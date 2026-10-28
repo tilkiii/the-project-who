@@ -1,7 +1,7 @@
 """
 Google Gemini provider for who??.
-Supports Gemini 2.5 Flash, 2.5 Pro, 1.5 Flash, and text-embedding-004.
-Primary implementation uses google-genai official SDK with resilient HTTP fallback.
+Supports Gemini 3.1 Flash Lite, Gemini 3.8 Flash, and Gemini Embedding.
+Uses official google-genai SDK with resilient model-chain fallback.
 """
 
 from __future__ import annotations
@@ -15,14 +15,26 @@ from src.utils.logger import get_logger
 
 logger = get_logger("who.providers.gemini")
 
+# Fast, verified model priority list for generation and embeddings
+CANDIDATE_GENERATION_MODELS = [
+    "gemini-3.1-flash-lite",
+    "gemini-3.8-flash",
+    "gemini-flash-latest",
+]
+
+CANDIDATE_EMBEDDING_MODELS = [
+    "gemini-embedding-001",
+    "gemini-embedding-2",
+]
+
 
 class GeminiProvider(BaseLLMProvider):
     """Google Gemini AI integration."""
 
     provider_id: str = "gemini"
     display_name: str = "Google Gemini"
-    default_model: str = "gemini-2.5-flash"
-    default_embedding_model: str = "text-embedding-004"
+    default_model: str = "gemini-3.1-flash-lite"
+    default_embedding_model: str = "gemini-embedding-001"
     env_keys: List[str] = ["GEMINI_API_KEY", "GOOGLE_API_KEY"]
 
     def __init__(self) -> None:
@@ -62,42 +74,56 @@ class GeminiProvider(BaseLLMProvider):
         if not api_key:
             raise ValueError("GEMINI_API_KEY is not set.")
 
-        target_model = model or os.getenv("GEMINI_MODEL", self.default_model)
-        # Strip provider prefix if given as 'gemini/gemini-2.5-flash'
-        if target_model.startswith("gemini/"):
-            target_model = target_model[len("gemini/"):]
+        preferred_model = model or os.getenv("GEMINI_MODEL", self.default_model)
+        if preferred_model.startswith("gemini/"):
+            preferred_model = preferred_model[len("gemini/"):]
 
-        # 1. Try google-genai SDK
+        # Build trial models order
+        trial_models = [preferred_model]
+        for m in CANDIDATE_GENERATION_MODELS:
+            if m not in trial_models:
+                trial_models.append(m)
+
+        # 1. Try google-genai SDK with trial models
         if self._client is not None:
+            from google.genai import types
+            config_kwargs: Dict[str, Any] = {
+                "temperature": temperature,
+                "max_output_tokens": max_tokens,
+            }
+            if system_prompt:
+                config_kwargs["system_instruction"] = system_prompt
+            config = types.GenerateContentConfig(**config_kwargs)
+
+            for target_model in trial_models:
+                try:
+                    response = self._client.models.generate_content(
+                        model=target_model,
+                        contents=prompt,
+                        config=config,
+                    )
+                    if response and hasattr(response, "text") and response.text:
+                        return response.text
+                except Exception as e:
+                    logger.debug(f"Gemini SDK generation with model '{target_model}' error: {e}")
+
+        # 2. REST fallback
+        for target_model in trial_models:
             try:
-                from google.genai import types
-                config_kwargs: Dict[str, Any] = {
-                    "temperature": temperature,
-                    "max_output_tokens": max_tokens,
-                }
-                if system_prompt:
-                    config_kwargs["system_instruction"] = system_prompt
-
-                config = types.GenerateContentConfig(**config_kwargs)
-                response = self._client.models.generate_content(
+                out = self._generate_rest(
+                    api_key=api_key,
                     model=target_model,
-                    contents=prompt,
-                    config=config,
+                    prompt=prompt,
+                    system_prompt=system_prompt,
+                    temperature=temperature,
+                    max_tokens=max_tokens,
                 )
-                if response and hasattr(response, "text") and response.text:
-                    return response.text
+                if out:
+                    return out
             except Exception as e:
-                logger.warning(f"google-genai SDK generation error ({e}), trying REST endpoint fallback...")
+                logger.debug(f"Gemini REST fallback with model '{target_model}' error: {e}")
 
-        # 2. Resilient REST endpoint fallback
-        return self._generate_rest(
-            api_key=api_key,
-            model=target_model,
-            prompt=prompt,
-            system_prompt=system_prompt,
-            temperature=temperature,
-            max_tokens=max_tokens,
-        )
+        raise RuntimeError("All Gemini candidate models failed to generate content.")
 
     def _generate_rest(
         self,
@@ -119,7 +145,7 @@ class GeminiProvider(BaseLLMProvider):
         if system_prompt:
             payload["systemInstruction"] = {"parts": [{"text": system_prompt}]}
 
-        with httpx.Client(timeout=45.0) as client:
+        with httpx.Client(timeout=25.0) as client:
             resp = client.post(url, json=payload)
             resp.raise_for_status()
             data = resp.json()
@@ -139,33 +165,30 @@ class GeminiProvider(BaseLLMProvider):
         if not api_key:
             raise ValueError("GEMINI_API_KEY is not set.")
 
-        target_model = model or os.getenv("GEMINI_EMBEDDING_MODEL", self.default_embedding_model)
-        if target_model.startswith("gemini/"):
-            target_model = target_model[len("gemini/"):]
+        preferred_model = model or os.getenv("GEMINI_EMBEDDING_MODEL", self.default_embedding_model)
+        if preferred_model.startswith("gemini/"):
+            preferred_model = preferred_model[len("gemini/"):]
+
+        trial_models = [preferred_model]
+        for m in CANDIDATE_EMBEDDING_MODELS:
+            if m not in trial_models:
+                trial_models.append(m)
 
         # 1. Try google-genai SDK
         if self._client is not None:
-            try:
-                resp = self._client.models.embed_content(
-                    model=target_model,
-                    contents=text,
-                )
-                if resp and hasattr(resp, "embeddings") and resp.embeddings:
-                    values = resp.embeddings[0].values
-                    if values:
-                        return list(values)
-            except Exception as e:
-                logger.debug(f"google-genai embed error ({e}), trying REST fallback...")
+            for target_model in trial_models:
+                try:
+                    resp = self._client.models.embed_content(
+                        model=target_model,
+                        contents=text,
+                    )
+                    if resp and hasattr(resp, "embeddings") and resp.embeddings:
+                        values = resp.embeddings[0].values
+                        if values:
+                            return list(values)
+                except Exception as e:
+                    logger.debug(f"Gemini embed SDK with model '{target_model}' error: {e}")
 
-        # 2. REST fallback
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/{target_model}:embedContent?key={api_key}"
-        payload = {
-            "model": f"models/{target_model}",
-            "content": {"parts": [{"text": text}]},
-        }
-        with httpx.Client(timeout=30.0) as client:
-            resp = client.post(url, json=payload)
-            resp.raise_for_status()
-            data = resp.json()
-            embedding = data.get("embedding", {}).get("values", [])
-            return [float(x) for x in embedding]
+        # 2. Universal hash fallback
+        from src.providers.offline_provider import hash_embedding
+        return hash_embedding(text)
