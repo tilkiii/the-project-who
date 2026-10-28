@@ -542,6 +542,81 @@ def chat(
             break
 
 
+@app.command()
+def providers() -> None:
+    """Inspect configured and available AI providers (Gemini, OpenAI, Anthropic, Groq, DeepSeek, Ollama)."""
+    from src.providers.manager import provider_manager
+
+    print_banner()
+    console.print("[bold green]AI Provider Registry & Status Audit[/bold green]\n")
+
+    statuses = provider_manager.list_all_statuses()
+    active_found = False
+
+    table = Table(title="Configured AI Engine Providers", show_header=True, header_style="bold cyan")
+    table.add_column("Status", width=14)
+    table.add_column("Provider", style="bold white", width=25)
+    table.add_column("Default Model", style="magenta", width=26)
+    table.add_column("Environment Key", style="yellow", width=24)
+    table.add_column("Type", style="dim", width=18)
+
+    provider_notes = {
+        "gemini": "Google Official (Free Tier / Multimodal)",
+        "openai": "OpenAI Cloud (GPT-4o / GPT-4o-mini)",
+        "anthropic": "Anthropic Claude (Sonnet / Haiku)",
+        "groq": "Groq Cloud (Fast Llama-3.3)",
+        "deepseek": "DeepSeek API (V3 / R1 reasoning)",
+        "openrouter": "Universal Multi-Model Gateway",
+        "mistral": "Mistral AI European Cloud",
+        "ollama": "Local Open-Source (No key needed)",
+        "vllm": "High-Throughput Local Engine",
+        "offline": "Corpus Grounded Fallback (No key)",
+    }
+
+    for s in statuses:
+        is_active = s.get("is_active", False)
+        is_avail = s.get("available", False)
+        pid = s.get("id", "")
+
+        if is_active:
+            active_found = True
+            status_badge = "[bold green]● ACTIVE[/bold green]"
+        elif is_avail:
+            status_badge = "[bold blue]○ READY[/bold blue]"
+        else:
+            status_badge = "[dim]○ NOT SET[/dim]"
+
+        env_keys = ", ".join(s.get("env_keys", [])) or "None (Local)"
+        p_type = provider_notes.get(pid, "General LLM")
+
+        table.add_row(
+            status_badge,
+            s.get("name", pid),
+            s.get("default_model", ""),
+            env_keys,
+            p_type,
+        )
+
+    console.print(table)
+    console.print()
+
+    active_provider = provider_manager.detect_active_provider()
+    if active_provider.provider_id != "offline":
+        console.print(
+            f"[bold green]✔ Active Provider:[/bold green] [bold cyan]{active_provider.display_name}[/bold cyan] "
+            f"(Model: [magenta]{active_provider.default_model}[/magenta])"
+        )
+    else:
+        console.print(
+            "[bold yellow]! Notice:[/bold yellow] No active external AI API keys detected in `.env`. "
+            "Running in resilient [bold cyan]Offline Fallback[/bold cyan] mode.\n"
+            "To connect Google Gemini, add your key to `.env`:\n"
+            "  [bold green]GEMINI_API_KEY=your_gemini_api_key_here[/bold green]\n"
+            "Or use any other provider (OPENAI_API_KEY, ANTHROPIC_API_KEY, GROQ_API_KEY, DEEPSEEK_API_KEY)."
+        )
+    console.print()
+
+
 def main() -> None:
     """Entry point for the who CLI."""
     app()

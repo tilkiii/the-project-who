@@ -1,7 +1,18 @@
 """
-Configuration management and LLM abstraction for who??.
-Handles environment variables, directory paths, LiteLLM connectivity,
-and fallback completion and embedding engines.
+Configuration management and multi-provider LLM abstraction for who??.
+
+Supported AI Providers:
+  • Google Gemini   (GEMINI_API_KEY / GOOGLE_API_KEY)
+  • OpenAI          (OPENAI_API_KEY)
+  • Anthropic       (ANTHROPIC_API_KEY)
+  • Groq            (GROQ_API_KEY)
+  • DeepSeek        (DEEPSEEK_API_KEY)
+  • OpenRouter      (OPENROUTER_API_KEY)
+  • Mistral         (MISTRAL_API_KEY)
+  • Ollama          (Local, no key required - OLLAMA_API_BASE)
+  • vLLM            (Local, no key required - VLLM_API_BASE)
+
+Configure keys in a `.env` file at the project root.
 """
 
 from __future__ import annotations
@@ -12,17 +23,24 @@ from typing import Any, Dict, List, Optional
 from dotenv import load_dotenv
 from pydantic import BaseModel, Field
 
+from src.providers.manager import provider_manager
+from src.providers.offline_provider import hash_embedding
 from src.utils.logger import get_logger
 from src.utils.text_cleaner import sanitize_slug
 
 logger = get_logger("who.config")
 
-# Load .env if present
-load_dotenv()
+# Load .env file from project root or current working dir
+_env_path = Path(__file__).resolve().parent.parent / ".env"
+if _env_path.exists():
+    load_dotenv(dotenv_path=_env_path, override=False)
+else:
+    load_dotenv(override=False)
 
 
 class TargetDirectories(BaseModel):
     """Encapsulates the standard filesystem layout for a target profile."""
+
     target_name: str
     target_slug: str
     base_dir: Path
@@ -40,23 +58,54 @@ class TargetDirectories(BaseModel):
 
 class Settings(BaseModel):
     """Global configuration settings for who??."""
-    profiles_dir: Path = Field(default_factory=lambda: Path(os.getenv("PROFILES_DIR", "profiles")))
-    default_llm_model: str = Field(default_factory=lambda: os.getenv("DEFAULT_LLM_MODEL", "gemini/gemini-2.5-flash"))
-    default_embedding_model: str = Field(default_factory=lambda: os.getenv("DEFAULT_EMBEDDING_MODEL", "text-embedding-3-small"))
 
-    gemini_api_key: Optional[str] = Field(default_factory=lambda: os.getenv("GEMINI_API_KEY"))
+    profiles_dir: Path = Field(default_factory=lambda: Path(os.getenv("PROFILES_DIR", "profiles")))
+
+    # Selected provider override (gemini, openai, anthropic, groq, deepseek, ollama, etc.)
+    provider_override: Optional[str] = Field(default_factory=lambda: os.getenv("WHO_PROVIDER") or os.getenv("LLM_PROVIDER"))
+
+    # Active provider properties (resolved dynamically)
+    @property
+    def active_provider(self) -> str:
+        return provider_manager.detect_active_provider().provider_id
+
+    @property
+    def active_provider_name(self) -> str:
+        return provider_manager.detect_active_provider().display_name
+
+    @property
+    def default_llm_model(self) -> str:
+        env_model = os.getenv("DEFAULT_LLM_MODEL")
+        if env_model:
+            return env_model
+        return provider_manager.detect_active_provider().default_model
+
+    @property
+    def default_embedding_model(self) -> str:
+        env_emb = os.getenv("DEFAULT_EMBEDDING_MODEL")
+        if env_emb:
+            return env_emb
+        return provider_manager.detect_active_provider().default_embedding_model
+
+    # API Keys
+    gemini_api_key: Optional[str] = Field(default_factory=lambda: os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY"))
     openai_api_key: Optional[str] = Field(default_factory=lambda: os.getenv("OPENAI_API_KEY"))
     anthropic_api_key: Optional[str] = Field(default_factory=lambda: os.getenv("ANTHROPIC_API_KEY"))
     groq_api_key: Optional[str] = Field(default_factory=lambda: os.getenv("GROQ_API_KEY"))
+    deepseek_api_key: Optional[str] = Field(default_factory=lambda: os.getenv("DEEPSEEK_API_KEY"))
+    openrouter_api_key: Optional[str] = Field(default_factory=lambda: os.getenv("OPENROUTER_API_KEY"))
 
+    # Local Engine URLs
     ollama_api_base: str = Field(default_factory=lambda: os.getenv("OLLAMA_API_BASE", "http://localhost:11434"))
     vllm_api_base: str = Field(default_factory=lambda: os.getenv("VLLM_API_BASE", "http://localhost:8000/v1"))
 
+    # Neo4j Settings
     neo4j_uri: str = Field(default_factory=lambda: os.getenv("NEO4J_URI", "bolt://localhost:7687"))
     neo4j_user: str = Field(default_factory=lambda: os.getenv("NEO4J_USER", "neo4j"))
     neo4j_password: str = Field(default_factory=lambda: os.getenv("NEO4J_PASSWORD", "password"))
     neo4j_database: str = Field(default_factory=lambda: os.getenv("NEO4J_DATABASE", "neo4j"))
 
+    # Epistemic Settings
     min_confidence_threshold: float = Field(default_factory=lambda: float(os.getenv("MIN_CONFIDENCE_THRESHOLD", "0.65")))
     evidence_min_quotes: int = Field(default_factory=lambda: int(os.getenv("EVIDENCE_MIN_QUOTES", "2")))
     strict_epistemic_mode: bool = Field(default_factory=lambda: os.getenv("STRICT_EPISTEMIC_MODE", "true").lower() in ("true", "1", "yes"))
@@ -83,7 +132,7 @@ class Settings(BaseModel):
         return td
 
 
-# Singleton settings instance
+# Singleton configuration settings
 settings = Settings()
 
 
@@ -93,161 +142,49 @@ def call_llm(
     model: Optional[str] = None,
     temperature: float = 0.2,
     max_tokens: int = 2048,
+    provider_id: Optional[str] = None,
 ) -> str:
     """
-    Unified LLM call supporting LiteLLM across OpenAI, Gemini, Anthropic, Groq, Ollama, vLLM.
-    Provides robust scientific fallback if offline or no keys are configured.
+    Unified LLM call supporting Google Gemini, OpenAI, Claude, Groq, DeepSeek, and Ollama.
+    Automatically routes to the configured provider or falls back safely.
     """
-    target_model = model or settings.default_llm_model
-    messages = []
-    if system_prompt:
-        messages.append({"role": "system", "content": system_prompt})
-    messages.append({"role": "user", "content": prompt})
-
+    provider = provider_manager.get_provider(provider_id)
     try:
-        import litellm
-        litellm.suppress_debug_info = True
-
-        # Pass appropriate API key if available
-        response = litellm.completion(
-            model=target_model,
-            messages=messages,
+        return provider.generate(
+            prompt=prompt,
+            system_prompt=system_prompt,
+            model=model,
             temperature=temperature,
             max_tokens=max_tokens,
-            api_base=settings.ollama_api_base if target_model.startswith("ollama/") else (
-                settings.vllm_api_base if target_model.startswith("vllm/") else None
-            ),
         )
-        return response.choices[0].message.content or ""
     except Exception as e:
-        logger.debug(f"LiteLLM call failed or not configured ({e}). Using deterministic epistemic fallback generator.")
-        return _fallback_llm_generation(prompt, system_prompt)
+        logger.warning(
+            f"Provider '{provider.display_name}' call failed: {e}. "
+            "Falling back to local corpus-grounded synthesis."
+        )
+        fallback = provider_manager.get_provider("offline")
+        return fallback.generate(
+            prompt=prompt,
+            system_prompt=system_prompt,
+            model=model,
+            temperature=temperature,
+            max_tokens=max_tokens,
+        )
 
 
-def get_embedding(text: str, model: Optional[str] = None) -> List[float]:
+def get_embedding(text: str, model: Optional[str] = None, provider_id: Optional[str] = None) -> List[float]:
     """
-    Generate normalized vector embeddings via LiteLLM or fallback deterministic embedding.
+    Generate normalized vector embeddings via the active provider (e.g. Gemini text-embedding-004,
+    OpenAI text-embedding-3-small) or fallback to hash-based pseudo embedding.
     """
-    target_model = model or settings.default_embedding_model
+    provider = provider_manager.get_provider(provider_id)
     try:
-        import litellm
-        response = litellm.embedding(model=target_model, input=[text])
-        return response.data[0]["embedding"]
-    except Exception:
-        # Fallback pseudo-embedding for testing and offline execution (128-dim normalized)
-        import hashlib
-        import math
-        vec = []
-        for i in range(128):
-            h = hashlib.sha256(f"{text}_{i}".encode("utf-8")).hexdigest()
-            val = (int(h[:8], 16) / 0xFFFFFFFF) * 2.0 - 1.0
-            vec.append(val)
-        norm = math.sqrt(sum(v * v for v in vec)) or 1.0
-        return [v / norm for v in vec]
+        return provider.embed(text=text, model=model)
+    except Exception as e:
+        logger.debug(f"Embedding via '{provider.display_name}' failed ({e}). Using hash embedding.")
+        return hash_embedding(text)
 
 
 def _fallback_llm_generation(prompt: str, system_prompt: Optional[str] = None) -> str:
-    """
-    Deterministic scientific response generator for offline / no-API-key mode.
-    Extracts CORPUS QUOTES from the prompt and synthesizes a grounded answer.
-    """
-    import re as _re
-
-    p_lower = prompt.lower()
-
-    # Structured extraction tasks
-    if "extract entities" in p_lower or ("entity" in p_lower and "json" in p_lower):
-        return (
-            '{"entities": ['
-            '{"name": "Masonluk", "type": "Organization", "description": "Uluslararasi kardeslik dernegi"}, '
-            '{"name": "Aydinlanma", "type": "Concept", "description": "18. yy rasyonalizm hareketi"}, '
-            '{"name": "Sosyal Secim Teorisi", "type": "AcademicField", "description": "Kolektif karar mekanizmalari"}], '
-            '"relationships": ['
-            '{"source": "Masonluk", "target": "Aydinlanma", "relation": "ROOTED_IN", "weight": 0.90}, '
-            '{"source": "Sosyal Secim Teorisi", "target": "Aydinlanma", "relation": "ALIGNED_WITH", "weight": 0.75}]}'
-        )
-    elif "character.json" in p_lower or "elizaos" in p_lower:
-        return (
-            '{"name": "Target Model", "bio": ["Evidence-focused researcher with high empirical standards"], '
-            '"lore": ["Known for rigorous analysis and probabilistic reasoning"], '
-            '"style": {"all": ["probabilistic", "evidence-based"], "chat": ["direct", "analytical"]}}'
-        )
-    elif (
-        ("mindset_summary" in p_lower or "cognitive" in p_lower)
-        and "question:" not in p_lower
-        and "scenario" not in p_lower
-        and "simulate" not in p_lower
-    ):
-        return (
-            "# Cognitive & Mindset Profile\n\n"
-            "## 1. Core Reasoning Heuristics\n"
-            "Based on observed evidence from primary corpus, the data suggests a plausible alignment "
-            "with probabilistic epistemic frameworks.\n\n"
-            "Confidence Score: 85% (Derived from primary corpus analysis)."
-        )
-    else:
-        # Oracle Q&A / Simulator fallback
-        question_match = _re.search(r"QUESTION:\s*(.+?)(?:\n|$)", prompt)
-        scenario_match = _re.search(r'SCENARIO PROPOSITION:\s*["\']?(.+?)["\']?\n', prompt)
-        is_scenario = bool(scenario_match)
-        question = (
-            scenario_match.group(1).strip() if is_scenario
-            else (question_match.group(1).strip() if question_match else "bu konu")
-        )
-
-        # Extract corpus quotes
-        raw_quotes = _re.findall(r'Quotation:\s*"([^"]{20,})"', prompt)
-        usable_quotes = [q.strip() for q in raw_quotes if len(q.strip()) > 30][:3]
-
-        # Extract graph edges
-        graph_edges = _re.findall(r"Graph Edge:\s*(.+?)(?:\n|$)", prompt)
-
-        label = "**Senaryo:**" if is_scenario else "**Soru:**"
-        lines = [f"{label} {question}\n"]
-
-        if is_scenario:
-            lines.append("**Olasi Tepki Simulasyonu (Corpus Tabanli):**\n")
-            lines.append(
-                "**1. Birincil Hipotez:** Gozlemlenen corpus sinyallerine dayanarak, "
-                "hedef profilin bu senaryoya kurumsal ve analitik bir perspektifle yaklasmasinin "
-                "yuksek olasilikta oldugu degerlendirilmektedir.\n"
-            )
-            if usable_quotes:
-                lines.append("**Destekleyici Corpus Kanitlari:**")
-                for i, q in enumerate(usable_quotes, 1):
-                    q_short = q[:200].replace("\n", " ")
-                    lines.append(f'> [{i}] "{q_short}"')
-            lines.append(
-                "\n**2. Olasilikli Itirazlar:** Spekulatif cercevelemeye karsi epistemik "
-                "rezerv gosterilmesi beklenmektedir.\n"
-                "**3. Guven Skoru:** 76% (Corpus derinligine gore hesaplanmistir)"
-            )
-        else:
-            if usable_quotes:
-                lines.append("**Corpus Kanit Analizi:**\n")
-                lines.append(
-                    "Birincil kaynak corpus incelendiginde asagidaki dogrudan kanitlar saptanmistir:\n"
-                )
-                for i, q in enumerate(usable_quotes, 1):
-                    q_clean = q.replace("\n", " ")
-                    lines.append(f'> [{i}] "{q_clean}"\n')
-                lines.append(
-                    "\nBu alıntılar ışığında veriler, hedef profilin konuya dair tutarlı ve "
-                    "kurumsal bir perspektif sergilediğine yüksek olasılıkla işaret etmektedir. "
-                    "Beyan örüntüsü epistemik temkinlilik ve sistematik düşünce yapısıyla uyumludur."
-                )
-            else:
-                lines.append(
-                    "Mevcut corpus'ta bu soruya dogrudan yanit veren birincil alinti "
-                    "bulunamamistir. Daha fazla kaynak eklenmesi onerilir."
-                )
-
-        if graph_edges:
-            lines.append(f"\n**Graf Baglantilari:** {'  |  '.join(graph_edges[:3])}")
-
-        lines.append(
-            "\n\n_Not: LLM API baglantisi olmadan corpus dogrudan sentezlenerek uretilmistir. "
-            "Tam analiz icin .env dosyasina GEMINI_API_KEY veya OPENAI_API_KEY ekleyin._"
-        )
-
-        return "\n".join(lines)
+    """Backward compatibility helper for offline generation."""
+    return provider_manager.get_provider("offline").generate(prompt, system_prompt)

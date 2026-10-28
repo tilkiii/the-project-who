@@ -137,14 +137,23 @@ pip install -e . --no-deps
 ```bash
 cp .env.example .env
 ```
-Configure your desired LLM provider (Gemini, OpenAI, Anthropic, Groq, Ollama) and optional Neo4j credentials:
+`who??` features a multi-provider engine supporting any AI provider (Google Gemini, OpenAI, Claude, Groq, DeepSeek, OpenRouter, Ollama):
 ```ini
-DEFAULT_LLM_MODEL=gemini/gemini-2.5-flash
-DEFAULT_EMBEDDING_MODEL=text-embedding-3-small
-GEMINI_API_KEY=your_key_here
-NEO4J_URI=bolt://localhost:7687
+# Google Gemini (Default recommended)
+GEMINI_API_KEY=your_gemini_key_here
+
+# Or other providers:
+# OPENAI_API_KEY=your_openai_key
+# ANTHROPIC_API_KEY=your_claude_key
+# GROQ_API_KEY=your_groq_key
+# DEEPSEEK_API_KEY=your_deepseek_key
 ```
-*(If Neo4j or API keys are not supplied, the framework automatically uses its resilient built-in NetworkX graph store and deterministic epistemic modeling engine.)*
+
+Verify your active AI provider setup at any time:
+```bash
+who providers
+```
+*(If no API keys are supplied, the framework automatically uses its resilient built-in local corpus synthesizer and deterministic epistemic modeling engine.)*
 
 ---
 
@@ -191,6 +200,9 @@ who compose --target "Target Name" --goal "Invite Target to keynote on open cons
 
 # 13. Interactive digital twin chat with formal/informal tone toggling
 who chat --target "Target Name" --mode formal
+
+# 14. Audit and inspect active and configured AI providers
+who providers
 ```
 
 ---

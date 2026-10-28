@@ -76,3 +76,9 @@ def test_cli_harvest_and_pipeline(tmp_path: Path):
     # 12. Compose
     res_compose = runner.invoke(app, ["compose", "--target", target, "--goal", "Invite Target to keynote on open consensus"])
     assert res_compose.exit_code == 0
+
+    # 13. Providers Audit
+    res_prov = runner.invoke(app, ["providers"])
+    assert res_prov.exit_code == 0
+    assert "Google Gemini" in res_prov.output
+    assert "OpenAI" in res_prov.output
