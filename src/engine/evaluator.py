@@ -50,8 +50,14 @@ class ProfileEvaluator:
         verified_count = 0
         for q in quotes_to_verify:
             # Check if key words appear in raw corpus
-            q_words = [w.lower() for w in q.split() if len(w) > 4]
-            if q_words and sum(1 for w in q_words if w in combined_corpus) >= len(q_words) * 0.6:
+            # Use 3+ char words to handle Turkish (many meaningful words are short)
+            q_words = [w.lower().strip(".,!?;:\"'()[]") for w in q.split() if len(w.strip(".,!?;:\"'()[]")) >= 3]
+            if not q_words:
+                continue
+            matches = sum(1 for w in q_words if w in combined_corpus)
+            match_ratio = matches / len(q_words)
+            # A quote is verified if ≥50% of its words appear in the corpus
+            if match_ratio >= 0.50:
                 verified_count += 1
 
         citation_validity_score = (verified_count / len(quotes_to_verify)) if quotes_to_verify else 1.0

@@ -133,6 +133,19 @@ class MindsetProfiler:
         # Persist all files
         if self.vault_dir:
             self.vault_dir.mkdir(parents=True, exist_ok=True)
+            # Preserve existing postExamples (real corpus quotes) if already harvested
+            existing_char_file = self.vault_dir / "character.json"
+            if existing_char_file.exists():
+                try:
+                    with open(existing_char_file, "r", encoding="utf-8") as f:
+                        existing_char = json.load(f)
+                    existing_examples = existing_char.get("postExamples", [])
+                    # Keep existing quotes if they are real (longer and more numerous than defaults)
+                    if len(existing_examples) > 3 and len(existing_examples[0]) > 60:
+                        character_data["postExamples"] = existing_examples
+                        logger.info(f"Preserved {len(existing_examples)} existing postExamples from corpus.")
+                except Exception:
+                    pass
             with open(self.vault_dir / "character.json", "w", encoding="utf-8") as f:
                 json.dump(character_data, f, indent=2)
 
