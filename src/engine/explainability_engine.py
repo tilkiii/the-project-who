@@ -54,7 +54,10 @@ class ExplainabilityEngine:
         # 4. Check BERTopic themes
         bertopic_themes = self._find_matching_topics(claim)
 
-        # 5. Quantify Confidence Score
+        # 5. Check Cognitive Dissonance Tensions (Capability #2)
+        dissonance_info = self._check_cognitive_dissonance(claim)
+
+        # 6. Quantify Confidence Score
         quote_weight = min(1.0, len(supporting_quotes) / 3.0) * 0.5
         graph_weight = min(1.0, len(graph_trace_paths) / 2.0) * 0.3
         topic_weight = min(1.0, len(bertopic_themes) / 1.0) * 0.2
@@ -71,10 +74,54 @@ class ExplainabilityEngine:
             "evidence_sources": sources,
             "graph_trace_paths": graph_trace_paths,
             "associated_bertopic_themes": bertopic_themes,
+            "cognitive_dissonance_analysis": dissonance_info,
             "required_phrasing": f"Based on observed evidence from {', '.join(sources) if sources else 'analyzed corpus'}, the data suggests a plausible alignment with {calibrated_claim}. Confidence Score: {int(confidence_score * 100)}% (Derived from {len(supporting_quotes)} supporting primary quotes).",
         }
 
         return explanation
+
+    def _check_cognitive_dissonance(self, claim: str) -> Dict[str, Any]:
+        """Verify whether the audited claim intersects with known cognitive dissonance / contradiction clusters."""
+        claim_lower = claim.lower()
+        contradiction_edges = []
+        matching_clusters = []
+
+        # Check in graph edges
+        for rel in self.graph_store.get_all_relationships():
+            if rel.get("relation") == "CONTRADICTS":
+                src = rel.get("source", "").lower()
+                tgt = rel.get("target", "").lower()
+                if src in claim_lower or tgt in claim_lower:
+                    contradiction_edges.append(rel)
+
+        # Check in graph_metrics.json
+        metrics_file = self.dirs.vault_dir / "graph_metrics.json"
+        if metrics_file.exists():
+            try:
+                with open(metrics_file, "r", encoding="utf-8") as f:
+                    gm = json.load(f)
+                    for cluster in gm.get("cognitive_dissonance", {}).get("dissonance_clusters", []):
+                        if any(c.lower() in claim_lower for c in cluster.get("concepts", [])):
+                            matching_clusters.append(cluster)
+            except Exception:
+                pass
+
+        has_tension = bool(contradiction_edges or matching_clusters)
+        statement = ""
+        if has_tension:
+            first_c = matching_clusters[0] if matching_clusters else {}
+            statement = (
+                f"Bilişsel Çelişki Uyarısı: İddia, hedefin çelişen inanç örüntüsü gösterdiği "
+                f"[{', '.join(first_c.get('concepts', ['çelişen konseptler'])[:2])}] kümelenmesiyle kesişmektedir. "
+                f"(Gerilim Nedeni: {first_c.get('primary_conflict', 'İdeolojik/Kurumsal Zıtlık')})."
+            )
+
+        return {
+            "has_dissonance_tension": has_tension,
+            "matching_contradictions": contradiction_edges[:2],
+            "matching_clusters": matching_clusters[:2],
+            "probabilistic_warning": statement,
+        }
 
     def enforce_probabilistic_phrasing(self, text: str) -> str:
         """Replace forbidden deterministic claims with scientific, probabilistic phrasing."""

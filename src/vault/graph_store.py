@@ -79,15 +79,20 @@ class GraphStore:
             src = rel.get("source", "").strip()
             tgt = rel.get("target", "").strip()
             if src and tgt:
-                self.nx_graph.add_edge(
-                    src,
-                    tgt,
-                    relation=rel.get("relation", "RELATES_TO"),
-                    weight=float(rel.get("weight", 0.8)),
-                    quote=rel.get("quote", ""),
-                    source_doc=rel.get("source_doc", ""),
-                    updated_at=datetime.now(timezone.utc).isoformat(),
-                )
+                edge_props = {
+                    "relation": rel.get("relation", "RELATES_TO"),
+                    "weight": float(rel.get("weight", 0.8)),
+                    "quote": rel.get("quote", ""),
+                    "source_doc": rel.get("source_doc", ""),
+                    "updated_at": datetime.now(timezone.utc).isoformat(),
+                }
+                if rel.get("relation") == "CONTRADICTS" or "dissonance_score" in rel:
+                    edge_props["dissonance_score"] = float(rel.get("dissonance_score", 0.85))
+                    edge_props["contradiction_summary"] = rel.get("contradiction_summary", "")
+                    edge_props["quote_a"] = rel.get("quote_a", "")
+                    edge_props["quote_b"] = rel.get("quote_b", "")
+
+                self.nx_graph.add_edge(src, tgt, **edge_props)
 
         # 2. Store in Neo4j if online
         if self.connected_to_neo4j and self.driver:
@@ -119,7 +124,12 @@ class GraphStore:
                         MATCH (t:Entity {{name: $target}})
                         MERGE (s)-[r:{rel_type}]->(t)
                         SET r.weight = $weight, r.quote = $quote,
-                            r.source_doc = $source_doc, r.updated_at = datetime()
+                            r.source_doc = $source_doc,
+                            r.dissonance_score = $dissonance_score,
+                            r.contradiction_summary = $contradiction_summary,
+                            r.quote_a = $quote_a,
+                            r.quote_b = $quote_b,
+                            r.updated_at = datetime()
                         """
                         session.run(
                             query,
@@ -128,6 +138,10 @@ class GraphStore:
                             weight=float(rel.get("weight", 0.8)),
                             quote=rel.get("quote", ""),
                             source_doc=rel.get("source_doc", ""),
+                            dissonance_score=float(rel.get("dissonance_score", 0.0)),
+                            contradiction_summary=rel.get("contradiction_summary", ""),
+                            quote_a=rel.get("quote_a", ""),
+                            quote_b=rel.get("quote_b", ""),
                         )
                 logger.info("Synchronized graph to Neo4j successfully.")
             except Exception as e:

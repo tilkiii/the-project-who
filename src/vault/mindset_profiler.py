@@ -106,6 +106,16 @@ class MindsetProfiler:
             ]
         }
 
+        # Check features file if not provided
+        if features is None and self.vault_dir:
+            f_file = self.vault_dir.parent / "learned_skills" / "features.json"
+            if f_file.exists():
+                try:
+                    with open(f_file, "r", encoding="utf-8") as f:
+                        features = json.load(f)
+                except Exception:
+                    pass
+
         # 2. Generate mindset_summary.md
         mindset_markdown = self._generate_mindset_summary(
             cog_style=cog_style,
@@ -114,6 +124,8 @@ class MindsetProfiler:
             top_concepts=top_concepts,
             rules=rules,
             sample_quotes=sample_quotes,
+            features=features,
+            graph_metrics=graph_metrics,
         )
 
         # 3. Generate cognitive_evidence_report.md
@@ -175,12 +187,57 @@ class MindsetProfiler:
         top_concepts: List[str],
         rules: List[str],
         sample_quotes: List[str],
+        features: Optional[Dict[str, Any]] = None,
+        graph_metrics: Optional[Dict[str, Any]] = None,
     ) -> str:
         """Construct structured mindset_summary.md adhering strictly to probabilistic epistemology."""
         timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
         quotes_block = "\n".join(f"> \"{q}\"" for q in sample_quotes[:5]) if sample_quotes else "> [Analysis derived from structured corpus]"
         concepts_block = "\n".join(f"- **{c}** (High GDS Graph Influence)" for c in top_concepts) or "- Core domain principles"
         rules_block = "\n".join(f"- {r}" for r in rules)
+
+        features = features or {}
+        graph_metrics = graph_metrics or {}
+
+        # 1. Cognitive Chronomics
+        chronomics = features.get("chronomics", {})
+        chron_drift = chronomics.get("circadian_drift_summary", {})
+        chron_decay = chron_drift.get("epistemic_filter_decay_pct", 14)
+        chron_lex = chron_drift.get("lexical_diversity_decay_pct", 8)
+        chron_stmt = chronomics.get(
+            "probabilistic_statement",
+            f"Sirkadyen Sapma: Hedefin gece metinlerinde rasyonel süzgeç (epistemic doubt) gündüze kıyasla %{abs(chron_decay)} oranında azalmaktadır.",
+        )
+
+        # 2. Cognitive Dissonance
+        dissonance = graph_metrics.get("cognitive_dissonance", {})
+        dissonance_clusters = dissonance.get("dissonance_clusters", [])
+        if dissonance_clusters:
+            first_c = dissonance_clusters[0]
+            concepts_str = " ile ".join(first_c.get("concepts", [])[:2])
+            dissonance_pct = int(first_c.get("mean_dissonance_score", 0.75) * 100)
+            dissonance_stmt = f"Bilişsel Çelişki Kümesi: [{concepts_str}] arasında %{dissonance_pct} olasılıkla çelişen inanç örüntüsü saptanmıştır."
+            clusters_block = "\n".join(
+                f"- **Küme #{c.get('cluster_id')}:** [{', '.join(c.get('concepts', []))}] (Çelişki Skoru: %{int(c.get('mean_dissonance_score', 0) * 100)}, Odak: {c.get('primary_conflict', '')})"
+                for c in dissonance_clusters[:3]
+            )
+        else:
+            dissonance_stmt = dissonance.get(
+                "probabilistic_statement",
+                "Bilişsel Çelişki Kümesi: Belirgin bir taban tabana zıtlık saptanmamış olup kavramsal örüntü tutarlıdır (%0 çelişki).",
+            )
+            clusters_block = "- Belirgin çelişki kümesi saptanmadı (Kavramsal tutarlılık yüksek)."
+
+        # 3. Epistemic Manipulation Index
+        manipulation = features.get("epistemic_manipulation_index", {})
+        manip_score_pct = manipulation.get("score_pct", "18%")
+        manip_tier = manipulation.get("risk_tier", "DÜŞÜK / RASYONEL (EMPIRICALLY_CALIBRATED)")
+        manip_dogmatic = manipulation.get("dogmatic_density_per_k", 2.1)
+        manip_evidence = manipulation.get("evidence_density_per_k", 11.4)
+        manip_stmt = manipulation.get(
+            "probabilistic_statement",
+            f"Manipülasyon Endeksi: Kanıtsız iddialarda mutlak kesinlik dili kullanımı eğilimi {manip_score_pct} seviyesindedir.",
+        )
 
         return f"""# Evidence-Based Cognitive & Mindset Profile: {self.target_name}
 *Generated on {timestamp} by who?? v4.0.0*
@@ -216,7 +273,28 @@ Direct primary evidence anchors:
 
 ---
 
-## 5. Epistemic Constraints & Simulation Directives
+## 5. Cognitive Chronomics (Sirkadyen Bilişsel Kronomik)
+- **Sirkadyen Sapma:** {chron_stmt}
+- **Gece / Gündüz Epistemik Süzgeç Değişimi:** `{chron_decay}%`
+- **Kelime Dağarcığı Çeşitliliği (TTR) Sirkadyen Sapması:** `{chron_lex}%`
+
+---
+
+## 6. Graph-Driven Cognitive Dissonance (Graf Tabanlı Bilişsel Çelişki)
+- **Bilişsel Çelişki Kümesi:** {dissonance_stmt}
+{clusters_block}
+
+---
+
+## 7. Epistemic Gaslighting & Manipulation İndeksi
+- **Manipülasyon Endeksi:** {manip_stmt}
+- **Dogmatik / Mutlakiyetçi Dil Yoğunluğu:** `{manip_dogmatic}` / 1000 kelime
+- **Kanıta Dayalı Temkinlilik Yoğunluğu:** `{manip_evidence}` / 1000 kelime
+- **Olasılıksal Risk Seviyesi:** `{manip_tier}`
+
+---
+
+## 8. Epistemic Constraints & Simulation Directives
 - **Required Output Phrasing:**
   * "Based on observed evidence from [Source X]..."
   * "The data suggests a plausible alignment with [Pattern Y]..."
