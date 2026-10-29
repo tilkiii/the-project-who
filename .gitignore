@@ -49,3 +49,5 @@ profiles/*
 # OS artifacts
 .DS_Store
 Thumbs.db
+.gemini/
+Thumbs.db

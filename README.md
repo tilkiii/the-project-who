@@ -7,10 +7,11 @@
 </p>
 
 <p align="center">
-  <a href="pyproject.toml"><img src="https://img.shields.io/badge/version-4.0.0-blue.svg?style=for-the-badge" alt="Version 4.0.0"/></a>
+  <a href="pyproject.toml"><img src="https://img.shields.io/badge/version-4.5.0-blue.svg?style=for-the-badge" alt="Version 4.0.0"/></a>
   <a href="https://python.org"><img src="https://img.shields.io/badge/python-3.10+-3776AB.svg?style=for-the-badge&logo=python&logoColor=white" alt="Python 3.10+"/></a>
-  <a href="tests/"><img src="https://img.shields.io/badge/tests-28%20passed-22c55e.svg?style=for-the-badge&logo=pytest&logoColor=white" alt="Tests"/></a>
+  <a href="tests/"><img src="https://img.shields.io/badge/tests-39%20passed-22c55e.svg?style=for-the-badge&logo=pytest&logoColor=white" alt="Tests"/></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-eab308.svg?style=for-the-badge" alt="License MIT"/></a>
+  <a href="https://d3js.org"><img src="https://img.shields.io/badge/D3.js-Interactive%20Graph-F9A03C.svg?style=for-the-badge&logo=d3.js&logoColor=white" alt="D3.js"/></a>
   <a href="https://neo4j.com"><img src="https://img.shields.io/badge/Neo4j-Graph%20Data%20Science-008CC1.svg?style=for-the-badge&logo=neo4j&logoColor=white" alt="Neo4j GDS"/></a>
   <a href="https://trychroma.com"><img src="https://img.shields.io/badge/ChromaDB-Vector%20Memory-f97316.svg?style=for-the-badge" alt="ChromaDB"/></a>
   <a href="https://maartengr.github.io/BERTopic/"><img src="https://img.shields.io/badge/BERTopic-Evolution-a855f7.svg?style=for-the-badge" alt="BERTopic"/></a>
@@ -44,6 +45,11 @@ It adheres strictly to **scientific rigor, probabilistic reasoning, and explicit
 - **Autonomous Literature Discovery:** Queries open scientific archives (arXiv, PubMed, Semantic Scholar) for peer-reviewed correlation models matching target linguistic features.
 - **7-Layer Multilayer Memory:** Seamless memory spanning raw corpus text, ChromaDB vectors, Neo4j graphs, behavioral signals, topic trajectories, ElizaOS-compliant `character.json`, and stateful chat memory.
 - **Adversarial Outreach & Simulation:** Scenario reaction simulation under explicit assumptions and hyper-tailored communication drafting with simulated adversarial rejection stress-testing.
+- **Social Media & Digital Footprint OSINT (Sherlock/Maigret Architecture):** Multi-platform username hunting across 18+ services (Instagram, YouTube, Telegram, GitHub, GitLab, Reddit, HackerNews, Medium, Steam, Pinterest, Substack, etc.) with automated markdown dossier ingestion.
+- **Cyber Footprint & Passive Breach Auditing (Holehe Architecture):** DNS/MX IP resolution, disposable burner mail detection, passive Gravatar/GitHub enumeration without triggering alerts, and breach risk quantification.
+- **Entity Resolution & Multi-Target Social Network Graphs:** Multi-target knowledge graph consolidation, betweenness broker ranking, and standalone interactive D3.js force-directed HTML graph generation.
+- **Strict Zero-Substitution Protocol:** Zero-hallucination entity verification ensuring strict name token matching without unauthorized identity conflation.
+- **Live Anomaly Monitoring & Swarm Debate Arena:** Continuous RSS/web stream anomaly surveillance and multi-turn dialectical debates synthesizing emergent consensus between digital twins.
 
 ---
 
@@ -203,6 +209,21 @@ who chat --target "Target Name" --mode formal
 
 # 14. Audit and inspect active and configured AI providers
 who providers
+
+# 15. Hunt username across 18+ major social platforms & ingest dossier
+who hunt --target "Target Name" --username "handle"
+
+# 16. Audit email address for DNS validity, burner status, passive profiles & breach exposure
+who cyber --target "Target Name" --email "target@domain.com"
+
+# 17. Build multi-target social network graph & generate interactive D3.js HTML visualization
+who network --targets "Target A, Target B" --export-html
+
+# 18. Monitor live feeds for anomalous updates or breaking statements
+who monitor --target "Target Name" --feed-urls "https://example.com/rss"
+
+# 19. Run multi-agent dialectical swarm arena debate between digital twins
+who arena --target-a "Target A" --target-b "Target B" --topic "Centralized AI Regulation" --rounds 3
 ```
 
 ---
@@ -234,7 +255,7 @@ The framework includes a comprehensive test suite across all 4 modules:
 python -m pytest -v
 ```
 ```
-============================= 28 passed in 41.76s =============================
+============================= 39 passed in 45.20s =============================
 ```
 
 ---

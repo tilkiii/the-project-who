@@ -9,6 +9,7 @@ from src.vault.graph_store import GraphStore
 from src.vault.graph_analytics import GraphAnalytics
 from src.vault.vector_embedder import VectorEmbedder
 from src.vault.mindset_profiler import MindsetProfiler
+from src.vault.social_graph import SocialGraphAnalyzer
 
 __all__ = [
     "GraphBuilder",
@@ -16,4 +17,5 @@ __all__ = [
     "GraphAnalytics",
     "VectorEmbedder",
     "MindsetProfiler",
+    "SocialGraphAnalyzer",
 ]

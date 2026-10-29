@@ -30,6 +30,8 @@ from src.harvest.media_harvester import MediaHarvester
 from src.harvest.ocr_processor import OCRProcessor
 from src.harvest.web_harvester import WebHarvester
 from src.harvest.live_monitor import LiveMonitor
+from src.harvest.social_osint import SocialOSINTHunter
+from src.harvest.cyber_footprint import CyberFootprintAuditor
 from src.learn.academic_researcher import AcademicResearcher
 from src.learn.feature_extractor import FeatureExtractor
 from src.learn.prompt_optimizer import PromptOptimizer
@@ -41,6 +43,7 @@ from src.vault.graph_builder import GraphBuilder
 from src.vault.graph_store import GraphStore
 from src.vault.mindset_profiler import MindsetProfiler
 from src.vault.vector_embedder import VectorEmbedder
+from src.vault.social_graph import SocialGraphAnalyzer
 
 app = typer.Typer(
     name="who",
@@ -863,6 +866,116 @@ def arena(
         title="[bold magenta]📊 Swarm Arena Konsensüs ve Epistemik Sentez Raporu[/bold magenta]",
         border_style="magenta"
     ))
+
+
+@app.command(name="hunt")
+def hunt(
+    target: str = typer.Option(..., "--target", "-t", help="Target individual name"),
+    username: str = typer.Option(..., "--username", "-u", help="Username / handle to hunt across platforms"),
+) -> None:
+    """Probe 15+ major platforms for username existence and ingest public dossiers."""
+    print_banner()
+    dirs = settings.get_target_dirs(target)
+    console.print(f"[bold green]Initiating Multi-Platform Username Hunt for:[/bold green] [bold cyan]{target}[/bold cyan] ([yellow]@{username}[/yellow])\n")
+
+    hunter = SocialOSINTHunter(target, dirs)
+    profiles = hunter.hunt_username(username)
+
+    if profiles:
+        table = Table(title=f"🌐 Discovered Digital Footprints: @{username}", header_style="bold cyan")
+        table.add_column("Platform", style="bold white", width=18)
+        table.add_column("Category", style="yellow", width=22)
+        table.add_column("Profile Link", style="blue")
+        table.add_column("Snippet / Bio", style="dim")
+
+        for p in profiles:
+            table.add_row(
+                f"{p['icon']} {p['platform']}",
+                p["category"],
+                p["url"],
+                p.get("bio_snippet", "")[:45] + ("..." if len(p.get("bio_snippet", "")) > 45 else ""),
+            )
+        console.print(table)
+        console.print(f"\n[green]Dossier ingested to:[/green] [cyan]{dirs.raw_data_dir / f'social_osint_dossier_{username}.md'}[/cyan]\n")
+    else:
+        console.print(f"[yellow]No active profiles discovered for @{username} across queried platforms.[/yellow]\n")
+
+
+@app.command(name="cyber")
+def cyber(
+    target: str = typer.Option(..., "--target", "-t", help="Target individual name"),
+    email: str = typer.Option(..., "--email", "-e", help="Email address to audit"),
+) -> None:
+    """Perform passive email reconnaissance, DNS infrastructure validation, and breach auditing."""
+    print_banner()
+    dirs = settings.get_target_dirs(target)
+    console.print(f"[bold green]Starting Cyber Footprint & Breach Reconnaissance for:[/bold green] [bold cyan]{target}[/bold cyan]\n")
+
+    auditor = CyberFootprintAuditor(target, dirs)
+    res = auditor.run_full_audit(email)
+
+    dns = res["dns_infrastructure"]
+    breach = res["breach_exposure"]
+
+    table = Table(title=f"🛡️ Cyber Reconnaissance Audit: {email}", header_style="bold magenta")
+    table.add_column("Dimension", style="bold white", width=24)
+    table.add_column("Observed Status / Metric", style="cyan")
+    table.add_column("Security Finding", style="white")
+
+    table.add_row("Email Syntax & Format", "Valid" if res["validation"]["is_valid_format"] else "Invalid", f"Domain: {res['validation']['domain']}")
+    table.add_row("DNS & Mail Resolution", f"IP: {dns.get('resolved_ip') or 'None'}", "Host Active" if dns.get("resolves") else "Unresolvable Host")
+    table.add_row("Burner / Disposable Check", "Passed" if not dns.get("is_disposable") else "DISPOSABLE RISK", "Legitimate Provider" if not dns.get("is_disposable") else "Temporary Mail Service")
+    table.add_row("Passive Service Discovery", f"{len(res['passive_services_detected'])} account(s) found", ", ".join(s['service'] for s in res['passive_services_detected']) or "None detected")
+    table.add_row("Breach Exposure Risk", f"Risk: {breach['risk_tier']}", f"Hygiene Rating: %{breach['digital_hygiene_score_pct']}")
+
+    console.print(table)
+    console.print(Panel(
+        f"[yellow]{breach['probabilistic_statement']}[/yellow]\n"
+        f"[dim]Belgelenmiş Tarihsel Olaylar: {', '.join(b['source'] for b in breach['documented_breach_incidents'])}[/dim]",
+        title="[bold red]⚠️ Siber Tehdit & Sızıntı Değerlendirmesi[/bold red]",
+        border_style="red"
+    ))
+
+
+@app.command(name="network")
+def network(
+    targets: str = typer.Option(..., "--targets", "-t", help="Comma-separated target names to cross-reference (e.g. 'Remzi Sanver, Test Target')"),
+    export_html: bool = typer.Option(True, "--export-html/--no-html", help="Generate standalone D3.js interactive HTML visualizer"),
+) -> None:
+    """Perform multi-target entity resolution, detect bridge broker nodes, and build social graphs."""
+    print_banner()
+    t_list = [t.strip() for t in targets.split(",") if t.strip()]
+    if len(t_list) < 2:
+        console.print("[bold red]Error:[/bold red] Social network analysis requires at least 2 targets to map shared ties.")
+        raise typer.Exit(1)
+
+    console.print(f"[bold green]Constructing Unified Social Network Graph for:[/bold green] [bold cyan]{' & '.join(t_list)}[/bold cyan]\n")
+
+    analyzer = SocialGraphAnalyzer(t_list)
+    net_res = analyzer.build_multi_target_network()
+
+    table = Table(title="🌐 Social Network Link Analysis", header_style="bold cyan")
+    table.add_column("Metric / Dimension", style="bold white", width=28)
+    table.add_column("Value / Finding", style="green")
+
+    table.add_row("Total Network Nodes", str(net_res["total_nodes"]))
+    table.add_row("Total Relationships & Edges", str(net_res["total_edges"]))
+    table.add_row("Cross-Target Shared Bridges", f"{len(net_res['shared_bridges'])} shared concept/entity bridge(s)")
+
+    top_brokers = ", ".join(f"{b['node']} ({b['connected_target_count']} bağ)" for b in net_res["broker_nodes_ranking"][:3]) or "None"
+    table.add_row("Top Betweenness Brokers", top_brokers)
+
+    console.print(table)
+
+    if net_res["shared_bridges"]:
+        console.print(Panel(
+            "\n".join(f"- [cyan]{b['bridge_concept']}[/cyan] connects targets: [yellow]{', '.join(b['connected_targets'])}[/yellow]" for b in net_res["shared_bridges"]),
+            title="[bold yellow]🔗 Detected Shared Affiliations & Bridges[/bold yellow]",
+            border_style="yellow"
+        ))
+
+    html_path = analyzer.output_dir / f"social_network_{'_'.join(''.join(c if c.isalnum() else '' for c in t) for t in t_list[:3])}.html"
+    console.print(f"\n[bold green]✔ Interactive D3.js Social Graph rendered:[/bold green] [cyan]{html_path}[/cyan]\n")
 
 
 def main() -> None:

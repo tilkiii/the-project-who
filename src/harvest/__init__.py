@@ -12,6 +12,8 @@ from src.harvest.diarized_transcriber import DiarizedTranscriber
 from src.harvest.visual_harvester import VisualHarvester
 from src.harvest.dialogue_harvester import DialogueHarvester
 from src.harvest.live_monitor import LiveMonitor
+from src.harvest.social_osint import SocialOSINTHunter
+from src.harvest.cyber_footprint import CyberFootprintAuditor
 
 __all__ = [
     "WebHarvester",
@@ -23,4 +25,6 @@ __all__ = [
     "VisualHarvester",
     "DialogueHarvester",
     "LiveMonitor",
+    "SocialOSINTHunter",
+    "CyberFootprintAuditor",
 ]
