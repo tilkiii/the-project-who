@@ -74,6 +74,12 @@ class VectorEmbedder:
                 },
             )
 
+            # Cap / evenly sample chunks for large corpora (e.g. multi-thousand line chats)
+            if len(chunks) > 150:
+                step = len(chunks) / 150
+                sampled_indices = [int(i * step) for i in range(150)]
+                chunks = [chunks[i] for i in sampled_indices]
+
             for c_idx, c in enumerate(chunks):
                 chunk_id = f"{source_id}_chunk_{c_idx}"
                 embedding = get_embedding(c["text"])

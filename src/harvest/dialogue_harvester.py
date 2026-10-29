@@ -183,7 +183,8 @@ class DialogueHarvester:
             text = redact_pii(curr["text"]) if self.auto_redact_pii else curr["text"]
             is_target = self.is_target_speaker(curr["speaker"])
             speaker_tag = "[TARGET_PRIMARY]" if is_target else "[INTERLOCUTOR_CONTEXT]"
-            diarized_markdown_lines.append(f"{speaker_tag}: {text}\n")
+            ts_prefix = f"[{curr['timestamp']}] " if curr.get("timestamp") else ""
+            diarized_markdown_lines.append(f"{ts_prefix}{speaker_tag}: {text}\n")
 
             if is_target and i > 0:
                 prev = turns[i - 1]
