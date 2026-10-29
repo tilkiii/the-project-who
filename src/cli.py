@@ -209,7 +209,7 @@ def learn(
             f"Night epistemic filter shift: {chron.get('epistemic_filter_decay_pct', 0)}%, TTR shift: {chron.get('lexical_diversity_decay_pct', 0)}%"
         )
     table.add_row("Characteristic Terms", top_terms or "empirical analysis")
-    table.add_row("Retrieved Papers", f"{len(lit)} peer-reviewed references stored")
+    table.add_row("Academic Research Agent", f"{len(lit)} papers parsed • dynamic scientific_weights.json calibrated")
 
     console.print(table)
     console.print(f"[bold green]Learning phase completed.[/bold green] Next step: [cyan]who build-vault --target \"{target}\"[/cyan]\n")
@@ -585,6 +585,29 @@ def psych_insights(
 
     console.print(table)
     console.print()
+
+    # Render Autonomous Academic Research Agent Table (Calibrated Scientific Weights & Reasoning Notes)
+    weights = report.get("scientific_weights", [])
+    if weights:
+        w_table = Table(title=f"📚 Autonomous Academic Research Agent: Calibrated Scientific Weights ({target})", header_style="bold green")
+        w_table.add_column("Davranışsal Belirti (Marker)", style="bold white", width=25)
+        w_table.add_column("Korele Psikometrik Boyut", style="cyan", width=24)
+        w_table.add_column("Korelasyon (r)", style="green", width=14)
+        w_table.add_column("Güven Skoru", style="yellow", width=12)
+        w_table.add_column("Kanıt Kaynağı (DOI)", style="magenta", width=28)
+        w_table.add_column("Ajanın Bilimsel Muhakeme Notu", style="dim")
+
+        for w in weights[:6]:
+            w_table.add_row(
+                w.get("behavioral_marker", ""),
+                w.get("correlated_psychometric", ""),
+                f"r={w.get('correlation_coefficient_r', 0.0)}",
+                f"%{int(w.get('confidence_score', 0.8) * 100)}",
+                w.get("evidence_source", ""),
+                w.get("agent_reasoning_note", ""),
+            )
+        console.print(w_table)
+        console.print()
 
 
 @app.command()

@@ -27,7 +27,7 @@ class PsychInsights:
         """Generate behavioral insight report pairing observed target quotes with academic DOIs and psychoinformatic indicators."""
         logger.info(f"Generating behavioral insight report for {self.target_name}")
 
-        # 1. Load academic literature
+        # 1. Load academic literature & calibrated scientific weights
         lit_file = self.dirs.learned_skills_dir / "retrieved_academic_literature.json"
         literature = []
         if lit_file.exists():
@@ -36,6 +36,51 @@ class PsychInsights:
                     literature = json.load(f)
             except Exception:
                 pass
+
+        # Load scientific weights (dynamically calibrated by Autonomous Academic Research Agent)
+        weights_file = self.dirs.learned_skills_dir / "scientific_weights.json"
+        global_weights_file = (
+            self.dirs.base_dir.parent / "scientific_weights.json"
+            if hasattr(self.dirs, "base_dir")
+            else Path("profiles/scientific_weights.json")
+        )
+
+        scientific_weights_catalog: Dict[str, Any] = {}
+        if weights_file.exists():
+            try:
+                with open(weights_file, "r", encoding="utf-8") as f:
+                    scientific_weights_catalog = json.load(f)
+            except Exception:
+                pass
+        elif global_weights_file.exists():
+            try:
+                with open(global_weights_file, "r", encoding="utf-8") as f:
+                    scientific_weights_catalog = json.load(f)
+            except Exception:
+                pass
+
+        calibrated_weights = scientific_weights_catalog.get("calibrated_weights", {})
+        agent_reasoning_items = []
+        for key, w in list(calibrated_weights.items())[:5]:
+            marker = w.get("behavioral_marker", "")
+            trait = w.get("correlated_psychometric", "")
+            r_val = w.get("correlation_coefficient_r", 0.35)
+            conf = int(w.get("confidence_score", 0.85) * 100)
+            doi = w.get("evidence_source", "")
+            doi_url = w.get("doi_url", f"https://doi.org/{doi.replace('DOI:', '')}")
+            note = w.get("agent_reasoning_note", "")
+            sample_n = w.get("sample_size_total", 1000)
+
+            agent_reasoning_items.append({
+                "marker": marker,
+                "trait": trait,
+                "r": r_val,
+                "confidence_pct": conf,
+                "doi": doi,
+                "doi_url": doi_url,
+                "sample_size": sample_n,
+                "note": note,
+            })
 
         # 2. Load learned features (includes chronomics and epistemic manipulation index)
         features_file = self.dirs.learned_skills_dir / "features.json"
@@ -138,10 +183,12 @@ class PsychInsights:
             f"- {chronomics_stmt}\n"
             f"- {dissonance_stmt}\n"
             f"- {manipulation_stmt}\n\n"
+            f"AUTONOMOUS ACADEMIC RESEARCH AGENT CALIBRATED WEIGHTS & EMPIRICAL CORRELATIONS:\n"
+            f"{json.dumps(agent_reasoning_items, indent=2)}\n\n"
             f"RETRIEVED SCIENTIFIC LITERATURE:\n{json.dumps(literature[:4])}\n\n"
             "Generate a structured Behavioral Science Report containing:\n"
             "1. Cognitive Architecture & Reasoning Stance (with primary quote citations)\n"
-            "2. Academic Literature Mapping (cite explicit DOIs/URLs)\n"
+            "2. Academic Literature Mapping & Autonomous Agent Calibration (cite explicit DOIs/URLs, correlation coefficients r, and include 'Ajanın Bilimsel Muhakeme Notu' verbatim)\n"
             "3. Cognitive Chronomics & Circadian Epistemic Drift Analysis\n"
             "4. Graph-Driven Cognitive Dissonance Tensions\n"
             "5. Epistemic Manipulation & Rhetorical Dogmatism Assessment\n"
@@ -152,7 +199,23 @@ class PsychInsights:
 
         report_content = call_llm(user_prompt, system_prompt=system_prompt, temperature=0.2)
 
-        # Guarantee inclusion of canonical statements in the final markdown if omitted
+        # Guarantee inclusion of canonical statements and academic agent notes in final markdown
+        academic_segment = ""
+        if agent_reasoning_items:
+            notes_block = "\n".join(
+                f"- **{it['marker']}** ➔ **{it['trait']}** (Korelasyon: `r={it['r']}`, Güven Skoru: `%{it['confidence_pct']}`, N={it['sample_size']})\n"
+                f"  * **Kanıt Kaynağı (DOI):** [{it['doi']}]({it['doi_url']})\n"
+                f"  * **{it['note']}**"
+                for it in agent_reasoning_items
+            )
+            academic_segment = (
+                f"\n\n---\n\n### 📚 Akademik Ajanın Bilimsel Muhakeme ve Literatür Kalibrasyonu\n"
+                f"{notes_block}\n"
+            )
+
+        if "Akademik Ajanın Bilimsel Muhakeme" not in report_content and academic_segment:
+            report_content += academic_segment
+
         if chronomics_stmt not in report_content and "Sirkadyen Sapma" not in report_content:
             report_content += (
                 f"\n\n---\n\n### 🔬 Bilişsel Kronomik ve Epistemik Gerilim Göstergeleri\n"
@@ -169,6 +232,8 @@ class PsychInsights:
             "chronomics_statement": chronomics_stmt,
             "dissonance_statement": dissonance_stmt,
             "manipulation_statement": manipulation_stmt,
+            "scientific_weights": list(calibrated_weights.values()),
+            "agent_reasoning_items": agent_reasoning_items,
             "innovative_metrics": {
                 "chronomics": chronomics,
                 "cognitive_dissonance": dissonance,
