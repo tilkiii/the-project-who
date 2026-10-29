@@ -28,6 +28,16 @@ htmlcov/
 profiles/*
 !profiles/.gitkeep
 
+# Confidential Chat Exports, Transcripts & Personal Logs
+*whatsapp*
+*telegram*
+*_chat.txt
+*chat_export*
+*dialogue_*.md
+*dialogue_pairs_*.json
+*.vtt
+*.srt
+
 # Media, video and audio downloads
 *.mp3
 *.webm

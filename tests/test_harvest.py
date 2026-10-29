@@ -113,3 +113,24 @@ def test_ocr_processor_fallback(tmp_path: Path):
     assert res["image_name"] == "scan.png"
     assert res["mean_confidence"] > 0.0
     assert "OCR Transcription" in res["content"]
+
+
+def test_redact_pii():
+    from src.utils.text_cleaner import redact_pii
+
+    raw_text = (
+        "Beni 0532 123 45 67 veya +90 544 987 65 43 numarasından ara. "
+        "E-posta adresim gizli.kullanici@example.com, IBAN numaram ise TR33 0006 1005 1234 5678 9012 34. "
+        "Grup linkimiz https://chat.whatsapp.com/AbCdEf123456."
+    )
+    scrubbed = redact_pii(raw_text)
+
+    assert "0532" not in scrubbed
+    assert "987 65 43" not in scrubbed
+    assert "[REDACTED_PHONE]" in scrubbed
+    assert "gizli.kullanici@example.com" not in scrubbed
+    assert "[REDACTED_EMAIL]" in scrubbed
+    assert "TR33" not in scrubbed
+    assert "[REDACTED_IBAN]" in scrubbed
+    assert "chat.whatsapp.com" not in scrubbed
+    assert "[REDACTED_CHAT_LINK]" in scrubbed

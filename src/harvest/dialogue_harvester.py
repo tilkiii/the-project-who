@@ -12,17 +12,23 @@ import re
 from typing import Any, Dict, List, Optional
 
 from src.utils.logger import get_logger
-from src.utils.text_cleaner import clean_text
+from src.utils.text_cleaner import clean_text, redact_pii
 
 logger = get_logger("who.harvest.dialogue")
 
 
 class DialogueHarvester:
-    """Parses multi-platform direct dialogue logs into structured context-response pairs."""
+    """Parses multi-platform direct dialogue logs into structured context-response pairs with automatic PII redaction."""
 
-    def __init__(self, output_dir: Optional[Path] = None, target_alias: str = "Target"):
+    def __init__(
+        self,
+        output_dir: Optional[Path] = None,
+        target_alias: str = "Target",
+        auto_redact_pii: bool = True,
+    ):
         self.output_dir = output_dir
         self.target_alias = target_alias.lower()
+        self.auto_redact_pii = auto_redact_pii
 
     def is_target_speaker(self, speaker_name: str) -> bool:
         """Heuristically verify if speaker name corresponds to the target."""
@@ -174,17 +180,19 @@ class DialogueHarvester:
 
         for i in range(len(turns)):
             curr = turns[i]
+            text = redact_pii(curr["text"]) if self.auto_redact_pii else curr["text"]
             is_target = self.is_target_speaker(curr["speaker"])
             speaker_tag = "[TARGET_PRIMARY]" if is_target else "[INTERLOCUTOR_CONTEXT]"
-            diarized_markdown_lines.append(f"{speaker_tag}: {curr['text']}\n")
+            diarized_markdown_lines.append(f"{speaker_tag}: {text}\n")
 
             if is_target and i > 0:
                 prev = turns[i - 1]
                 if not self.is_target_speaker(prev["speaker"]):
+                    prev_text = redact_pii(prev["text"]) if self.auto_redact_pii else prev["text"]
                     pairs.append({
                         "context_speaker": prev["speaker"],
-                        "context_text": prev["text"],
-                        "target_response": curr["text"],
+                        "context_text": prev_text,
+                        "target_response": text,
                         "source_type": source_type,
                     })
 

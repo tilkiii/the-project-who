@@ -120,6 +120,71 @@ def chunk_text(
     return chunks
 
 
+def redact_pii(text: str) -> str:
+    """
+    Scrub personally identifiable information (PII) from private chat logs:
+    - Phone numbers (Turkish & International)
+    - Email addresses
+    - IBANs and 16-digit credit card numbers
+    - National ID numbers (TCKN 11-digit)
+    - Private WhatsApp/Telegram invite links
+    """
+    if not text:
+        return ""
+
+    sanitized = text
+
+    # 1. Email Addresses
+    sanitized = re.sub(
+        r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b",
+        "[REDACTED_EMAIL]",
+        sanitized,
+    )
+
+    # 2. IBAN & Credit Cards
+    sanitized = re.sub(
+        r"\bTR\d{2}(?:\s*\d{4}){5}\s*\d{2}\b",
+        "[REDACTED_IBAN]",
+        sanitized,
+        flags=re.IGNORECASE,
+    )
+    sanitized = re.sub(
+        r"\b(?:\d{4}[-\s]?){3}\d{4}\b",
+        "[REDACTED_CARD]",
+        sanitized,
+    )
+
+    # 3. WhatsApp & Telegram Invite Links
+    sanitized = re.sub(
+        r"https?://chat\.whatsapp\.com/[A-Za-z0-9]+",
+        "[REDACTED_CHAT_LINK]",
+        sanitized,
+    )
+    sanitized = re.sub(
+        r"https?://t\.me/[A-Za-z0-9_+]+",
+        "[REDACTED_TELEGRAM_LINK]",
+        sanitized,
+    )
+
+    # 4. Phone Numbers (International and Turkish formats)
+    # +90 5xx xxx xx xx, 05xx xxx xx xx, 5xx xxx xx xx
+    sanitized = re.sub(
+        r"(?:\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{2}[-.\s]?\d{2}\b",
+        "[REDACTED_PHONE]",
+        sanitized,
+    )
+
+    # 5. National ID numbers (11 digits preceded by keyword or standalone)
+    sanitized = re.sub(
+        r"\b(?:tc|tckn|kimlik)?\s*([1-9]\d{10})\b",
+        "[REDACTED_ID]",
+        sanitized,
+        flags=re.IGNORECASE,
+    )
+
+    return sanitized
+
+
 def extract_quotes(text: str, query: str, max_quotes: int = 3) -> List[str]:
     """Find exact or highly relevant sentences in text matching query keywords."""
     if not text or not query:
