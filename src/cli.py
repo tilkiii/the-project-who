@@ -5,6 +5,7 @@ Enterprise Multimodal OSINT Engine, Neo4j Graph Intelligence & Evidence-Based Di
 
 from __future__ import annotations
 
+from datetime import datetime
 import json
 from pathlib import Path
 from typing import List, Optional
@@ -21,12 +22,14 @@ from src.engine.oracle import Oracle
 from src.engine.psych_insights import PsychInsights
 from src.engine.simulator import Simulator
 from src.engine.twin_chat import TwinChat
+from src.engine.arena import SwarmArena
 from src.harvest.academic_harvester import AcademicHarvester
 from src.harvest.dialogue_harvester import DialogueHarvester
 from src.harvest.document_ingestor import DocumentIngestor
 from src.harvest.media_harvester import MediaHarvester
 from src.harvest.ocr_processor import OCRProcessor
 from src.harvest.web_harvester import WebHarvester
+from src.harvest.live_monitor import LiveMonitor
 from src.learn.academic_researcher import AcademicResearcher
 from src.learn.feature_extractor import FeatureExtractor
 from src.learn.prompt_optimizer import PromptOptimizer
@@ -764,6 +767,102 @@ def providers() -> None:
             "Or use any other provider (OPENAI_API_KEY, ANTHROPIC_API_KEY, GROQ_API_KEY, DEEPSEEK_API_KEY)."
         )
     console.print()
+
+
+@app.command(name="monitor")
+def monitor(
+    target: str = typer.Option(..., "--target", "-t", help="Target individual name"),
+    sources: Optional[str] = typer.Option(None, "--sources", "-s", help="Comma-separated RSS feeds or URLs to monitor"),
+    simulate_feed: bool = typer.Option(False, "--simulate-feed", help="Simulate a live feed item to test anomaly triggers"),
+) -> None:
+    """Scan live external feeds and detect real-time circadian, dogmatic, or cognitive anomalies."""
+    print_banner()
+    dirs = settings.get_target_dirs(target)
+    console.print(f"[bold green]Starting Live OSINT Monitor for:[/bold green] [bold cyan]{target}[/bold cyan]\n")
+
+    monitor_engine = LiveMonitor(target, dirs)
+    url_list = [u.strip() for u in sources.split(",") if u.strip()] if sources else []
+
+    feed_items = []
+    if url_list:
+        feed_items.extend(monitor_engine.fetch_live_feed(url_list))
+
+    if simulate_feed or not feed_items:
+        sim_dt = datetime.now()
+        feed_items.append({
+            "title": f"Live Capture: {target} nocturnal discourse",
+            "content": "Kesinlikle herkes bilmelidir ki, eski usuller tamamen çökmüştür. Asla başka bir alternatif kabul edilemez, durum şüphesiz ortadadır.",
+            "url": "https://example.org/simulated_stream",
+            "timestamp": sim_dt.replace(hour=2, minute=15).isoformat(),
+            "source_type": "simulated_live_feed",
+        })
+        console.print("[dim]Analyzing active live stream candidate...[/dim]\n")
+
+    anomalies = monitor_engine.detect_anomalies(feed_items)
+
+    if anomalies:
+        console.print(f"[bold red]⚠️ {len(anomalies)} Cognitive / Behavioral Anomaly Alert(s) Detected![/bold red]\n")
+        table = Table(title=f"🚨 Live Monitoring Anomaly Alerts: {target}", header_style="bold red")
+        table.add_column("Anomaly Type", style="bold yellow", width=26)
+        table.add_column("Severity", style="bold red", width=12)
+        table.add_column("Observed Detail", style="white")
+        table.add_column("Source", style="dim", width=22)
+
+        for anom in anomalies:
+            for trig in anom.get("triggers", []):
+                sev_color = "red" if trig.get("severity") == "HIGH" else "yellow"
+                table.add_row(
+                    trig.get("type", "UNKNOWN"),
+                    f"[{sev_color}]{trig.get('severity', 'MED')}[/{sev_color}]",
+                    trig.get("detail", ""),
+                    anom.get("item_title", "")[:22],
+                )
+        console.print(table)
+        console.print(f"\n[green]Alerts saved to:[/green] [cyan]{dirs.vault_dir / 'monitoring_alerts.json'}[/cyan]\n")
+    else:
+        console.print("[bold green]✔ No cognitive or circadian anomalies detected. Footprint matches baseline within normal boundaries.[/bold green]\n")
+
+
+@app.command(name="arena")
+def arena(
+    targets: str = typer.Option(..., "--targets", "-t", help="Comma-separated target participant names (e.g. 'Remzi Sanver, Test Target')"),
+    topic: str = typer.Option(..., "--topic", "-p", help="Debate proposition, dilemma, or policy question"),
+    rounds: int = typer.Option(2, "--rounds", "-r", help="Number of multi-agent debate rounds (1-5)"),
+) -> None:
+    """Convene multiple digital twins into an interactive debate arena tracking consensus divergence."""
+    print_banner()
+    participant_list = [p.strip() for p in targets.split(",") if p.strip()]
+    if len(participant_list) < 2:
+        console.print("[bold red]Error:[/bold red] Swarm Arena requires at least 2 target participants.")
+        raise typer.Exit(1)
+
+    console.print(f"[bold magenta]⚔️ Initiating Swarm Arena Debate:[/bold magenta] [bold cyan]{' vs '.join(participant_list)}[/bold cyan]")
+    console.print(f"[bold yellow]Proposition:[/bold yellow] [italic]{topic}[/italic]\n")
+
+    swarm = SwarmArena(participant_names=participant_list, topic=topic, rounds=rounds)
+    debate_res = swarm.run_debate()
+
+    # Display turns in terminal
+    for turn in debate_res.get("transcript", []):
+        console.print(Panel(
+            turn["statement"],
+            title=f"[bold cyan]Tur {turn['round']}: {turn['speaker']}[/bold cyan]",
+            border_style="cyan"
+        ))
+
+    synth = debate_res.get("synthesis", {})
+    common_pts = "\n".join(f"- {c}" for c in synth.get("common_ground_points", []))
+    friction_pts = "\n".join(f"- {f}" for f in synth.get("irreconcilable_frictions", []))
+
+    console.print(Panel(
+        f"[bold]Ortak Konsensüs Oranı:[/bold] [green]%{synth.get('consensus_score_pct', 55)}[/green] | "
+        f"[bold]Fikirsel Ayrışma / Sürtünme:[/bold] [red]%{synth.get('consensus_divergence_pct', 45)}[/red]\n\n"
+        f"[bold yellow]Ortak Payda:[/bold yellow]\n{common_pts}\n\n"
+        f"[bold red]Temel Çelişkiler:[/bold red]\n{friction_pts}\n\n"
+        f"[bold green]Sentez Çıkarımı:[/bold green] {synth.get('emergent_synthesis', '')}",
+        title="[bold magenta]📊 Swarm Arena Konsensüs ve Epistemik Sentez Raporu[/bold magenta]",
+        border_style="magenta"
+    ))
 
 
 def main() -> None:

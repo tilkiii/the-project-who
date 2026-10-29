@@ -11,6 +11,7 @@ from src.harvest.media_harvester import MediaHarvester
 from src.harvest.diarized_transcriber import DiarizedTranscriber
 from src.harvest.visual_harvester import VisualHarvester
 from src.harvest.dialogue_harvester import DialogueHarvester
+from src.harvest.live_monitor import LiveMonitor
 
 __all__ = [
     "WebHarvester",
@@ -21,4 +22,5 @@ __all__ = [
     "DiarizedTranscriber",
     "VisualHarvester",
     "DialogueHarvester",
+    "LiveMonitor",
 ]
