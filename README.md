@@ -3,11 +3,12 @@
 <img src="assets/who_banner.svg" alt="Evidence-grounded digital twin banner for who??" width="100%"/>
 
 <p align="center">
-  <strong>Evidence-Grounded Digital Twin Framework | Multimodal Data, Knowledge Graphs &amp; Probabilistic Simulation</strong>
+  <strong>Evidence-Based Cognitive Digital Twin &amp; Behavioral Modeling Framework<br/>Powered by Multimodal Evidence Grounding, Neo4j Graph Intelligence &amp; ElizaOS Synthesis</strong>
 </p>
 
 <p align="center">
-  <a href="pyproject.toml"><img src="https://img.shields.io/badge/version-4.5.0-blue.svg?style=for-the-badge" alt="Version 4.0.0"/></a>
+  <a href="https://pypi.org/project/the-project-who/"><img src="https://img.shields.io/pypi/v/the-project-who.svg?style=for-the-badge&logo=pypi&logoColor=white" alt="PyPI Version"/></a>
+  <a href="https://pypi.org/project/the-project-who/"><img src="https://img.shields.io/pypi/dm/the-project-who.svg?style=for-the-badge&logo=pypi&logoColor=white" alt="PyPI Downloads"/></a>
   <a href="https://python.org"><img src="https://img.shields.io/badge/python-3.10+-3776AB.svg?style=for-the-badge&logo=python&logoColor=white" alt="Python 3.10+"/></a>
   <a href="tests/"><img src="https://img.shields.io/badge/tests-39%20passed-22c55e.svg?style=for-the-badge&logo=pytest&logoColor=white" alt="Tests"/></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-eab308.svg?style=for-the-badge" alt="License MIT"/></a>
@@ -34,22 +35,34 @@
 
 ## Overview
 
-**`who??`** is an open-source digital twin framework that builds evidence-grounded, probabilistic models from multimodal sources. It combines topic analysis, knowledge graphs, and source-linked answers to explore patterns and simulate plausible scenarios.
+**`who??`** is an open-source research framework designed to construct **high-fidelity cognitive digital twins and evidence-based behavioral models** of **ANY** individual from multimodal sources.
 
-It is designed for research and analysis—not as an exact replica or a reliable predictor of a person's thoughts or future actions. Its outputs should remain probabilistic, traceable to evidence, and interpreted with uncertainty.
+Instead of generic chatbot personas or hallucinated roleplay, `who??` builds an empirical replica grounded in a person's real-world footprint—their speech cadence, cognitive patterns, core philosophies, decision habits, and published discourse.
 
-### Key Capabilities
-- **Multimodal Footprint Ingestion:** Deep parsing across web articles, RSS feeds, office documents (PDF, DOCX, PPTX via Docling), visual scans/infographics (PaddleOCR), audio streams (yt-dlp), and speaker-diarized transcripts (WhisperX tagging `[TARGET_PRIMARY]` vs `[INTERLOCUTOR_CONTEXT]`).
-- **Knowledge Graph Intelligence:** Persistent Neo4j graph store with Graph Data Science (GDS) algorithms computing PageRank, degree/betweenness centrality, and Louvain community detection.
-- **BERTopic Temporal Evolution:** Tracks target topic emergence, persistence, and abandonment trajectories over time.
-- **Autonomous Literature Discovery:** Queries open scientific archives (arXiv, PubMed, Semantic Scholar) for peer-reviewed correlation models matching target linguistic features.
-- **7-Layer Multilayer Memory:** Seamless memory spanning raw corpus text, ChromaDB vectors, Neo4j graphs, behavioral signals, topic trajectories, ElizaOS-compliant `character.json`, and stateful chat memory.
-- **Adversarial Outreach & Simulation:** Scenario reaction simulation under explicit assumptions and hyper-tailored communication drafting with simulated adversarial rejection stress-testing.
-- **Social Media & Digital Footprint OSINT (Sherlock/Maigret Architecture):** Multi-platform username hunting across 18+ services (Instagram, YouTube, Telegram, GitHub, GitLab, Reddit, HackerNews, Medium, Steam, Pinterest, Substack, etc.) with automated markdown dossier ingestion.
-- **Cyber Footprint & Passive Breach Auditing (Holehe Architecture):** DNS/MX IP resolution, disposable burner mail detection, passive Gravatar/GitHub enumeration without triggering alerts, and breach risk quantification.
-- **Entity Resolution & Multi-Target Social Network Graphs:** Multi-target knowledge graph consolidation, betweenness broker ranking, and standalone interactive D3.js force-directed HTML graph generation.
-- **Strict Zero-Substitution Protocol:** Zero-hallucination entity verification ensuring strict name token matching without unauthorized identity conflation.
-- **Live Anomaly Monitoring & Swarm Debate Arena:** Continuous RSS/web stream anomaly surveillance and multi-turn dialectical debates synthesizing emergent consensus between digital twins.
+It adheres strictly to **epistemic honesty, probabilistic reasoning, and explicit uncertainty quantification**. Deterministic claims regarding hidden psychology are scientifically unfounded; instead, `who??` delivers calibrated behavioral forecasts with citation traces back to primary quotes and knowledge graph paths.
+
+### 🧠 Core Digital Twin Capabilities
+
+1. **High-Fidelity Cognitive Digital Twins (`who chat`):**
+   Synthesizes ElizaOS-standard `character.json` and deep mindset summaries. Supports dynamic tone toggling between formal keynote speeches and informal 1-on-1 dialogic registers.
+
+2. **Plausible Reaction & Scenario Simulation (`who simulate`, `who compose`):**
+   Simulates how the target would react to complex hypothetical dilemmas, counter-proposals, and invitations under explicit scenario assumptions, stress-tested with adversarial rejection models.
+
+3. **Multi-Agent Dialectical Swarm Arena (`who arena`):**
+   Pits two distinct cognitive digital twins against each other in structured, multi-turn debates on controversial topics—quantifying consensus convergence and irreconcilable ideological friction.
+
+4. **7-Layer Cognitive Memory Architecture:**
+   Integrates raw corpus evidence, ChromaDB semantic embeddings, Neo4j knowledge graphs with Graph Data Science (GDS PageRank & Louvain clusters), psycholinguistic markers (pronoun density, epistemic calibration), and BERTopic trajectory tracking.
+
+5. **Multi-Target Social Network Intelligence & D3.js Force Graphs (`who network`):**
+   Consolidates knowledge graphs across multiple individuals to identify shared bridge concepts, betweenness broker nodes, and mutual affiliations in an interactive D3.js force-directed visualizer.
+
+6. **Autonomous Academic Research & DSPy Skill Synthesis (`who learn`, `who psych-insights`):**
+   Autonomously searches global scientific archives (arXiv, PubMed, Semantic Scholar, Crossref) for peer-reviewed empirical studies matching the target's observed linguistic and cognitive traits. Leverages DSPy prompt optimization to extract statistical correlation coefficients ($r$), sample sizes ($N$), and $p$-values, Bayesian-calibrates `scientific_weights.json`, and synthesizes grounded behavioral skill profiles (`generated_mapping_skill.json`) to scientifically educate the digital twin.
+
+7. **Zero-Hallucination Evidence Grounding (Multimodal Harvester & OSINT):**
+   Feeds the digital twin using word-level speaker diarization (`WhisperX`), document hierarchy parsing (`Docling`), OCR (`PaddleOCR`), continuous RSS monitoring (`who monitor`), and multi-platform digital footprint reconnaissance (`who hunt`, `who cyber`) enforced by the **Strict Zero-Substitution Protocol**.
 
 ---
 
@@ -132,6 +145,13 @@ All conclusions generated by `who??` embed:
 ## Quickstart
 
 ### 1. Installation
+
+#### Via PyPI (Recommended):
+```bash
+pip install the-project-who
+```
+
+#### From Source (Development):
 ```bash
 git clone https://github.com/tilkiii/the-project-who.git
 cd the-project-who

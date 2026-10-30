@@ -3,9 +3,9 @@ requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "who"
+name = "the-project-who"
 version = "4.5.0"
-description = "Enterprise-Grade Multimodal OSINT Engine, Neo4j Graph Intelligence, BERTopic Evolution & Evidence-Based Digital Twin Framework"
+description = "Evidence-Based Cognitive Digital Twin & Behavioral Modeling Framework with Multimodal OSINT, Neo4j Graph Intelligence & ElizaOS Character Synthesis"
 readme = "README.md"
 requires-python = ">=3.10"
 license = {text = "MIT"}
