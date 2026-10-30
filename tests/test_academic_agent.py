@@ -157,16 +157,16 @@ def test_bayesian_weight_updating_and_persistence(tmp_path: Path):
     assert "meta" in data
 
 
-def test_who_learn_module_import_and_forwarding():
-    """Verify that imports from src.who_learn and src.learn are completely identical and functional."""
-    from src.who_learn.autonomous_researcher import (
-        AutonomousAcademicResearcher as WhoResearcher,
-        AcademicResearcher as WhoLegacy,
-    )
+def test_academic_researcher_canonical_exports():
+    """Verify that canonical imports from src.learn are completely functional."""
     from src.learn.autonomous_researcher import (
-        AutonomousAcademicResearcher as LearnResearcher,
-        AcademicResearcher as LearnLegacy,
+        AutonomousAcademicResearcher,
+        AcademicResearcher,
+        fisher_z,
+        inv_fisher_z,
     )
 
-    assert WhoResearcher is LearnResearcher
-    assert WhoLegacy is LearnLegacy
+    assert AutonomousAcademicResearcher is not None
+    assert AcademicResearcher is not None
+    assert callable(fisher_z)
+    assert callable(inv_fisher_z)
