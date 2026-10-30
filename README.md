@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="assets/who_banner.gif" alt="Animated digital twin banner for who??" width="100%"/>
+<img src="assets/who_banner.svg" alt="Evidence-grounded digital twin banner for who??" width="100%"/>
 
 <p align="center">
   <strong>Evidence-Grounded Digital Twin Framework | Multimodal Data, Knowledge Graphs &amp; Probabilistic Simulation</strong>
