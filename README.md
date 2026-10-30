@@ -3,7 +3,7 @@
 <img src="assets/who_banner.svg" alt="who?? Banner" width="100%"/>
 
 <p align="center">
-  <strong>Enterprise-Grade Multimodal OSINT Engine, Neo4j Graph Intelligence, BERTopic Evolution &amp; Evidence-Based Digital Twin Framework</strong>
+  <strong>Evidence-Grounded Digital Twin Framework | Multimodal Data, Knowledge Graphs &amp; Probabilistic Simulation</strong>
 </p>
 
 <p align="center">
@@ -34,9 +34,9 @@
 
 ## Overview
 
-**`who??`** is a research-grade, target-agnostic open-source framework designed to construct evidence-backed cognitive digital twins and behavioral models of **ANY** target individual.
+**`who??`** is an open-source digital twin framework that builds evidence-grounded, probabilistic models from multimodal sources. It combines topic analysis, knowledge graphs, and source-linked answers to explore patterns and simulate plausible scenarios.
 
-It adheres strictly to **scientific rigor, probabilistic reasoning, and explicit uncertainty quantification**. Deterministic claims regarding human motives, hidden psychology, or future actions are scientifically unfounded and strictly forbidden across all engine outputs.
+It is designed for research and analysis—not as an exact replica or a reliable predictor of a person's thoughts or future actions. Its outputs should remain probabilistic, traceable to evidence, and interpreted with uncertainty.
 
 ### Key Capabilities
 - **Multimodal Footprint Ingestion:** Deep parsing across web articles, RSS feeds, office documents (PDF, DOCX, PPTX via Docling), visual scans/infographics (PaddleOCR), audio streams (yt-dlp), and speaker-diarized transcripts (WhisperX tagging `[TARGET_PRIMARY]` vs `[INTERLOCUTOR_CONTEXT]`).
