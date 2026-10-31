@@ -9,7 +9,7 @@ import typer
 from src.utils.logger import console, print_banner
 
 # Subcommand implementations
-from src.cli.commands.harvest import cyber, harvest, hunt, monitor
+from src.cli.commands.harvest import cyber, harvest, hunt, monitor, vision
 from src.cli.commands.network import network
 from src.cli.commands.system import providers, purge, targets, ui
 from src.cli.commands.twin import (
@@ -53,6 +53,7 @@ app.command(name="harvest")(harvest)
 app.command(name="hunt")(hunt)
 app.command(name="cyber")(cyber)
 app.command(name="monitor")(monitor)
+app.command(name="vision")(vision)
 
 # Register Vault & Autonomous Learning Commands
 app.command(name="learn")(learn)

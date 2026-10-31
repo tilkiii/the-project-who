@@ -259,6 +259,16 @@ who purge --target "Target Name"
 
 # 22. Launch the interactive Web Dashboard & Digital Twin Studio
 who ui --port 8765
+
+# 23. Multimodal Visual OSINT: Vision-LLM slide/scene analysis, EXIF/GPS/ELA forensics & Avatar dHash matching
+who vision --target "Target Name" --images "/path/to/slides" --compare-avatars "avatar_github.png,avatar_x.jpg"
+
+# 24. Export standalone interactive HTML intelligence dossier (D3 graph, Chronomics, Visual Forensics)
+who export-dossier --target "Target Name" --output "target_dossier.html"
+
+# 25. Capture temporal cognitive snapshots & measure epistemic drift across time
+who snapshot --target "Target Name" --label "q3_baseline"
+who diff --target "Target Name"
 ```
 
 ---

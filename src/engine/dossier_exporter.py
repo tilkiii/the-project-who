@@ -46,6 +46,7 @@ class DossierExporter:
         graph_net = self._read_json(vault / "concept_network.json", {})
         graph_metrics = self._read_json(vault / "graph_metrics.json", {})
         literature = self._read_json(skills / "retrieved_academic_literature.json", [])
+        visual_report = self._read_json(vault / "visual_forensics_report.json", {})
 
         chronomics = features.get("chronomics") or self._read_json(skills / "chronomics.json", {})
 
@@ -120,6 +121,7 @@ class DossierExporter:
             "cognitive_dissonance": graph_metrics.get("cognitive_dissonance", {}),
             "literature": literature if isinstance(literature, list) else [],
             "cyber_reports": cyber_reports,
+            "visual_assets": visual_report.get("assets", []) if isinstance(visual_report, dict) else [],
         }
 
     def render_html(self, payload: Optional[Dict[str, Any]] = None) -> str:
@@ -193,6 +195,15 @@ class DossierExporter:
         ) or '<p class="muted">No autonomous academic literature linked yet.</p>'
 
         graph_json = json.dumps(data["graph"], ensure_ascii=False).replace("</", "<\\/")
+
+        visual_rows = "".join(
+            f"<tr><td><strong>{esc(str(v.get('file_name', '')))}</strong></td>"
+            f"<td>{v.get('width', 0)}x{v.get('height', 0)} ({esc(str(v.get('layout_class', '')))})</td>"
+            f"<td><code>{esc(str(v.get('dhash', '')))}</code></td>"
+            f"<td>{esc(str(v.get('capture_timestamp_iso') or 'No EXIF'))} {esc(str(v.get('camera_device') or ''))}</td>"
+            f"<td>{esc(str(v.get('authenticity_confidence_pct', 0)))}%</td></tr>"
+            for v in (data.get("visual_assets", []) or [])[:12]
+        ) or '<tr><td colspan="5" class="muted">No verified visual OSINT assets ingested yet.</td></tr>'
 
         return f"""<!DOCTYPE html>
 <html lang="en">
@@ -281,6 +292,11 @@ class DossierExporter:
         {cyber_html}
         <h2 style="margin-top:18px;">Peer-Reviewed Literature</h2>
         {lit_html}
+        <h2 style="margin-top:18px;">Visual OSINT &amp; EXIF Forensic Ledger</h2>
+        <table>
+          <thead><tr><th>Asset</th><th>Geometry</th><th>dHash</th><th>EXIF / Device</th><th>Auth</th></tr></thead>
+          <tbody>{visual_rows}</tbody>
+        </table>
       </div>
     </div>
   </div>

@@ -202,6 +202,18 @@ def _resolve_target_display_name(target_ref: str) -> str:
     return target_ref
 
 
+def _decode_base64_image_bytes(raw_b64: str) -> bytes:
+    """Decode a data URL or raw base64 string into binary image bytes."""
+    import base64
+
+    cleaned = (raw_b64 or "").strip()
+    if "," in cleaned and cleaned.lower().startswith("data:"):
+        cleaned = cleaned.split(",", 1)[1].strip()
+    if not cleaned:
+        raise ValueError("Empty base64 image payload.")
+    return base64.b64decode(cleaned, validate=False)
+
+
 DASHBOARD_HTML = """<!DOCTYPE html>
 <html lang="en" class="dark">
 <head>
@@ -295,6 +307,9 @@ DASHBOARD_HTML = """<!DOCTYPE html>
     </button>
     <button onclick="showTab('arena')" id="tab-arena" class="py-3 border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center space-x-2 whitespace-nowrap transition">
       <i class="fa-solid fa-people-arrows"></i> <span>Swarm Arena</span>
+    </button>
+    <button onclick="showTab('vision')" id="tab-vision" class="py-3 border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center space-x-2 whitespace-nowrap transition">
+      <i class="fa-solid fa-camera-retro"></i> <span>Visual OSINT Lab</span>
     </button>
     <button onclick="showTab('mindset')" id="tab-mindset" class="py-3 border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center space-x-2 whitespace-nowrap transition">
       <i class="fa-solid fa-brain"></i> <span>Mindset & Epistemics</span>
@@ -686,6 +701,113 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       </div>
     </div>
 
+    <!-- TAB 8: VISUAL OSINT & FORENSICS LAB -->
+    <div id="content-vision" class="hidden space-y-6">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Vision-LLM & EXIF/GPS/ELA Inspector -->
+        <div class="glass-card rounded-2xl p-6 shadow-xl space-y-4">
+          <div>
+            <h2 class="text-base font-bold text-slate-100 flex items-center space-x-2">
+              <i class="fa-solid fa-microscope text-brand-400"></i>
+              <span>Vision-LLM & Forensic Metadata Inspector</span>
+            </h2>
+            <p class="text-xs text-slate-400 mt-1">Inspect slides, photos, or screenshots for EXIF/GPS provenance, ELA recompression anomalies, dHash fingerprints, and Multimodal Vision-LLM synthesis (Zero-Substitution enforced).</p>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 items-center">
+            <div class="sm:col-span-2 space-y-2.5">
+              <input type="file" id="visionFileInput" accept="image/*" onchange="previewImageInput('visionFileInput', 'visionPreviewImg')"
+                     class="w-full text-xs text-slate-300 file:mr-3 file:py-2 file:px-3.5 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-brand-600/20 file:text-brand-300 hover:file:bg-brand-600/40 bg-darkbg border border-darkborder rounded-xl p-1.5 cursor-pointer">
+              <input type="text" id="visionContextInput" placeholder="Optional context hint (e.g. Keynote slide deck from symposium)..."
+                     class="w-full bg-darkbg border border-darkborder rounded-xl px-3.5 py-2 text-xs text-slate-100 focus:outline-none focus:border-brand-500 transition">
+              <label class="flex items-center space-x-2 text-xs text-slate-300 cursor-pointer">
+                <input type="checkbox" id="visionIngestCheckbox" checked class="accent-brand-500">
+                <span>Ingest verified findings into target's primary corpus & forensic vault</span>
+              </label>
+            </div>
+            <div class="h-28 rounded-xl bg-darkbg border border-darkborder flex items-center justify-center overflow-hidden">
+              <img id="visionPreviewImg" src="" alt="Preview" class="hidden max-h-full max-w-full object-contain">
+              <span id="visionPreviewPlaceholder" class="text-[11px] text-slate-500"><i class="fa-regular fa-image mr-1"></i> Preview</span>
+            </div>
+          </div>
+
+          <button onclick="runVisionAnalysis()" class="w-full bg-brand-600 hover:bg-brand-500 text-white font-semibold py-2.5 rounded-xl text-xs transition flex items-center justify-center space-x-2">
+            <i class="fa-solid fa-eye"></i> <span>Analyze Visual Asset & EXIF Forensics</span>
+          </button>
+
+          <div id="visionAnalysisOutput" class="bg-darkbg/70 border border-darkborder rounded-xl p-4 text-xs text-slate-300 space-y-3 max-h-96 overflow-y-auto">
+            <p class="text-slate-400">Upload a visual asset above to run cryptographic, EXIF/GPS, ELA, and Multimodal Vision-LLM analysis.</p>
+          </div>
+        </div>
+
+        <!-- Cross-Platform Avatar Perceptual Matcher -->
+        <div class="glass-card rounded-2xl p-6 shadow-xl space-y-4">
+          <div>
+            <h2 class="text-base font-bold text-slate-100 flex items-center space-x-2">
+              <i class="fa-solid fa-fingerprint text-emerald-400"></i>
+              <span>Cross-Platform Avatar Perceptual Matcher</span>
+            </h2>
+            <p class="text-xs text-slate-400 mt-1">Compare two profile avatars (e.g. GitHub vs X/LinkedIn) via 64-bit perceptual <code class="text-emerald-400">dHash</code> Hamming distance and 24-bin RGB cosine similarity.</p>
+          </div>
+
+          <div class="grid grid-cols-2 gap-4">
+            <div class="space-y-2">
+              <label class="block text-xs font-semibold text-slate-300">Avatar A (Anchor)</label>
+              <input type="file" id="avatarAInput" accept="image/*" onchange="previewImageInput('avatarAInput', 'avatarAPreview')"
+                     class="w-full text-[11px] text-slate-300 file:mr-2 file:py-1.5 file:px-2.5 file:rounded file:border-0 file:bg-emerald-600/20 file:text-emerald-300 bg-darkbg border border-darkborder rounded-xl p-1">
+              <div class="h-24 rounded-xl bg-darkbg border border-darkborder flex items-center justify-center overflow-hidden">
+                <img id="avatarAPreview" src="" alt="Avatar A" class="hidden max-h-full max-w-full object-contain">
+                <span id="avatarAPreviewPlaceholder" class="text-[11px] text-slate-500">Avatar A</span>
+              </div>
+            </div>
+            <div class="space-y-2">
+              <label class="block text-xs font-semibold text-slate-300">Avatar B (Candidate)</label>
+              <input type="file" id="avatarBInput" accept="image/*" onchange="previewImageInput('avatarBInput', 'avatarBPreview')"
+                     class="w-full text-[11px] text-slate-300 file:mr-2 file:py-1.5 file:px-2.5 file:rounded file:border-0 file:bg-emerald-600/20 file:text-emerald-300 bg-darkbg border border-darkborder rounded-xl p-1">
+              <div class="h-24 rounded-xl bg-darkbg border border-darkborder flex items-center justify-center overflow-hidden">
+                <img id="avatarBPreview" src="" alt="Avatar B" class="hidden max-h-full max-w-full object-contain">
+                <span id="avatarBPreviewPlaceholder" class="text-[11px] text-slate-500">Avatar B</span>
+              </div>
+            </div>
+          </div>
+
+          <button onclick="runAvatarComparison()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-2.5 rounded-xl text-xs transition flex items-center justify-center space-x-2">
+            <i class="fa-solid fa-code-compare"></i> <span>Compare Perceptual Avatar Similarity</span>
+          </button>
+
+          <div id="avatarCompareOutput" class="bg-darkbg/70 border border-darkborder rounded-xl p-4 text-xs text-slate-300 space-y-3">
+            <p class="text-slate-400">Select two avatar images above to compute calibrated perceptual correspondence.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Verified Visual Forensics Vault Ledger -->
+      <div class="glass-card rounded-2xl p-6 shadow-xl space-y-3">
+        <div class="flex items-center justify-between">
+          <h3 class="text-sm font-bold text-slate-100 flex items-center space-x-2">
+            <i class="fa-solid fa-vault text-purple-400"></i>
+            <span>Verified Visual Forensics Vault Ledger</span>
+          </h3>
+          <span id="visionLedgerCountBadge" class="text-xs px-2.5 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30 font-semibold">0 assets</span>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs text-slate-300">
+            <thead class="bg-darkbg text-slate-400 uppercase font-semibold border-b border-darkborder">
+              <tr>
+                <th class="p-2.5">Asset</th>
+                <th class="p-2.5">Geometry & Layout</th>
+                <th class="p-2.5">dHash</th>
+                <th class="p-2.5">EXIF Timestamp / Device</th>
+                <th class="p-2.5">GPS</th>
+                <th class="p-2.5">Authenticity / ELA</th>
+              </tr>
+            </thead>
+            <tbody id="visionLedgerBody" class="divide-y divide-darkborder/50"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
   </main>
 
   <script>
@@ -694,7 +816,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
     let allTargetsSummary = [];
     let graphData = {nodes: [], links: [], contradictions_count: 0};
 
-    const ALL_TABS = ['chat', 'graph', 'oracle', 'composer', 'arena', 'mindset', 'targets'];
+    const ALL_TABS = ['chat', 'graph', 'oracle', 'composer', 'arena', 'vision', 'mindset', 'targets'];
 
     function escapeHtml(value) {
       if (value === null || value === undefined) return '';
@@ -810,6 +932,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
         });
 
         await loadGraphData();
+        await loadVisualLedger();
         await loadTargetsTable();
       } catch (e) {
         console.error(e);
@@ -1260,6 +1383,178 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       });
     }
 
+    function readFileAsDataURL(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = err => reject(err);
+        reader.readAsDataURL(file);
+      });
+    }
+
+    function previewImageInput(inputId, imgId) {
+      const input = document.getElementById(inputId);
+      const img = document.getElementById(imgId);
+      const placeholder = document.getElementById(imgId + 'Placeholder');
+      if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = e => {
+          img.src = e.target.result;
+          img.classList.remove('hidden');
+          if (placeholder) placeholder.classList.add('hidden');
+        };
+        reader.readAsDataURL(input.files[0]);
+      }
+    }
+
+    async function loadVisualLedger() {
+      if (!currentTarget) return;
+      try {
+        const res = await fetch('/api/target/' + encodeURIComponent(currentTarget) + '/vision');
+        const data = await res.json();
+        const assets = data.assets || [];
+        document.getElementById('visionLedgerCountBadge').innerText = assets.length + ' verified asset(s)';
+        const tbody = document.getElementById('visionLedgerBody');
+        if (!assets.length) {
+          tbody.innerHTML = '<tr><td colspan="6" class="p-3 text-slate-500">No verified visual assets ingested yet for this target.</td></tr>';
+          return;
+        }
+        tbody.innerHTML = assets.map(a => {
+          const tsDev = [a.capture_timestamp_iso, a.camera_device].filter(Boolean).join(' • ') || 'No EXIF';
+          const gps = (a.gps && a.gps.has_gps) ? `${a.gps.latitude}, ${a.gps.longitude}` : '—';
+          const ela = a.ela ? a.ela.ela_anomaly_score : 0;
+          return `<tr class="hover:bg-darkbg/40 transition">
+            <td class="p-2.5 font-semibold text-slate-100">${escapeHtml(a.file_name)}</td>
+            <td class="p-2.5 text-brand-400">${a.width}x${a.height} (${escapeHtml(a.layout_class)})</td>
+            <td class="p-2.5 font-mono text-[11px] text-purple-300">${escapeHtml(a.dhash)}</td>
+            <td class="p-2.5">${escapeHtml(tsDev)}</td>
+            <td class="p-2.5 text-emerald-300">${escapeHtml(gps)}</td>
+            <td class="p-2.5">%${a.authenticity_confidence_pct} (ELA: ${ela})</td>
+          </tr>`;
+        }).join('');
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    async function runVisionAnalysis() {
+      const fileInput = document.getElementById('visionFileInput');
+      const outBox = document.getElementById('visionAnalysisOutput');
+      if (!currentTarget) return;
+      if (!fileInput.files || !fileInput.files[0]) {
+        outBox.innerHTML = '<p class="text-amber-400">Please choose an image file first.</p>';
+        return;
+      }
+      const file = fileInput.files[0];
+      outBox.innerHTML = '<p class="text-brand-400 animate-pulse"><i class="fa-solid fa-spinner fa-spin mr-1.5"></i> Running EXIF/GPS forensics, ELA tampering audit, and Multimodal Vision-LLM synthesis...</p>';
+      try {
+        const b64 = await readFileAsDataURL(file);
+        const contextHint = document.getElementById('visionContextInput').value.trim();
+        const ingest = document.getElementById('visionIngestCheckbox').checked;
+        const res = await fetch('/api/vision/analyze', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({
+            target: currentTarget,
+            filename: file.name,
+            image_base64: b64,
+            context_hint: contextHint,
+            ingest_to_corpus: ingest
+          })
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          outBox.innerHTML = `<p class="text-rose-400">Error: ${escapeHtml(data.error || 'Vision analysis failed')}</p>`;
+          return;
+        }
+        if (data.rejected) {
+          outBox.innerHTML = `
+            <div class="p-3.5 rounded-xl bg-amber-950/30 border border-amber-500/40 space-y-1.5">
+              <div class="font-bold text-amber-300">🛡️ Sıfır İkame Kapısı (Zero-Substitution Gate) Tarafından Engellendi</div>
+              <div class="text-amber-100">${escapeHtml(data.notice || '')}</div>
+              <div class="text-[11px] text-slate-400">Reason: ${escapeHtml(data.rejection_reason || '')} • Zero third-party files written to profile.</div>
+            </div>`;
+          return;
+        }
+        const f = data.forensics || {};
+        const gpsStr = (f.gps && f.gps.has_gps) ? `${f.gps.latitude}, ${f.gps.longitude}` : 'Absent';
+        const flagsHtml = (f.forensic_flags || []).map(fl => `<li class="text-amber-300">${escapeHtml(fl)}</li>`).join('');
+        outBox.innerHTML = `
+          <div class="flex flex-wrap gap-2">
+            <span class="px-2 py-0.5 rounded bg-brand-600/20 text-brand-300 border border-brand-500/30">${f.width}x${f.height} • ${escapeHtml(f.layout_class)}</span>
+            <span class="px-2 py-0.5 rounded bg-purple-600/20 text-purple-300 border border-purple-500/30 font-mono">dHash: ${escapeHtml(f.dhash)}</span>
+            <span class="px-2 py-0.5 rounded bg-emerald-600/20 text-emerald-300 border border-emerald-500/30">Auth: %${f.authenticity_confidence_pct}</span>
+            <span class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-darkborder">ELA: ${f.ela ? f.ela.ela_anomaly_score : 0} (${escapeHtml(f.ela ? f.ela.assessment : '')})</span>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 text-[11px] bg-darkpanel/70 p-2.5 rounded-lg border border-darkborder">
+            <div><span class="text-slate-400">EXIF Timestamp:</span> <strong class="text-slate-200">${escapeHtml(f.capture_timestamp_iso || 'None')}</strong></div>
+            <div><span class="text-slate-400">Device:</span> <strong class="text-slate-200">${escapeHtml(f.camera_device || 'None')}</strong></div>
+            <div><span class="text-slate-400">GPS:</span> <strong class="text-emerald-300">${escapeHtml(gpsStr)}</strong></div>
+          </div>
+          ${flagsHtml ? `<ul class="list-disc list-inside text-[11px] space-y-0.5">${flagsHtml}</ul>` : ''}
+          <div class="whitespace-pre-wrap text-slate-200 leading-relaxed border-t border-darkborder pt-2.5">${escapeHtml(data.vision_synthesis || '')}</div>
+        `;
+        await loadTargetDetails();
+      } catch (err) {
+        outBox.innerHTML = `<p class="text-rose-400">Unexpected error: ${escapeHtml(String(err))}</p>`;
+      }
+    }
+
+    async function runAvatarComparison() {
+      const inA = document.getElementById('avatarAInput');
+      const inB = document.getElementById('avatarBInput');
+      const outBox = document.getElementById('avatarCompareOutput');
+      if (!inA.files || !inA.files[0] || !inB.files || !inB.files[0]) {
+        outBox.innerHTML = '<p class="text-amber-400">Please select both Avatar A and Avatar B images.</p>';
+        return;
+      }
+      outBox.innerHTML = '<p class="text-emerald-400 animate-pulse"><i class="fa-solid fa-spinner fa-spin mr-1.5"></i> Computing 64-bit dHash Hamming distance & RGB histogram cosine...</p>';
+      try {
+        const [b64A, b64B] = await Promise.all([
+          readFileAsDataURL(inA.files[0]),
+          readFileAsDataURL(inB.files[0])
+        ]);
+        const res = await fetch('/api/vision/compare', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({
+            target: currentTarget,
+            filename_a: inA.files[0].name,
+            image_a_base64: b64A,
+            filename_b: inB.files[0].name,
+            image_b_base64: b64B
+          })
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          outBox.innerHTML = `<p class="text-rose-400">Error: ${escapeHtml(data.error || 'Comparison failed')}</p>`;
+          return;
+        }
+        const pct = data.similarity_pct || 0;
+        const tierColor = data.match_tier === 'HIGH_VISUAL_CORRESPONDENCE'
+          ? 'text-emerald-300 bg-emerald-500/20 border-emerald-500/40'
+          : (data.match_tier === 'MODERATE_VISUAL_SIMILARITY'
+              ? 'text-amber-300 bg-amber-500/20 border-amber-500/40'
+              : 'text-rose-300 bg-rose-500/20 border-rose-500/40');
+        outBox.innerHTML = `
+          <div class="flex items-center justify-between">
+            <span class="px-2.5 py-0.5 rounded-full border font-bold text-[11px] ${tierColor}">${escapeHtml(data.match_tier)}</span>
+            <span class="font-bold text-sm text-emerald-400">%${pct} Similarity</span>
+          </div>
+          <div class="w-full bg-darkbg rounded-full h-2.5 border border-darkborder overflow-hidden">
+            <div class="bg-gradient-to-r from-brand-500 to-emerald-400 h-full" style="width: ${Math.min(100, pct)}%"></div>
+          </div>
+          <div class="grid grid-cols-2 gap-2 text-[11px] bg-darkpanel/70 p-2.5 rounded-lg border border-darkborder">
+            <div><span class="text-slate-400">dHash Hamming:</span> <strong class="text-slate-100">${data.hamming_distance} / 64</strong></div>
+            <div><span class="text-slate-400">RGB Cosine:</span> <strong class="text-slate-100">${data.histogram_cosine}</strong></div>
+          </div>
+          <p class="text-slate-200 leading-relaxed">${escapeHtml(data.probabilistic_statement || '')}</p>
+        `;
+      } catch (err) {
+        outBox.innerHTML = `<p class="text-rose-400">Unexpected error: ${escapeHtml(String(err))}</p>`;
+      }
+    }
+
     function exportCurrentDossier() {
       if (!currentTarget) return;
       window.open('/api/target/' + encodeURIComponent(currentTarget) + '/dossier', '_blank');
@@ -1324,6 +1619,19 @@ class DashboardRequestHandler(SimpleHTTPRequestHandler):
             self.send_header("Content-Disposition", f'attachment; filename="{target_slug}_intelligence_dossier.html"')
             self.end_headers()
             self.wfile.write(html_doc.encode("utf-8"))
+            return
+
+        if path.startswith("/api/target/") and path.endswith("/vision"):
+            parts = path.split("/")
+            target_slug = sanitize_slug(urllib.parse.unquote(parts[3]))
+            report_file = Path(settings.profiles_dir) / target_slug / "vault" / "visual_forensics_report.json"
+            if report_file.exists():
+                try:
+                    self._send_json(json.loads(report_file.read_text(encoding="utf-8")))
+                    return
+                except Exception:
+                    pass
+            self._send_json({"target_slug": target_slug, "total_verified_visual_assets": 0, "assets": []})
             return
 
         if path.startswith("/api/target/") and path.endswith("/graph"):
@@ -1420,6 +1728,87 @@ class DashboardRequestHandler(SimpleHTTPRequestHandler):
             composer = Composer(display_name, target_dirs)
             res = composer.compose_outreach(goal=goal, context=context)
             self._send_json(res)
+            return
+
+        if path == "/api/vision/analyze":
+            import tempfile
+
+            target = str(payload.get("target", "")).strip()
+            raw_b64 = str(payload.get("image_base64", "")).strip()
+            filename = Path(str(payload.get("filename", "uploaded_visual.jpg"))).name
+            context_hint = str(payload.get("context_hint", "")).strip() or None
+            ingest_to_corpus = bool(payload.get("ingest_to_corpus", True))
+
+            if not target or not raw_b64:
+                self._send_json({"error": "Both 'target' and 'image_base64' are required."}, status=400)
+                return
+
+            try:
+                img_bytes = _decode_base64_image_bytes(raw_b64)
+            except Exception as e:
+                self._send_json({"error": f"Invalid base64 image payload: {e}"}, status=400)
+                return
+
+            display_name = _resolve_target_display_name(target)
+            target_dirs = settings.get_target_dirs(target)
+            from src.harvest.visual_intelligence import SUPPORTED_IMAGE_EXTENSIONS, VisionAnalyzer
+
+            suffix = Path(filename).suffix.lower()
+            if suffix not in SUPPORTED_IMAGE_EXTENSIONS:
+                filename = f"{Path(filename).stem or 'visual'}.jpg"
+
+            # Stage in isolated temporary directory first so rejected namesake assets NEVER touch profile disk
+            with tempfile.TemporaryDirectory() as tmp_dir:
+                staged_path = Path(tmp_dir) / filename
+                staged_path.write_bytes(img_bytes)
+                analyzer = VisionAnalyzer(
+                    target_name=display_name,
+                    raw_data_dir=target_dirs.raw_data_dir,
+                    vault_dir=target_dirs.vault_dir,
+                )
+                res = analyzer.analyze_image(
+                    staged_path,
+                    context_hint=context_hint,
+                    ingest_to_corpus=ingest_to_corpus,
+                )
+            self._send_json(res)
+            return
+
+        if path == "/api/vision/compare":
+            import tempfile
+
+            target = str(payload.get("target", "")).strip()
+            b64_a = str(payload.get("image_a_base64", "")).strip()
+            b64_b = str(payload.get("image_b_base64", "")).strip()
+            fname_a = Path(str(payload.get("filename_a", "avatar_a.jpg"))).name
+            fname_b = Path(str(payload.get("filename_b", "avatar_b.jpg"))).name
+
+            if not b64_a or not b64_b:
+                self._send_json({"error": "Both 'image_a_base64' and 'image_b_base64' are required."}, status=400)
+                return
+
+            try:
+                bytes_a = _decode_base64_image_bytes(b64_a)
+                bytes_b = _decode_base64_image_bytes(b64_b)
+            except Exception as e:
+                self._send_json({"error": f"Invalid base64 avatar payload: {e}"}, status=400)
+                return
+
+            display_name = _resolve_target_display_name(target) if target else None
+            from src.harvest.visual_intelligence import AvatarIdentityMatcher, SUPPORTED_IMAGE_EXTENSIONS
+
+            if Path(fname_a).suffix.lower() not in SUPPORTED_IMAGE_EXTENSIONS:
+                fname_a = f"{Path(fname_a).stem or 'avatar_a'}.jpg"
+            if Path(fname_b).suffix.lower() not in SUPPORTED_IMAGE_EXTENSIONS:
+                fname_b = f"{Path(fname_b).stem or 'avatar_b'}.jpg"
+
+            with tempfile.TemporaryDirectory() as tmp_dir:
+                path_a = Path(tmp_dir) / f"a_{fname_a}"
+                path_b = Path(tmp_dir) / f"b_{fname_b}"
+                path_a.write_bytes(bytes_a)
+                path_b.write_bytes(bytes_b)
+                cmp_res = AvatarIdentityMatcher.compare_avatars(path_a, path_b, target_name=display_name)
+            self._send_json(cmp_res)
             return
 
         if path == "/api/arena":

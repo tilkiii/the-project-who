@@ -21,6 +21,8 @@ from src.harvest.live_monitor import LiveMonitor
 from src.harvest.media_harvester import MediaHarvester
 from src.harvest.ocr_processor import OCRProcessor
 from src.harvest.social_osint import SocialOSINTHunter
+from src.harvest.visual_harvester import VisualHarvester
+from src.harvest.visual_intelligence import AvatarIdentityMatcher, VisionAnalyzer
 from src.harvest.web_harvester import WebHarvester
 from src.utils.entity_validator import DISAMBIGUATION_NOTICE_TR
 from src.utils.logger import console, print_banner
@@ -260,3 +262,173 @@ def monitor(
         console.print(f"\n[green]Alerts saved to:[/green] [cyan]{dirs.vault_dir / 'monitoring_alerts.json'}[/cyan]\n")
     else:
         console.print("[bold green]✔ No cognitive or circadian anomalies detected. Footprint matches baseline within normal boundaries.[/bold green]\n")
+
+
+def vision(
+    target: str = typer.Option(..., "--target", "-t", help="Target individual name"),
+    images: Optional[str] = typer.Option(
+        None,
+        "--images",
+        "-i",
+        help="Comma-separated image paths or directory for EXIF/GPS forensics & Vision-LLM ingestion",
+    ),
+    video: Optional[str] = typer.Option(
+        None,
+        "--video",
+        "-v",
+        help="Video or multi-frame slide file for dHash-deduplicated keyframe Vision analysis",
+    ),
+    compare_avatars: Optional[str] = typer.Option(
+        None,
+        "--compare-avatars",
+        "-c",
+        help="Comma-separated pair/list of avatar paths or URLs for perceptual dHash + RGB matching",
+    ),
+    context_hint: Optional[str] = typer.Option(
+        None,
+        "--context",
+        "-x",
+        help="Optional analytical context hint for multimodal Vision-LLM inspection",
+    ),
+    interval_seconds: int = typer.Option(
+        30,
+        "--interval",
+        help="Keyframe sampling interval in seconds for --video",
+    ),
+) -> None:
+    """Run Multimodal Visual OSINT: Vision-LLM slide/scene analysis, EXIF/GPS/ELA forensics, and Avatar dHash matching."""
+    print_banner()
+    dirs = settings.get_target_dirs(target)
+    console.print(
+        f"[bold green]Starting Visual Intelligence & Forensics Lab for:[/bold green] [bold cyan]{target}[/bold cyan]\n"
+    )
+
+    analyzer = VisionAnalyzer(
+        target_name=target,
+        raw_data_dir=dirs.raw_data_dir,
+        vault_dir=dirs.vault_dir,
+    )
+    did_work = False
+
+    # 1. Image Forensics & Multimodal Vision-LLM Ingestion
+    if images:
+        did_work = True
+        input_paths = [Path(p.strip()) for p in images.split(",") if p.strip()]
+        results = analyzer.analyze_inputs(input_paths, context_hint=context_hint, ingest_to_corpus=True)
+
+        table = Table(title=f"🔬 Visual OSINT & Forensic Metadata Ledger: {target}", header_style="bold cyan")
+        table.add_column("Asset", style="bold white", width=22)
+        table.add_column("Geometry & Class", style="cyan", width=24)
+        table.add_column("EXIF Timestamp / Device", style="yellow", width=24)
+        table.add_column("GPS", style="magenta", width=18)
+        table.add_column("Auth / ELA", style="green", width=16)
+        table.add_column("Status", style="bold white", width=18)
+
+        for res in results:
+            f_meta = res["forensics"]
+            ts_dev = " | ".join(
+                part for part in [f_meta.get("capture_timestamp_iso") or "", f_meta.get("camera_device") or ""] if part
+            ) or "No EXIF Provenance"
+            gps = f_meta.get("gps", {})
+            gps_str = f"{gps['latitude']}, {gps['longitude']}" if gps.get("has_gps") else "—"
+            auth_str = f"%{f_meta['authenticity_confidence_pct']} ({f_meta['ela']['ela_anomaly_score']})"
+            status_str = (
+                "[red]✗ BLOCKED (Rule #1)[/red]"
+                if res.get("rejected")
+                else f"[green]✓ INGESTED[/green] ({res.get('vision_engine')})"
+            )
+            table.add_row(
+                res["file_name"][:22],
+                f"{f_meta['width']}x{f_meta['height']} ({f_meta['layout_class'][:14]})",
+                ts_dev[:24],
+                gps_str,
+                auth_str,
+                status_str,
+            )
+
+        console.print(table)
+
+        for res in results:
+            if not res.get("rejected") and res.get("vision_synthesis"):
+                console.print(
+                    Panel(
+                        res["vision_synthesis"][:900],
+                        title=f"[bold cyan]👁️ Vision Synthesis: {res['file_name']} (dHash: {res['forensics']['dhash']})[/bold cyan]",
+                        border_style="cyan",
+                    )
+                )
+
+    # 2. Video Keyframe Scene-Deduplicated Slide Pipeline
+    if video:
+        did_work = True
+        v_path = Path(video.strip())
+        v_harvester = VisualHarvester(output_dir=dirs.raw_data_dir / "keyframes")
+        v_res = v_harvester.analyze_video_visuals(
+            video_path=v_path,
+            vision_analyzer=analyzer,
+            interval_seconds=interval_seconds,
+        )
+        console.print(
+            Panel(
+                f"[white]Video Asset:[/white] [bold]{v_res['video_name']}[/bold]\n"
+                f"[white]Extracted Keyframes:[/white] {v_res['total_frames_extracted']}  |  "
+                f"[white]Unique dHash Scenes Retained:[/white] [cyan]{v_res['unique_frames_retained']}[/cyan]  |  "
+                f"[white]Verified Scenes:[/white] [green]{v_res['verified_scenes_count']}[/green]\n"
+                f"[dim]Consolidated Slide Dossier: {v_res.get('consolidated_dossier_path') or 'None'}[/dim]",
+                title="[bold magenta]🎬 Video Keyframe & Slide Deduplication Pipeline[/bold magenta]",
+                border_style="magenta",
+            )
+        )
+
+    # 3. Cross-Platform Avatar Perceptual Matching
+    if compare_avatars:
+        did_work = True
+        avatar_list = [a.strip() for a in compare_avatars.split(",") if a.strip()]
+        if len(avatar_list) < 2:
+            console.print("[bold red]Error:[/bold red] --compare-avatars requires at least 2 comma-separated paths or URLs.")
+            raise typer.Exit(code=1)
+
+        av_table = Table(title=f"🧬 Cross-Platform Avatar Perceptual Matching: {target}", header_style="bold green")
+        av_table.add_column("Avatar A", style="white")
+        av_table.add_column("Avatar B", style="white")
+        av_table.add_column("Similarity", style="bold cyan")
+        av_table.add_column("dHash Hamming", style="yellow")
+        av_table.add_column("RGB Cosine", style="magenta")
+        av_table.add_column("Verdict Tier", style="bold green", overflow="fold")
+
+        anchor = avatar_list[0]
+        for other in avatar_list[1:]:
+            cmp_res = AvatarIdentityMatcher.compare_avatars(anchor, other, target_name=target)
+            av_table.add_row(
+                cmp_res["image_a"],
+                cmp_res["image_b"],
+                f"%{cmp_res['similarity_pct']}",
+                f"{cmp_res['hamming_distance']}/64",
+                f"{cmp_res['histogram_cosine']:.3f}",
+                cmp_res["match_tier"],
+            )
+            console.print(av_table)
+            console.print(
+                Panel(
+                    f"[yellow]{cmp_res['probabilistic_statement']}[/yellow]",
+                    title="[bold cyan]📐 Epistemik Görsel Eşleştirme Değerlendirmesi[/bold cyan]",
+                    border_style="cyan",
+                )
+            )
+
+    if analyzer.rejected_namesakes_count > 0:
+        console.print(
+            Panel(
+                f"[yellow]{DISAMBIGUATION_NOTICE_TR}[/yellow]\n"
+                f"[dim](Görsel Sıfır İkame Kapısı tarafından elenen varlık sayısı: {analyzer.rejected_namesakes_count} — "
+                f"hedef profiline üçüncü şahıs görseli veya metni kaydedilmedi.)[/dim]",
+                title="[bold yellow]🛡️ Görsel Ayrıştırma Kapısı (Zero-Substitution Gate)[/bold yellow]",
+                border_style="yellow",
+            )
+        )
+
+    if not did_work:
+        console.print(
+            "[yellow]Provide at least one visual operation flag:[/yellow] "
+            "[cyan]--images (-i)[/cyan], [cyan]--video (-v)[/cyan], or [cyan]--compare-avatars (-c)[/cyan].\n"
+        )
