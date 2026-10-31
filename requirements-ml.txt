@@ -1,0 +1,14 @@
+# ==============================================================================
+# "who??" Optional Heavy Multimodal ML, Deep OCR & GPU Dependencies
+# ==============================================================================
+# Install only if you have C++ Build Tools (MSVC on Windows / gcc on Linux)
+# and wish to run local offline OCR, audio diarization, or local transformer models.
+# Note: For PaddleOCR, Python 3.10-3.11 is recommended.
+
+docling>=2.0.0
+paddleocr>=2.7.0
+whisperx>=3.1.0
+crawl4ai>=0.3.0
+bertopic>=0.16.0
+sentence-transformers>=2.5.0
+dspy-ai>=2.4.0

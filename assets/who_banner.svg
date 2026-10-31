@@ -1,0 +1,120 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="480" viewBox="0 0 1200 480" role="img" aria-labelledby="title desc">
+  <title id="title">who?? — Evidence-grounded digital twins</title>
+  <desc id="desc">An abstract, evidence-connected digital human profile representing multimodal data, knowledge graphs, and probabilistic modeling.</desc>
+  <defs>
+    <linearGradient id="background" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0b1728"/>
+      <stop offset="0.58" stop-color="#091321"/>
+      <stop offset="1" stop-color="#101b2c"/>
+    </linearGradient>
+    <radialGradient id="aura" cx="73%" cy="48%" r="53%">
+      <stop offset="0" stop-color="#244c67" stop-opacity=".62"/>
+      <stop offset=".58" stop-color="#122a3a" stop-opacity=".28"/>
+      <stop offset="1" stop-color="#0b1728" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="profileFill" x1=".2" y1="0" x2=".82" y2="1">
+      <stop offset="0" stop-color="#70e1ce" stop-opacity=".25"/>
+      <stop offset=".55" stop-color="#5aa9cf" stop-opacity=".15"/>
+      <stop offset="1" stop-color="#a08bf2" stop-opacity=".2"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#64e0c7"/>
+      <stop offset="1" stop-color="#8ab8ff"/>
+    </linearGradient>
+    <linearGradient id="line" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#65ddc4" stop-opacity=".78"/>
+      <stop offset="1" stop-color="#91a9ff" stop-opacity=".48"/>
+    </linearGradient>
+    <filter id="softGlow" x="-80%" y="-80%" width="260%" height="260%">
+      <feGaussianBlur stdDeviation="18"/>
+    </filter>
+    <filter id="smallGlow" x="-100%" y="-100%" width="300%" height="300%">
+      <feGaussianBlur stdDeviation="5" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <pattern id="grid" width="36" height="36" patternUnits="userSpaceOnUse">
+      <path d="M36 0H0V36" fill="none" stroke="#9cb8d0" stroke-opacity=".045" stroke-width="1"/>
+    </pattern>
+    <clipPath id="profileClip">
+      <path d="M853 380c-23-24-36-55-39-87-3-37 8-77 31-105 23-28 60-47 99-47 44 0 80 20 100 52 12 20 17 42 17 61 0 9-2 17-2 23 0 6 5 10 14 15 9 5 12 11 8 17-3 5-11 7-18 8 7 4 9 9 7 14-2 5-8 9-17 10-2 12-8 22-18 29-8 6-16 7-26 8l-1 35c0 11 4 20 13 27l19 14H837c12-12 21-27 16-44z"/>
+    </clipPath>
+  </defs>
+
+  <rect width="1200" height="480" rx="24" fill="url(#background)"/>
+  <rect width="1200" height="480" rx="24" fill="url(#aura)"/>
+  <rect width="1200" height="480" rx="24" fill="url(#grid)"/>
+  <path d="M32 1h1136a31 31 0 0 1 31 31v416a31 31 0 0 1-31 31H32a31 31 0 0 1-31-31V32A31 31 0 0 1 32 1z" fill="none" stroke="#a8c4d6" stroke-opacity=".16"/>
+
+  <g font-family="Inter, Segoe UI, Arial, sans-serif">
+    <g transform="translate(78 68)">
+      <rect width="38" height="38" rx="11" fill="#142e3b" stroke="#64e0c7" stroke-opacity=".45"/>
+      <path d="M10 25 19 12l10 14" fill="none" stroke="url(#accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="10" cy="25" r="3" fill="#64e0c7"/><circle cx="19" cy="12" r="3" fill="#8ab8ff"/><circle cx="29" cy="26" r="3" fill="#64e0c7"/>
+      <text x="52" y="15" fill="#a8bacd" font-size="11" font-weight="700" letter-spacing="2.5">OPEN-SOURCE RESEARCH FRAMEWORK</text>
+      <text x="52" y="34" fill="#e5edf6" font-size="14" font-weight="600" letter-spacing=".7">WHO??</text>
+    </g>
+
+    <text x="78" y="190" fill="#f2f6fb" font-size="48" font-weight="650" letter-spacing="-1.6">Evidence-grounded</text>
+    <text x="78" y="249" fill="#f2f6fb" font-size="48" font-weight="650" letter-spacing="-1.6">digital twins<tspan fill="url(#accent)">.</tspan></text>
+    <text x="80" y="291" fill="#a8b8c9" font-size="17" font-weight="400">Turn multimodal evidence into explainable,</text>
+    <text x="80" y="316" fill="#a8b8c9" font-size="17" font-weight="400">probabilistic models of evolving ideas.</text>
+
+    <g transform="translate(80 355)">
+      <circle cx="4" cy="4" r="4" fill="#66dec6"/>
+      <text x="17" y="8" fill="#d5e0eb" font-size="11" font-weight="600" letter-spacing="1.15">MULTIMODAL EVIDENCE</text>
+      <path d="M179 4h22" stroke="#607488" stroke-width="1"/>
+      <circle cx="214" cy="4" r="4" fill="#7bc7df"/>
+      <text x="227" y="8" fill="#d5e0eb" font-size="11" font-weight="600" letter-spacing="1.15">KNOWLEDGE GRAPHS</text>
+      <path d="M392 4h22" stroke="#607488" stroke-width="1"/>
+      <circle cx="427" cy="4" r="4" fill="#a99af1"/>
+      <text x="440" y="8" fill="#d5e0eb" font-size="11" font-weight="600" letter-spacing="1.15">PROBABILISTIC INSIGHT</text>
+    </g>
+    <text x="80" y="421" fill="#73869a" font-size="12" letter-spacing=".35">Models patterns in evidence — not certainty about people.</text>
+  </g>
+
+  <g>
+    <circle cx="960" cy="250" r="190" fill="#59d6c2" opacity=".055" filter="url(#softGlow)"/>
+    <circle cx="960" cy="250" r="169" fill="none" stroke="#a8c8d8" stroke-opacity=".12"/>
+    <circle cx="960" cy="250" r="145" fill="none" stroke="#8eb2ca" stroke-opacity=".13" stroke-dasharray="2 9"/>
+    <ellipse cx="960" cy="249" rx="191" ry="87" transform="rotate(-28 960 249)" fill="none" stroke="#78d9cf" stroke-opacity=".16"/>
+    <ellipse cx="960" cy="249" rx="184" ry="71" transform="rotate(40 960 249)" fill="none" stroke="#91a8f3" stroke-opacity=".14"/>
+
+    <g clip-path="url(#profileClip)">
+      <path d="M825 130h270v275H825z" fill="url(#profileFill)"/>
+      <path d="M824 159h278M824 185h278M824 211h278M824 237h278M824 263h278M824 289h278M824 315h278M824 341h278M824 367h278" stroke="#95e5da" stroke-opacity=".11"/>
+      <path d="M850 125v290M880 125v290M910 125v290M940 125v290M970 125v290M1000 125v290M1030 125v290M1060 125v290" stroke="#95e5da" stroke-opacity=".09"/>
+      <g fill="none" stroke="url(#line)" stroke-opacity=".63" stroke-width="1.15">
+        <path d="M858 191l49 38 31-64 45 45 39-52M858 191l7 76 42-38 33 67 43-86 48 48 38-100"/>
+        <path d="M865 267l50 39 25-10 33 47 10-131 43 94 48-47M907 229l8 77 58-17 10-57 43 94M938 165l-23 141 68-74 43-74 28 102"/>
+        <path d="M858 191l83-26 90 83 66-23M865 267l75-102 75 131 82-71"/>
+      </g>
+      <g fill="#a3f4dc" filter="url(#smallGlow)">
+        <circle cx="858" cy="191" r="3.4"/><circle cx="907" cy="229" r="3.2"/><circle cx="938" cy="165" r="4"/>
+        <circle cx="983" cy="210" r="3.3"/><circle cx="1022" cy="158" r="3.6"/><circle cx="1060" cy="267" r="3.2"/>
+        <circle cx="865" cy="267" r="3.2"/><circle cx="915" cy="306" r="3.7"/><circle cx="973" cy="289" r="3.2"/>
+        <circle cx="1006" cy="232" r="4"/><circle cx="1049" cy="326" r="3.4"/><circle cx="958" cy="343" r="3.1"/>
+      </g>
+      <g fill="#9cb3ff" opacity=".92">
+        <circle cx="891" cy="180" r="2.3"/><circle cx="1021" cy="286" r="2.7"/><circle cx="932" cy="254" r="2.2"/><circle cx="1045" cy="219" r="2.2"/>
+      </g>
+    </g>
+    <path d="M853 380c-23-24-36-55-39-87-3-37 8-77 31-105 23-28 60-47 99-47 44 0 80 20 100 52 12 20 17 42 17 61 0 9-2 17-2 23 0 6 5 10 14 15 9 5 12 11 8 17-3 5-11 7-18 8 7 4 9 9 7 14-2 5-8 9-17 10-2 12-8 22-18 29-8 6-16 7-26 8l-1 35c0 11 4 20 13 27l19 14H837c12-12 21-27 16-44z" fill="none" stroke="#8ee8d7" stroke-opacity=".78" stroke-width="1.4"/>
+
+    <g font-family="Inter, Segoe UI, Arial, sans-serif">
+      <g transform="translate(737 178)">
+        <rect width="106" height="32" rx="9" fill="#101f2e" stroke="#89aebe" stroke-opacity=".3"/>
+        <circle cx="15" cy="16" r="4" fill="#6cddc6"/><text x="27" y="20" fill="#c6d5e1" font-size="10" letter-spacing=".6">SOURCES</text>
+      </g>
+      <g transform="translate(1051 129)">
+        <rect width="112" height="32" rx="9" fill="#101f2e" stroke="#89aebe" stroke-opacity=".3"/>
+        <circle cx="15" cy="16" r="4" fill="#9d9af0"/><text x="27" y="20" fill="#c6d5e1" font-size="10" letter-spacing=".6">TOPIC TRAILS</text>
+      </g>
+      <g transform="translate(1044 358)">
+        <rect width="120" height="32" rx="9" fill="#101f2e" stroke="#89aebe" stroke-opacity=".3"/>
+        <circle cx="15" cy="16" r="4" fill="#79c9e2"/><text x="27" y="20" fill="#c6d5e1" font-size="10" letter-spacing=".6">EXPLAINABLE</text>
+      </g>
+    </g>
+    <path d="M843 194h28M1050 145l-22 16M1045 372l-24-20" fill="none" stroke="#a2ddd5" stroke-opacity=".45" stroke-dasharray="3 4"/>
+    <circle cx="1104" cy="87" r="3" fill="#8edfd1"/><circle cx="1142" cy="246" r="2" fill="#9caeff"/><circle cx="853" cy="403" r="2" fill="#8edfd1"/>
+  </g>
+</svg>

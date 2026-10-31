@@ -1,0 +1,57 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Environment variables & secrets
+.env
+.env.local
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+
+# Unit test / coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Dynamic Target Profiles (Keep only .gitkeep)
+profiles/*
+!profiles/.gitkeep
+
+# Confidential Chat Exports, Transcripts & Personal Logs
+*whatsapp*
+*telegram*
+*_chat.txt
+*chat_export*
+*dialogue_*.md
+*dialogue_pairs_*.json
+*.vtt
+*.srt
+
+# Media, video and audio downloads
+*.mp3
+*.webm
+*.mp4
+*.wav
+*.avi
+*.mkv
+
+# Agent rules & local configurations
+AGENTS.md
+.gemini/
+
+# OS artifacts
+.DS_Store
+Thumbs.db
+.gemini/
+Thumbs.db
