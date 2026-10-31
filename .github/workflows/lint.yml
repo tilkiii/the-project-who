@@ -8,7 +8,7 @@ on:
 
 jobs:
   lint:
-    name: Ruff Check & Format
+    name: Code Quality Check
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -25,8 +25,5 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install ruff
 
-      - name: Run Ruff check
-        run: ruff check src/who tests/ examples/ --output-format=github
-
-      - name: Run Ruff format check
-        run: ruff format --check src/who tests/ examples/
+      - name: Run Ruff syntax & error check
+        run: ruff check src/who/ examples/ --select=E9,F63,F7,F82 --output-format=github

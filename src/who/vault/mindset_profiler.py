@@ -314,6 +314,7 @@ Direct primary evidence anchors:
             for item in lit
         ) or "- Empirical baseline linguistics (Pennebaker et al.)"
 
+        quotes_block = "\n".join(f"- Quotation: *\"{q}\"*" for q in sample_quotes[:5])
         return f"""# Cognitive Evidence Report: {self.target_name}
 *Traceability Matrix & Epistemic Audit*
 
@@ -321,7 +322,7 @@ Direct primary evidence anchors:
 Total primary quotes verified: **{len(sample_quotes)}**
 
 ### Sample Supporting Citations:
-{chr(10).join(f"- Quotation: *\"{q}\"*" for q in sample_quotes[:5])}
+{quotes_block}
 
 ## 2. Peer-Reviewed Academic Corroboration
 Literature backing the behavioral interpretations:
