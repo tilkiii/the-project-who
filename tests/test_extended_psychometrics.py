@@ -7,11 +7,11 @@ from pathlib import Path
 import json
 import pytest
 
-from src.learn.feature_extractor import FeatureExtractor
-from src.learn.scientific_referee import ScientificReferee, fisher_z, inv_fisher_z
-from src.learn.boundary_synthesizer import BoundarySynthesizer
-from src.learn.autonomous_researcher import AutonomousAcademicResearcher
-from src.learn.skill_synthesizer import SkillSynthesizer
+from who.learn.feature_extractor import FeatureExtractor
+from who.learn.scientific_referee import ScientificReferee, fisher_z, inv_fisher_z
+from who.learn.boundary_synthesizer import BoundarySynthesizer
+from who.learn.autonomous_researcher import AutonomousAcademicResearcher
+from who.learn.skill_synthesizer import SkillSynthesizer
 
 
 def test_feature_extractor_extended_psychometrics(tmp_path: Path):

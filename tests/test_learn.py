@@ -5,11 +5,11 @@ Tests for Module 2: who_learn (Feature Extractor, Topic Mapper, Academic Researc
 from pathlib import Path
 import pytest
 
-from src.learn.academic_researcher import AcademicResearcher
-from src.learn.feature_extractor import FeatureExtractor
-from src.learn.prompt_optimizer import PromptOptimizer
-from src.learn.skill_synthesizer import SkillSynthesizer
-from src.learn.topic_mapper import TopicMapper
+from who.learn.academic_researcher import AcademicResearcher
+from who.learn.feature_extractor import FeatureExtractor
+from who.learn.prompt_optimizer import PromptOptimizer
+from who.learn.skill_synthesizer import SkillSynthesizer
+from who.learn.topic_mapper import TopicMapper
 
 
 def test_feature_extractor(tmp_path: Path):

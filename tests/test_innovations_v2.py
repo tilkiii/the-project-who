@@ -13,10 +13,10 @@ from pathlib import Path
 import pytest
 from typer.testing import CliRunner
 
-from src.cli import app
-from src.config import settings
-from src.engine.arena import SwarmArena
-from src.harvest.live_monitor import LiveMonitor
+from who.cli import app
+from who.config import settings
+from who.engine.arena import SwarmArena
+from who.harvest.live_monitor import LiveMonitor
 
 runner = CliRunner()
 

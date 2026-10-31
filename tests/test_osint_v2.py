@@ -12,10 +12,10 @@ from pathlib import Path
 import pytest
 from typer.testing import CliRunner
 
-from src.cli import app
-from src.config import settings
-from src.harvest.social_osint import SocialOSINTHunter
-from src.vault.social_graph import SocialGraphAnalyzer
+from who.cli import app
+from who.config import settings
+from who.harvest.social_osint import SocialOSINTHunter
+from who.vault.social_graph import SocialGraphAnalyzer
 
 runner = CliRunner()
 

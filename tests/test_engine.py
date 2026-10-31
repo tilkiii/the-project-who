@@ -5,14 +5,14 @@ Tests for Module 4: who_engine (Oracle, Simulator, Composer, Psych Insights, Exp
 from pathlib import Path
 import pytest
 
-from src.config import settings
-from src.engine.composer import Composer
-from src.engine.evaluator import ProfileEvaluator
-from src.engine.explainability_engine import ExplainabilityEngine
-from src.engine.oracle import Oracle
-from src.engine.psych_insights import PsychInsights
-from src.engine.simulator import Simulator
-from src.engine.twin_chat import TwinChat
+from who.config import settings
+from who.engine.composer import Composer
+from who.engine.evaluator import ProfileEvaluator
+from who.engine.explainability_engine import ExplainabilityEngine
+from who.engine.oracle import Oracle
+from who.engine.psych_insights import PsychInsights
+from who.engine.simulator import Simulator
+from who.engine.twin_chat import TwinChat
 
 
 @pytest.fixture

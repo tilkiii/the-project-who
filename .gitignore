@@ -24,9 +24,11 @@ env/
 .coverage
 htmlcov/
 
-# Dynamic Target Profiles (Keep only .gitkeep)
+# Dynamic Target Profiles (Keep only .gitkeep and synthetic Target X demo profile)
 profiles/*
 !profiles/.gitkeep
+!profiles/target_x/
+!profiles/target_x/**
 
 # Confidential Chat Exports, Transcripts & Personal Logs
 *whatsapp*

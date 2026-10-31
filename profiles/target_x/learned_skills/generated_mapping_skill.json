@@ -1,0 +1,46 @@
+{
+  "target_name": "Target X",
+  "version": "1.0.0",
+  "epistemic_framework": "Probabilistic Reasoning & Game-Theoretic Equilibrium",
+  "behavioral_profile": {
+    "cognitive_style": "Analytical Empirical",
+    "social_orientation": "Strategic & Transactional",
+    "lexical_richness": "Technical / Rigorous",
+    "calibration_ratio": 0.94,
+    "extended_psychometrics": {
+      "machiavellianism": {
+        "score": 0.75,
+        "score_pct": "75%",
+        "tier": "STRATEGIC_PRAGMATIST",
+        "probabilistic_statement": "Strategic Pragmatism: 75% level. Prioritizes structural leverage and payoff alignment over emotional persuasion."
+      },
+      "need_for_closure": {
+        "score": 0.85,
+        "score_pct": "85%",
+        "tier": "HIGH_NEED_FOR_CLOSURE",
+        "probabilistic_statement": "Need for Closure: 85% level. Demands clear definitions, deterministic bounds, and verifiable outcomes."
+      },
+      "loss_aversion": {
+        "loss_to_gain_ratio": 1.2,
+        "orientation": "CALIBRATED_RISK",
+        "probabilistic_statement": "Risk Calibration: 1.2 ratio. Balances defensive hedging with strategic opportunities."
+      },
+      "affective_volatility": {
+        "volatility_score": 0.05,
+        "composure_score": 0.95,
+        "tier": "STOIC_COMPOSURE",
+        "probabilistic_statement": "Emotional Equilibrium: Stoic composure under adversarial stimuli."
+      },
+      "moral_foundations": {
+        "dominant_foundation": "FAIRNESS_AND_RULES",
+        "probabilistic_statement": "Focuses on procedural fairness, transparent rules, and verifiable consensus."
+      }
+    }
+  },
+  "generation_rules": [
+    "[TACTICAL_TRANSACTIONALISM] Frame concessions strictly in exchange for verified symmetric commitments.",
+    "[STOIC_EQUANIMITY] Disregard emotional provocations; refocus discussions onto quantifiable outcomes.",
+    "[BAYESIAN_UPDATE_REQUIREMENT] Require explicit empirical priors before modifying baseline risk assessments.",
+    "[EQUILIBRIUM_INTEGRITY] Reject coordination proposals that produce unhedged asymmetric vulnerabilities."
+  ]
+}

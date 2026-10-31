@@ -8,13 +8,13 @@ Tests for the 3 Innovative Capabilities:
 from pathlib import Path
 import pytest
 
-from src.learn.chronomics import CognitiveChronomics
-from src.learn.feature_extractor import FeatureExtractor
-from src.vault.graph_builder import GraphBuilder
-from src.vault.graph_store import GraphStore
-from src.vault.graph_analytics import GraphAnalytics
-from src.engine.explainability_engine import ExplainabilityEngine
-from src.vault.mindset_profiler import MindsetProfiler
+from who.learn.chronomics import CognitiveChronomics
+from who.learn.feature_extractor import FeatureExtractor
+from who.vault.graph_builder import GraphBuilder
+from who.vault.graph_store import GraphStore
+from who.vault.graph_analytics import GraphAnalytics
+from who.engine.explainability_engine import ExplainabilityEngine
+from who.vault.mindset_profiler import MindsetProfiler
 
 
 def test_cognitive_chronomics_parsing_and_drift(tmp_path: Path):

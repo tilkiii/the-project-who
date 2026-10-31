@@ -8,13 +8,13 @@ import json
 from pathlib import Path
 import pytest
 
-from src.agent.sdk import (
+from who.agent.sdk import (
     AcademicResearcher,
     CognitiveTwin,
     get_target,
     list_targets,
 )
-from src.config import settings
+from who.config import settings
 
 
 @pytest.fixture

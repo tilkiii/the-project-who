@@ -5,11 +5,11 @@ Tests for Module 3: who_vault (Graph Builder, Graph Store, Graph Analytics, Vect
 from pathlib import Path
 import pytest
 
-from src.vault.graph_analytics import GraphAnalytics
-from src.vault.graph_builder import GraphBuilder
-from src.vault.graph_store import GraphStore
-from src.vault.mindset_profiler import MindsetProfiler
-from src.vault.vector_embedder import VectorEmbedder
+from who.vault.graph_analytics import GraphAnalytics
+from who.vault.graph_builder import GraphBuilder
+from who.vault.graph_store import GraphStore
+from who.vault.mindset_profiler import MindsetProfiler
+from who.vault.vector_embedder import VectorEmbedder
 
 
 def test_graph_builder():

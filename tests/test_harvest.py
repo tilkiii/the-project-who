@@ -6,10 +6,10 @@ import json
 from pathlib import Path
 import pytest
 
-from src.harvest.dialogue_harvester import DialogueHarvester
-from src.harvest.document_ingestor import DocumentIngestor
-from src.harvest.ocr_processor import OCRProcessor
-from src.utils.text_cleaner import chunk_text, clean_text, extract_quotes, parse_diarized_segments, sanitize_slug
+from who.harvest.dialogue_harvester import DialogueHarvester
+from who.harvest.document_ingestor import DocumentIngestor
+from who.harvest.ocr_processor import OCRProcessor
+from who.utils.text_cleaner import chunk_text, clean_text, extract_quotes, parse_diarized_segments, sanitize_slug
 
 
 def test_sanitize_slug():
@@ -116,7 +116,7 @@ def test_ocr_processor_fallback(tmp_path: Path):
 
 
 def test_redact_pii():
-    from src.utils.text_cleaner import redact_pii
+    from who.utils.text_cleaner import redact_pii
 
     raw_text = (
         "Beni 0532 123 45 67 veya +90 544 987 65 43 numarasından ara. "

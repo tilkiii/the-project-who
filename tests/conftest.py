@@ -4,7 +4,7 @@ Global pytest fixtures and test isolation configuration for who??.
 
 from pathlib import Path
 import pytest
-from src.config import settings
+from who.config import settings
 
 
 @pytest.fixture(autouse=True)

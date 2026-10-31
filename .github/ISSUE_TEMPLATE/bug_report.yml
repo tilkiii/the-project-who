@@ -1,0 +1,50 @@
+name: Bug Report
+description: Create a report to help us improve who??
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to fill out this bug report!
+  - type: input
+    id: version
+    attributes:
+      label: who?? Version
+      description: What version of who?? are you using? (Check with `who --version` or package metadata)
+      placeholder: e.g. 1.0.0
+    validations:
+      required: true
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating System
+      options:
+        - Linux (Ubuntu, Debian, Fedora, Arch)
+        - macOS
+        - Windows
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: Describe the Bug
+      description: A clear and concise description of what the bug is.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to Reproduce
+      description: Exact steps or Python code snippet to reproduce the behavior.
+      placeholder: |
+        1. Run `who chat --target "Target X"`
+        2. Enter message '...'
+        3. See error
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Traceback or Terminal Output
+      description: Please copy and paste any relevant logs or tracebacks.
+      render: shell

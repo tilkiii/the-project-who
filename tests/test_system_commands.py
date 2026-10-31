@@ -5,8 +5,8 @@ Unit tests for system management CLI commands (targets, purge, providers, ui).
 from pathlib import Path
 from typer.testing import CliRunner
 
-from src.cli import app
-from src.config import settings
+from who.cli import app
+from who.config import settings
 
 runner = CliRunner()
 

@@ -1,7 +1,7 @@
 """Unit tests for Strict Entity Resolution & Zero-Substitution Disambiguation."""
 
 import pytest
-from src.utils.entity_validator import (
+from who.utils.entity_validator import (
     normalize_name,
     is_strict_entity_match,
     filter_verified_entities,

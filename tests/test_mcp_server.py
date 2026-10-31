@@ -8,8 +8,8 @@ import json
 from pathlib import Path
 import pytest
 
-from src.config import settings
-from src.mcp_server import MCPServer, TOOLS_SCHEMA
+from who.config import settings
+from who.mcp_server import MCPServer, TOOLS_SCHEMA
 
 
 @pytest.fixture

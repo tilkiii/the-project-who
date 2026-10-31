@@ -8,7 +8,7 @@ from pathlib import Path
 import json
 import pytest
 
-from src.learn.autonomous_researcher import (
+from who.learn.autonomous_researcher import (
     AutonomousAcademicResearcher,
     AcademicResearcher,
     fisher_z,
@@ -158,8 +158,8 @@ def test_bayesian_weight_updating_and_persistence(tmp_path: Path):
 
 
 def test_academic_researcher_canonical_exports():
-    """Verify that canonical imports from src.learn are completely functional."""
-    from src.learn.autonomous_researcher import (
+    """Verify that canonical imports from who.learn are completely functional."""
+    from who.learn.autonomous_researcher import (
         AutonomousAcademicResearcher,
         AcademicResearcher,
         fisher_z,
@@ -207,7 +207,7 @@ def test_ingest_academic_corpus(tmp_path: Path):
 def test_cli_research_command():
     """Verify who research CLI subcommand execution."""
     from typer.testing import CliRunner
-    from src.cli import app
+    from who.cli import app
 
     runner = CliRunner()
     result = runner.invoke(app, ["research", "--topic", "epistemic humility", "--limit", "1", "--sources", "arxiv"])
