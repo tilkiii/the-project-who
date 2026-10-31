@@ -1,18 +1,22 @@
 """
 Speaker diarization and audio transcription using whisperX.
-Separates speech turns into [TARGET_PRIMARY] vs [INTERLOCUTOR_CONTEXT].
+Separates speech turns into [TARGET_PRIMARY] vs [INTERLOCUTOR_CONTEXT],
+with resilient fallback parsing for companion .txt, .srt, and .vtt transcripts.
 """
 
 from __future__ import annotations
 
 import hashlib
 from pathlib import Path
+import re
 from typing import Any, Dict, List, Optional
 
 from src.utils.logger import get_logger
 from src.utils.text_cleaner import clean_text
 
 logger = get_logger("who.harvest.transcribe")
+
+SUPPORTED_MEDIA_EXTENSIONS = {".mp3", ".wav", ".m4a", ".ogg", ".flac", ".mp4", ".webm"}
 
 
 class DiarizedTranscriber:
@@ -85,17 +89,32 @@ class DiarizedTranscriber:
                     "text": text,
                 })
         except Exception as e:
-            logger.debug(f"WhisperX pipeline not active or encountered error ({e}). Using heuristic audio transcript parser.")
-            # Fallback reading companion srt/vtt/txt if present
-            companion_txt = path.with_suffix(".txt")
-            if companion_txt.exists():
-                with open(companion_txt, "r", encoding="utf-8") as f:
-                    raw_lines = f.readlines()
-                    for idx, line in enumerate(raw_lines):
-                        line_str = line.strip()
-                        if line_str:
-                            tag = "[TARGET_PRIMARY]" if idx % 2 == 0 else "[INTERLOCUTOR_CONTEXT]"
-                            full_text_lines.append(f"{tag}: {line_str}")
+            logger.debug(f"WhisperX pipeline not active or encountered error ({e}). Using companion subtitle/transcript parser.")
+            companion = None
+            for ext in (".txt", ".vtt", ".srt"):
+                candidate = path.with_suffix(ext)
+                if candidate.exists():
+                    companion = candidate
+                    break
+
+            if companion is not None:
+                raw_lines = companion.read_text(encoding="utf-8", errors="ignore").splitlines()
+                cue_idx = 0
+                for line in raw_lines:
+                    line_str = line.strip()
+                    if not line_str or line_str.upper().startswith("WEBVTT") or line_str.isdigit():
+                        continue
+                    if "-->" in line_str:
+                        continue
+                    line_str = re.sub(r"<[^>]+>", "", line_str).strip()
+                    if not line_str:
+                        continue
+                    if line_str.startswith("[TARGET_PRIMARY]") or line_str.startswith("[INTERLOCUTOR_CONTEXT]"):
+                        full_text_lines.append(line_str)
+                    else:
+                        tag = "[TARGET_PRIMARY]" if cue_idx % 2 == 0 else "[INTERLOCUTOR_CONTEXT]"
+                        full_text_lines.append(f"{tag}: {line_str}")
+                    cue_idx += 1
             else:
                 full_text_lines.append(f"[TARGET_PRIMARY]: Audio recorded from {path.name}. Detailed discourse captured.")
 

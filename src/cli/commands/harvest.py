@@ -13,49 +13,60 @@ from rich.table import Table
 
 from src.config import settings
 from src.harvest.academic_harvester import AcademicHarvester
+from src.harvest.cyber_footprint import CyberFootprintAuditor
 from src.harvest.dialogue_harvester import DialogueHarvester
+from src.harvest.diarized_transcriber import DiarizedTranscriber, SUPPORTED_MEDIA_EXTENSIONS
 from src.harvest.document_ingestor import DocumentIngestor
+from src.harvest.live_monitor import LiveMonitor
 from src.harvest.media_harvester import MediaHarvester
 from src.harvest.ocr_processor import OCRProcessor
-from src.harvest.web_harvester import WebHarvester
-from src.harvest.live_monitor import LiveMonitor
 from src.harvest.social_osint import SocialOSINTHunter
-from src.harvest.cyber_footprint import CyberFootprintAuditor
+from src.harvest.web_harvester import WebHarvester
+from src.utils.entity_validator import DISAMBIGUATION_NOTICE_TR
 from src.utils.logger import console, print_banner
 
 
 def harvest(
     target: str = typer.Option(..., "--target", "-t", help="Target individual name"),
     urls: Optional[str] = typer.Option(None, "--urls", "-u", help="Comma-separated URLs to scrape (articles, RSS, media)"),
-    docs_dir: Optional[str] = typer.Option(None, "--docs-dir", "-d", help="Directory containing PDFs, DOCX, PPTX, or images"),
+    docs_dir: Optional[str] = typer.Option(None, "--docs-dir", "-d", help="Directory containing PDFs, DOCX, PPTX, images, or audio/video"),
     chat_logs: Optional[str] = typer.Option(None, "--chat-logs", "-c", help="Path to chat export (.txt, .json, .vtt)"),
-    target_alias: Optional[str] = typer.Option(None, "--target-alias", "-a", help="Target alias for dialogue attribution"),
+    audio_files: Optional[str] = typer.Option(None, "--audio-files", "-m", help="Comma-separated audio/video files to auto-transcribe & diarize"),
+    target_alias: Optional[str] = typer.Option(None, "--target-alias", "-a", help="Target alias for dialogue & speaker attribution"),
 ) -> None:
-    """Harvest public footprint, documents, media, and dialogue records."""
+    """Harvest public footprint, documents, media (with automatic diarized transcription), and dialogue records."""
     print_banner()
     dirs = settings.get_target_dirs(target)
     console.print(f"[bold green]Starting Multimodal Harvest for:[/bold green] [bold cyan]{target}[/bold cyan]")
     console.print(f"[dim]Profile storage directory: {dirs.base_dir}[/dim]\n")
 
     harvested_records: List[str] = []
+    total_rejected_namesakes = 0
+    transcriber = DiarizedTranscriber(output_dir=dirs.raw_data_dir)
+    effective_alias = target_alias or target
 
-    # 1. Harvest URLs
+    # 1. Harvest URLs (Web, RSS, and Media Streams with Auto-Transcription Bridge)
     if urls:
         url_list = [u.strip() for u in urls.split(",") if u.strip()]
         console.print(f"[*] Processing {len(url_list)} URL resource(s)...")
-        web_harvester = WebHarvester(output_dir=dirs.raw_data_dir)
+        web_harvester = WebHarvester(output_dir=dirs.raw_data_dir, target_name=target)
         media_harvester = MediaHarvester(output_dir=dirs.raw_data_dir / "media")
 
         for u in url_list:
             if any(vid in u.lower() for vid in ["youtube.com", "youtu.be", "vimeo.com", "spotify.com"]):
                 media_res = media_harvester.download_audio(u)
                 harvested_records.append(f"Media Audio: {media_res.get('title', u)}")
+                audio_path_str = media_res.get("audio_file_path", "")
+                if audio_path_str and Path(audio_path_str).exists():
+                    tr_res = transcriber.transcribe_and_diarize(Path(audio_path_str), target_alias=effective_alias)
+                    harvested_records.append(f"Auto-Transcribed Media: {tr_res.get('audio_file')}")
             else:
                 web_res = web_harvester.harvest_urls([u])
                 for wr in web_res:
                     harvested_records.append(f"Web/Article: {wr.get('title', u)}")
+        total_rejected_namesakes += web_harvester.rejected_namesakes_count
 
-    # 2. Ingest Documents & OCR
+    # 2. Ingest Documents, OCR & Local Media Files in Directory
     if docs_dir:
         d_path = Path(docs_dir)
         console.print(f"[*] Ingesting documents from: {d_path}...")
@@ -70,11 +81,26 @@ def harvest(
         for orc in ocr_res:
             harvested_records.append(f"OCR Scan: {orc.get('image_name')}")
 
+        if d_path.exists() and d_path.is_dir():
+            for item in sorted(d_path.iterdir()):
+                if item.is_file() and item.suffix.lower() in SUPPORTED_MEDIA_EXTENSIONS:
+                    tr_res = transcriber.transcribe_and_diarize(item, target_alias=effective_alias)
+                    harvested_records.append(f"Auto-Transcribed Media: {tr_res.get('audio_file')}")
+
+    # 2b. Explicit Audio/Video Files (--audio-files / -m)
+    if audio_files:
+        media_paths = [Path(p.strip()) for p in audio_files.split(",") if p.strip()]
+        for mp in media_paths:
+            if mp.exists() and mp.is_file():
+                console.print(f"[*] Auto-transcribing & diarizing media file: {mp.name}...")
+                tr_res = transcriber.transcribe_and_diarize(mp, target_alias=effective_alias)
+                harvested_records.append(f"Auto-Transcribed Media: {tr_res.get('audio_file')}")
+
     # 3. Harvest Dialogue Logs
     if chat_logs:
         c_path = Path(chat_logs)
         console.print(f"[*] Parsing direct dialogue logs from: {c_path}...")
-        dialogue_harvester = DialogueHarvester(output_dir=dirs.raw_data_dir, target_alias=target_alias or target)
+        dialogue_harvester = DialogueHarvester(output_dir=dirs.raw_data_dir, target_alias=effective_alias)
         pairs = dialogue_harvester.parse_file(c_path)
         harvested_records.append(f"Dialogue Logs: {len(pairs)} target-response turns from {c_path.name}")
 
@@ -83,6 +109,7 @@ def harvest(
     pubs = academic_harvester.search_author_publications(target, max_results=5)
     for p in pubs:
         harvested_records.append(f"Academic Publication: {p.get('title')}")
+    total_rejected_namesakes += academic_harvester.rejected_namesakes_count
 
     # Ensure at least one baseline document exists if no inputs were given
     if not harvested_records and not list(dirs.raw_data_dir.glob("*.md")):
@@ -101,6 +128,17 @@ def harvest(
         table.add_row(str(idx), rec, "✓ INGESTED")
 
     console.print(table)
+
+    if total_rejected_namesakes > 0:
+        console.print(
+            Panel(
+                f"[yellow]{DISAMBIGUATION_NOTICE_TR}[/yellow]\n"
+                f"[dim](Sıfır İkame Kapısı tarafından elenen kayıt sayısı: {total_rejected_namesakes} — hedef profiline üçüncü şahıs verisi işlenmedi.)[/dim]",
+                title="[bold yellow]🛡️ Ayrıştırma Kapısı (Zero-Substitution Disambiguation Gate)[/bold yellow]",
+                border_style="yellow",
+            )
+        )
+
     console.print(f"[bold green]Harvest completed successfully.[/bold green] Next step: [cyan]who learn --target \"{target}\"[/cyan]\n")
 
 

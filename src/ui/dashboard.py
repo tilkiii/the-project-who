@@ -269,6 +269,9 @@ DASHBOARD_HTML = """<!DOCTYPE html>
           <option value="" disabled selected>Loading...</option>
         </select>
       </div>
+      <button onclick="exportCurrentDossier()" title="Export Standalone HTML Dossier" class="px-3 py-1.5 rounded-lg bg-brand-600/20 border border-brand-500/40 text-brand-400 hover:bg-brand-600 hover:text-white text-xs font-semibold transition flex items-center space-x-1.5">
+        <i class="fa-solid fa-file-export"></i> <span class="hidden sm:inline">Export Dossier</span>
+      </button>
       <button onclick="refreshData()" title="Refresh Profile Data" class="p-2 rounded-lg bg-darkbg border border-darkborder text-slate-400 hover:text-white transition">
         <i class="fa-solid fa-rotate-right"></i>
       </button>
@@ -1257,6 +1260,11 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       });
     }
 
+    function exportCurrentDossier() {
+      if (!currentTarget) return;
+      window.open('/api/target/' + encodeURIComponent(currentTarget) + '/dossier', '_blank');
+    }
+
     function refreshData() {
       loadTargetDetails();
     }
@@ -1301,6 +1309,21 @@ class DashboardRequestHandler(SimpleHTTPRequestHandler):
             targets = get_all_target_names()
             summary = [get_target_profile_summary(t) for t in targets]
             self._send_json(summary)
+            return
+
+        if path.startswith("/api/target/") and path.endswith("/dossier"):
+            parts = path.split("/")
+            target_slug = sanitize_slug(urllib.parse.unquote(parts[3]))
+            display_name = _resolve_target_display_name(target_slug)
+            target_dirs = settings.get_target_dirs(target_slug)
+            from src.engine.dossier_exporter import DossierExporter
+
+            html_doc = DossierExporter(display_name, target_dirs).render_html()
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.send_header("Content-Disposition", f'attachment; filename="{target_slug}_intelligence_dossier.html"')
+            self.end_headers()
+            self.wfile.write(html_doc.encode("utf-8"))
             return
 
         if path.startswith("/api/target/") and path.endswith("/graph"):

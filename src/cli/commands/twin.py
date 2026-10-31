@@ -4,6 +4,7 @@ Cognitive Digital Twin, Behavioral Simulation, Multi-Agent Arena, and Reasoning 
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Optional
 import typer
 from rich.panel import Panel
@@ -13,6 +14,7 @@ from rich.table import Table
 from src.config import settings
 from src.engine.arena import SwarmArena
 from src.engine.composer import Composer
+from src.engine.dossier_exporter import DossierExporter
 from src.engine.evaluator import ProfileEvaluator
 from src.engine.explainability_engine import ExplainabilityEngine
 from src.engine.oracle import Oracle
@@ -249,3 +251,23 @@ def arena(
         title="[bold magenta]📊 Swarm Arena Konsensüs ve Epistemik Sentez Raporu[/bold magenta]",
         border_style="magenta"
     ))
+
+
+def export_dossier(
+    target: str = typer.Option(..., "--target", "-t", help="Target individual name"),
+    output: Optional[str] = typer.Option(None, "--output", "-o", help="Custom output HTML file path"),
+) -> None:
+    """Compile and export a standalone, self-contained HTML intelligence dossier for the target."""
+    print_banner()
+    dirs = settings.get_target_dirs(target)
+    exporter = DossierExporter(target, dirs)
+    out_file = exporter.export_to_file(Path(output) if output else None)
+    console.print(
+        Panel(
+            f"[bold green]✔ Standalone HTML Intelligence Dossier exported![/bold green]\n\n"
+            f"• Target: [bold cyan]{target}[/bold cyan]\n"
+            f"• File Path: [cyan]{out_file}[/cyan]",
+            title="[bold cyan]📁 Intelligence Dossier Export[/bold cyan]",
+            border_style="green",
+        )
+    )

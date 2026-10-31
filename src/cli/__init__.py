@@ -19,6 +19,7 @@ from src.cli.commands.twin import (
     compose,
     evaluate_profile,
     explain,
+    export_dossier,
     psych_insights,
     simulate,
 )
@@ -27,6 +28,8 @@ from src.cli.commands.vault import (
     graph,
     graph_export,
     learn,
+    snapshot,
+    diff,
     topics,
 )
 
@@ -57,6 +60,8 @@ app.command(name="topics")(topics)
 app.command(name="build-vault")(build_vault)
 app.command(name="graph")(graph)
 app.command(name="graph-export")(graph_export)
+app.command(name="snapshot")(snapshot)
+app.command(name="diff")(diff)
 
 # Register Digital Twin & Reasoning Commands
 app.command(name="evaluate-profile")(evaluate_profile)
@@ -67,6 +72,7 @@ app.command(name="simulate")(simulate)
 app.command(name="compose")(compose)
 app.command(name="chat")(chat)
 app.command(name="arena")(arena)
+app.command(name="export-dossier")(export_dossier)
 
 # Register Social Network Commands
 app.command(name="network")(network)

@@ -134,3 +134,38 @@ def test_redact_pii():
     assert "[REDACTED_IBAN]" in scrubbed
     assert "chat.whatsapp.com" not in scrubbed
     assert "[REDACTED_CHAT_LINK]" in scrubbed
+
+
+def test_diarized_transcriber_vtt_and_cli_audio_bridge(tmp_path: Path):
+    import shutil
+    from typer.testing import CliRunner
+    from src.cli import app
+    from src.config import settings
+    from src.harvest.diarized_transcriber import DiarizedTranscriber
+
+    audio_file = tmp_path / "keynote_talk.mp3"
+    audio_file.write_bytes(b"ID3-dummy-audio-stream")
+    vtt_file = tmp_path / "keynote_talk.vtt"
+    vtt_file.write_text(
+        "WEBVTT\n\n00:00:01.000 --> 00:00:04.500\nEpistemic calibration prevents deterministic hallucinations.\n\n"
+        "00:00:05.000 --> 00:00:08.000\nHow do you quantify confidence?\n",
+        encoding="utf-8",
+    )
+
+    out_dir = tmp_path / "transcripts"
+    dt = DiarizedTranscriber(output_dir=out_dir)
+    rec = dt.transcribe_and_diarize(audio_file, target_alias="Media Twin")
+    assert "[TARGET_PRIMARY]: Epistemic calibration prevents deterministic hallucinations." in rec["content"]
+    assert "[INTERLOCUTOR_CONTEXT]: How do you quantify confidence?" in rec["content"]
+
+    runner = CliRunner()
+    target_name = "Audio Bridge Twin"
+    target_dir = settings.get_target_dirs(target_name).base_dir
+    try:
+        res = runner.invoke(app, ["harvest", "--target", target_name, "--audio-files", str(audio_file)])
+        assert res.exit_code == 0
+        assert "Auto-Transcribed Media: keynote_talk.mp3" in res.output
+        transcript_files = list((target_dir / "raw_data").glob("transcript_*.md"))
+        assert len(transcript_files) == 1
+    finally:
+        shutil.rmtree(target_dir, ignore_errors=True)

@@ -380,3 +380,69 @@ def graph_export(
 
 
     console.print(f"[bold green]Knowledge Graph exported to:[/bold green] {dest} ({len(data.get('nodes', []))} nodes, {len(data.get('relationships', []))} edges)")
+
+
+def snapshot(
+    target: str = typer.Option(..., "--target", "-t", help="Target individual name"),
+    label: Optional[str] = typer.Option(None, "--label", "-l", help="Optional checkpoint label (e.g. 'q1_baseline')"),
+) -> None:
+    """Capture a timestamped cognitive vault snapshot for temporal drift comparison."""
+    from src.vault.snapshot_diff import SnapshotManager
+
+    print_banner()
+    dirs = settings.get_target_dirs(target)
+    mgr = SnapshotManager(target, dirs)
+    snap_path = mgr.create_snapshot(label=label)
+    console.print(
+        Panel(
+            f"[bold green]✔ Cognitive Snapshot Captured![/bold green]\n\n"
+            f"• Target: [bold cyan]{target}[/bold cyan]\n"
+            f"• Label: [yellow]{label or 'checkpoint'}[/yellow]\n"
+            f"• Saved File: [cyan]{snap_path}[/cyan]",
+            title="[bold cyan]📸 Temporal Twin Snapshot[/bold cyan]",
+            border_style="green",
+        )
+    )
+
+
+def diff(
+    target: str = typer.Option(..., "--target", "-t", help="Target individual name"),
+    from_snapshot: Optional[str] = typer.Option(None, "--from", help="Path to older snapshot JSON"),
+    to_snapshot: Optional[str] = typer.Option(None, "--to", help="Path to newer snapshot JSON"),
+) -> None:
+    """Compare two temporal snapshots (or latest snapshot vs live vault) to quantify cognitive & ideological drift."""
+    from src.vault.snapshot_diff import SnapshotManager
+
+    print_banner()
+    dirs = settings.get_target_dirs(target)
+    mgr = SnapshotManager(target, dirs)
+    try:
+        report = mgr.compare_snapshots(
+            snap_a_path=Path(from_snapshot) if from_snapshot else None,
+            snap_b_path=Path(to_snapshot) if to_snapshot else None,
+        )
+    except ValueError as err:
+        console.print(f"[bold red]Error:[/bold red] {err}")
+        raise typer.Exit(1)
+
+    table = Table(title=f"⏳ Temporal Cognitive Drift Analysis: {target} ({report['from_label']} ➔ {report['to_label']})", header_style="bold cyan")
+    table.add_column("Drift Dimension", style="bold white", width=30)
+    table.add_column("Observed Delta / Shift", style="cyan")
+
+    table.add_row("Epistemic Calibration Delta", f"{report['epistemic_calibration_delta']:+.3f}")
+    table.add_row("Manipulation Index Delta", f"{report['manipulation_score_delta']:+.3f}")
+    table.add_row("Lexical Diversity (TTR) Delta", f"{report['lexical_ttr_delta']:+.3f}")
+    table.add_row("Added Concepts", ", ".join(report["added_concepts"][:8]) or "None")
+    table.add_row("Removed Concepts", ", ".join(report["removed_concepts"][:8]) or "None")
+    table.add_row("New [CONTRADICTS] Tensions", ", ".join(report["new_contradictions"][:5]) or "None")
+    table.add_row("Resolved [CONTRADICTS] Tensions", ", ".join(report["resolved_contradictions"][:5]) or "None")
+    table.add_row("Emerging Topics", ", ".join(report["emerging_topics"][:6]) or "None")
+
+    console.print(table)
+    console.print(
+        Panel(
+            f"[yellow]{report['probabilistic_drift_statement']}[/yellow]",
+            title="[bold yellow]📊 Calibrated Temporal Drift Summary[/bold yellow]",
+            border_style="yellow",
+        )
+    )

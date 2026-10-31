@@ -25,6 +25,7 @@ class AcademicHarvester:
 
     def __init__(self, output_dir: Optional[Path] = None):
         self.output_dir = output_dir
+        self.rejected_namesakes_count: int = 0
 
     def search_author_publications(self, author_name: str, max_results: int = 15) -> List[Dict[str, Any]]:
         """Search publications for a specific author under Strict Zero-Substitution Protocol."""
@@ -46,6 +47,7 @@ class AcademicHarvester:
                 if matched:
                     verified_author = candidate
                     break
+                self.rejected_namesakes_count += 1
                 logger.info(
                     f"Disambiguation Gate [Google Scholar]: Rejected namesake '{cand_name}' "
                     f"for target '{author_name}' ({reason})"
@@ -93,6 +95,7 @@ class AcademicHarvester:
                         if matched:
                             verified_authors.append(cand)
                         else:
+                            self.rejected_namesakes_count += 1
                             logger.info(
                                 f"Disambiguation Gate [Semantic Scholar]: Rejected namesake '{cand_name}' "
                                 f"for target '{author_name}' ({reason})"
@@ -143,6 +146,7 @@ class AcademicHarvester:
                                 entry_authors.append(clean_text(name_el.text))
 
                         if not any(is_strict_entity_match(author_name, a_name)[0] for a_name in entry_authors):
+                            self.rejected_namesakes_count += 1
                             logger.info(
                                 f"Disambiguation Gate [arXiv]: Rejected entry by {entry_authors} "
                                 f"for target '{author_name}'"

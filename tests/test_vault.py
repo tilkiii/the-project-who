@@ -139,3 +139,68 @@ def test_graph_export_custom_output_utf8_no_double_write(tmp_path: Path):
     assert "Bilişsel Tutarlılık" in raw_text
     assert "\\u00fc" not in raw_text
     assert len(exported["nodes"]) == 2
+
+
+def test_temporal_snapshot_and_diff_cli():
+    import json
+    import shutil
+    from typer.testing import CliRunner
+    from src.cli import app
+    from src.config import settings
+
+    runner = CliRunner()
+    target_name = "Temporal Drift Twin"
+    dirs = settings.get_target_dirs(target_name)
+
+    try:
+        # Phase 1: Baseline state
+        (dirs.learned_skills_dir / "features.json").write_text(
+            json.dumps({
+                "corpus_stats": {"total_words": 500, "type_token_ratio": 0.62},
+                "epistemic_markers": {"epistemic_calibration_ratio": 1.40},
+                "epistemic_manipulation_index": {"score": 0.15},
+            }),
+            encoding="utf-8",
+        )
+        (dirs.vault_dir / "concept_network.json").write_text(
+            json.dumps({
+                "nodes": [{"name": "Open Science"}, {"name": "Peer Review"}],
+                "relationships": [],
+            }),
+            encoding="utf-8",
+        )
+
+        res_snap1 = runner.invoke(app, ["snapshot", "--target", target_name, "--label", "v1_baseline"])
+        assert res_snap1.exit_code == 0
+        assert "Cognitive Snapshot Captured" in res_snap1.output
+
+        # Phase 2: Evolved state with new concept & new [CONTRADICTS] tension
+        (dirs.learned_skills_dir / "features.json").write_text(
+            json.dumps({
+                "corpus_stats": {"total_words": 900, "type_token_ratio": 0.58},
+                "epistemic_markers": {"epistemic_calibration_ratio": 0.95},
+                "epistemic_manipulation_index": {"score": 0.42},
+            }),
+            encoding="utf-8",
+        )
+        (dirs.vault_dir / "concept_network.json").write_text(
+            json.dumps({
+                "nodes": [{"name": "Open Science"}, {"name": "Closed Licensing"}],
+                "relationships": [
+                    {"source": "Open Science", "target": "Closed Licensing", "relation": "CONTRADICTS", "dissonance_score": 0.89}
+                ],
+            }),
+            encoding="utf-8",
+        )
+
+        res_snap2 = runner.invoke(app, ["snapshot", "--target", target_name, "--label", "v2_shift"])
+        assert res_snap2.exit_code == 0
+
+        res_diff = runner.invoke(app, ["diff", "--target", target_name])
+        assert res_diff.exit_code == 0
+        assert "-0.450" in res_diff.output
+        assert "+0.270" in res_diff.output
+        assert "Closed Licensing" in res_diff.output
+        assert "Open Science ⚡ Closed Licensing" in res_diff.output
+    finally:
+        shutil.rmtree(dirs.base_dir, ignore_errors=True)

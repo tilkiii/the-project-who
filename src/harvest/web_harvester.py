@@ -1,6 +1,7 @@
 """
 Web and RSS scraper for who??.
 Leverages crawl4ai and feedparser to extract LLM-ready markdown from web articles and feeds.
+Enforces Strict Zero-Substitution Protocol (AGENTS.md Rule #1) when target_name is specified.
 """
 
 from __future__ import annotations
@@ -13,6 +14,7 @@ from typing import Any, Dict, List, Optional
 import httpx
 from bs4 import BeautifulSoup
 
+from src.utils.entity_validator import detect_unauthorized_name_expansion
 from src.utils.logger import get_logger
 from src.utils.text_cleaner import clean_text
 
@@ -22,14 +24,17 @@ logger = get_logger("who.harvest.web")
 class WebHarvester:
     """Harvests web articles, blogs, and RSS feeds into normalized markdown."""
 
-    def __init__(self, output_dir: Optional[Path] = None):
+    def __init__(self, output_dir: Optional[Path] = None, target_name: Optional[str] = None):
         self.output_dir = output_dir
+        self.target_name = target_name
+        self.rejected_namesakes_count: int = 0
 
-    async def scrape_url(self, url: str) -> Dict[str, Any]:
-        """Scrape a single URL using crawl4ai with httpx/bs4 fallback."""
+    async def scrape_url(self, url: str) -> Optional[Dict[str, Any]]:
+        """Scrape a single URL using crawl4ai with httpx/bs4 fallback and Disambiguation Gate."""
         logger.info(f"Scraping web resource: {url}")
         content_markdown = ""
         title = ""
+        declared_author: Optional[str] = None
 
         # Attempt crawl4ai first
         try:
@@ -39,6 +44,9 @@ class WebHarvester:
                 if result and result.markdown:
                     content_markdown = result.markdown
                     title = getattr(result, "title", "") or url
+                    meta = getattr(result, "metadata", None) or {}
+                    if isinstance(meta, dict):
+                        declared_author = meta.get("author")
         except Exception as e:
             logger.debug(f"crawl4ai not available or encountered error ({e}), falling back to httpx+BeautifulSoup")
 
@@ -50,6 +58,12 @@ class WebHarvester:
                     resp = await client.get(url, headers=headers)
                     if resp.status_code == 200:
                         soup = BeautifulSoup(resp.text, "html.parser")
+                        author_meta = (
+                            soup.find("meta", attrs={"name": "author"})
+                            or soup.find("meta", attrs={"property": "article:author"})
+                        )
+                        if author_meta and author_meta.get("content"):
+                            declared_author = str(author_meta.get("content")).strip()
                         # Strip script and style
                         for s in soup(["script", "style", "nav", "footer", "header", "noscript"]):
                             s.decompose()
@@ -62,6 +76,20 @@ class WebHarvester:
                 content_markdown = f"# Scrape Failure\n\nCould not fetch content from {url}."
 
         clean_md = clean_text(content_markdown)
+
+        if self.target_name:
+            contaminated, reason = detect_unauthorized_name_expansion(
+                self.target_name,
+                f"{title}\n{clean_md}",
+                declared_author=declared_author,
+            )
+            if contaminated:
+                self.rejected_namesakes_count += 1
+                logger.info(
+                    f"Disambiguation Gate [WebHarvester]: Ignored non-matching namesake record at {url} ({reason})"
+                )
+                return None
+
         doc_record = {
             "source_url": url,
             "title": title or url,
@@ -77,9 +105,9 @@ class WebHarvester:
         return doc_record
 
     def parse_rss_feed(self, feed_url: str, max_entries: int = 10) -> List[Dict[str, Any]]:
-        """Parse an RSS or Atom feed using feedparser."""
+        """Parse an RSS or Atom feed using feedparser with Disambiguation Gate."""
         logger.info(f"Parsing RSS feed: {feed_url}")
-        records = []
+        records: List[Dict[str, Any]] = []
         try:
             import feedparser
             feed = feedparser.parse(feed_url)
@@ -87,14 +115,30 @@ class WebHarvester:
                 title = entry.get("title", "Untitled")
                 link = entry.get("link", "")
                 summary = entry.get("summary", "") or entry.get("description", "")
+                entry_author = entry.get("author", "") or None
                 # Clean html tags from summary
                 soup = BeautifulSoup(summary, "html.parser")
                 clean_body = soup.get_text(separator="\n").strip()
+                combined_content = f"# {title}\n\n{clean_body}"
+
+                if self.target_name:
+                    contaminated, reason = detect_unauthorized_name_expansion(
+                        self.target_name,
+                        combined_content,
+                        declared_author=entry_author,
+                    )
+                    if contaminated:
+                        self.rejected_namesakes_count += 1
+                        logger.info(
+                            f"Disambiguation Gate [RSS]: Ignored non-matching namesake entry '{title}' ({reason})"
+                        )
+                        continue
+
                 record = {
                     "source_url": link or feed_url,
                     "title": title,
                     "published": entry.get("published", datetime.now(timezone.utc).isoformat()),
-                    "content": f"# {title}\n\n{clean_body}",
+                    "content": combined_content,
                     "source_type": "rss_entry",
                     "speaker": "TARGET_PRIMARY",
                 }
@@ -107,14 +151,15 @@ class WebHarvester:
 
     def harvest_urls(self, urls: List[str]) -> List[Dict[str, Any]]:
         """Synchronous wrapper to scrape a batch of URLs."""
-        results = []
+        results: List[Dict[str, Any]] = []
         for url in urls:
             if "rss" in url.lower() or "feed" in url.lower() or url.endswith(".xml"):
                 results.extend(self.parse_rss_feed(url))
             else:
                 try:
                     res = asyncio.run(self.scrape_url(url))
-                    results.append(res)
+                    if res is not None:
+                        results.append(res)
                 except Exception as e:
                     logger.error(f"Async scrape error for {url}: {e}")
         return results

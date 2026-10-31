@@ -91,3 +91,27 @@ def test_twin_chat(target_dirs):
     chat_informal = TwinChat("Alice", target_dirs, mode="informal")
     resp_informal = chat_informal.respond("Hey Alice, what's up?")
     assert len(resp_informal) > 0
+
+
+def test_dossier_exporter_standalone_html(target_dirs, tmp_path: Path):
+    from typer.testing import CliRunner
+    from src.cli import app
+    from src.engine.dossier_exporter import DossierExporter
+
+    custom_html = tmp_path / "alice_dossier.html"
+    exporter = DossierExporter("Alice", target_dirs)
+    out_path = exporter.export_to_file(custom_html)
+
+    assert out_path == custom_html
+    assert custom_html.exists()
+    html_text = custom_html.read_text(encoding="utf-8")
+    assert "who?? Intelligence Dossier" in html_text
+    assert "Alice" in html_text
+    assert "Confidence Score:" in html_text
+    assert "d3.v7.min.js" in html_text
+
+    runner = CliRunner()
+    cli_html = tmp_path / "cli_alice_dossier.html"
+    res = runner.invoke(app, ["export-dossier", "--target", "Alice", "--output", str(cli_html)])
+    assert res.exit_code == 0
+    assert cli_html.exists()

@@ -126,3 +126,54 @@ def test_academic_harvester_zero_substitution_arxiv(tmp_path, monkeypatch):
     assert len(pubs) == 1
     assert pubs[0]["title"] == "Verified Target Arxiv Preprint"
     assert pubs[0]["authors"] == ["Mücteba Özdemir", "Remzi Sanver"]
+    assert harvester.rejected_namesakes_count == 1
+
+
+def test_web_harvester_disambiguation_gate_blocks_namesake_expansion(tmp_path, monkeypatch):
+    import httpx
+    from src.harvest.web_harvester import WebHarvester
+    from src.utils.entity_validator import detect_unauthorized_name_expansion
+
+    # Sentence-initial Turkish word ('Bugün') must NOT trigger false positive
+    is_bad, _ = detect_unauthorized_name_expansion(
+        "Mucteba Özdemir",
+        "Bugün Mücteba Özdemir yeni bilişsel mimari makalesini yayınladı.",
+    )
+    assert is_bad is False
+
+    # Prefixed namesake ('Muhammet Mücteba Özdemir') MUST be blocked
+    is_bad2, reason2 = detect_unauthorized_name_expansion(
+        "Mucteba Özdemir",
+        "Kararı imzalayan Muhammet Mücteba Özdemir görevine başladı.",
+    )
+    assert is_bad2 is True
+    assert "EXPANSION" in reason2
+
+    class DummyAsyncResp:
+        def __init__(self, html: str):
+            self.status_code = 200
+            self.text = html
+
+    async def fake_async_get(self, url, **kwargs):
+        if "namesake" in url:
+            return DummyAsyncResp(
+                "<html><head><title>Muhammet Mücteba Özdemir Atama Kararı</title></head>"
+                "<body><p>Muhammet Mücteba Özdemir yeni görevine atandı.</p></body></html>"
+            )
+        return DummyAsyncResp(
+            "<html><head><title>Mücteba Özdemir Makalesi</title></head>"
+            "<body><p>Mücteba Özdemir olasılıksal dijital ikiz mimarisini açıkladı.</p></body></html>"
+        )
+
+    monkeypatch.setattr(httpx.AsyncClient, "get", fake_async_get)
+
+    wh = WebHarvester(output_dir=tmp_path, target_name="Mucteba Özdemir")
+    results = wh.harvest_urls(["https://example.org/namesake", "https://example.org/verified"])
+
+    assert len(results) == 1
+    assert wh.rejected_namesakes_count == 1
+    assert "olasılıksal dijital ikiz" in results[0]["content"]
+    # Zero third-party namesake files written to disk
+    saved_files = list(tmp_path.glob("web_*.md"))
+    assert len(saved_files) == 1
+    assert "Muhammet" not in saved_files[0].read_text(encoding="utf-8")
