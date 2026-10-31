@@ -19,23 +19,28 @@ DISAMBIGUATION_NOTICE_TR = (
 
 
 def normalize_name(name: str) -> str:
-    """Normalize text by lowercasing, stripping diacritics/accents, and trimming whitespace."""
+    """Normalize text by Turkish-safe lowercasing, stripping diacritics/accents, and trimming whitespace."""
     if not name:
         return ""
-    # Normalize unicode (decompose accented characters)
-    normalized = unicodedata.normalize("NFKD", name.strip().lower())
-    # Remove combining diacritical marks
-    without_accents = "".join(c for c in normalized if not unicodedata.combining(c))
-    # Replace common Turkish letter variations
-    without_accents = (
-        without_accents.replace("ı", "i")
+    # Explicitly map Turkish dotted/dotless I variants before lower() + NFKD so 'İ' never leaves '\u0307'
+    pre_cleaned = (
+        name.strip()
+        .replace("İ", "i")
+        .replace("I", "i")
+        .replace("ı", "i")
         .replace("ğ", "g")
+        .replace("Ğ", "g")
         .replace("ü", "u")
+        .replace("Ü", "u")
         .replace("ş", "s")
+        .replace("Ş", "s")
         .replace("ö", "o")
+        .replace("Ö", "o")
         .replace("ç", "c")
+        .replace("Ç", "c")
     )
-    # Clean non-alphanumeric except whitespace
+    normalized = unicodedata.normalize("NFKD", pre_cleaned.lower())
+    without_accents = "".join(c for c in normalized if not unicodedata.combining(c))
     cleaned = re.sub(r"[^\w\s]", "", without_accents)
     return " ".join(cleaned.split())
 

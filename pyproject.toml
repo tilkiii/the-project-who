@@ -32,7 +32,6 @@ ml = [
     "paddleocr>=2.7.0",
     "whisperx>=3.1.0",
     "bertopic>=0.16.0",
-    "dspy-ai>=2.4.0",
     "chromadb>=0.4.24",
     "networkx>=3.2.0",
     "scikit-learn>=1.4.0",

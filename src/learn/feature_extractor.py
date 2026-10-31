@@ -12,6 +12,7 @@ import re
 from typing import Any, Dict, List, Optional
 
 from src.utils.logger import get_logger
+from src.utils.text_cleaner import BILINGUAL_STOPWORDS, compute_mattr, tokenize_words, tr_lower
 
 logger = get_logger("who.learn.features")
 
@@ -34,7 +35,7 @@ class FeatureExtractor:
         if not combined_text.strip():
             return self._empty_feature_set()
 
-        words = re.findall(r"\b[a-zA-ZçğıöşüÇĞİÖŞÜ']+\b", combined_text.lower())
+        words = tokenize_words(combined_text, min_len=1)
         total_words = len(words)
         if total_words == 0:
             return self._empty_feature_set()
@@ -42,13 +43,22 @@ class FeatureExtractor:
         sentences = [s.strip() for s in re.split(r"[.!?]+", combined_text) if s.strip()]
         total_sentences = len(sentences) or 1
 
-        # 1. Pronoun analysis (Turkish + English)
-        i_pronouns = {"i", "me", "my", "mine", "myself", "ben", "bana", "beni", "benim", "kendim"}
-        we_pronouns = {"we", "us", "our", "ours", "ourselves", "biz", "bize", "bizi", "bizim", "kendimiz"}
-        you_pronouns = {"you", "your", "yours", "yourself", "yourselves", "sen", "siz", "sana", "size", "senin", "sizin"}
+        # 1. Pronoun analysis (Turkish + English, including common Turkish agglutinative forms)
+        i_pronouns = {
+            "i", "me", "my", "mine", "myself",
+            "ben", "bana", "beni", "benim", "benden", "benimle", "bende", "kendim", "kendime", "kendimi",
+        }
+        we_pronouns = {
+            "we", "us", "our", "ours", "ourselves",
+            "biz", "bize", "bizi", "bizim", "bizden", "bizimle", "bizde", "kendimiz", "kendimize",
+        }
+        you_pronouns = {
+            "you", "your", "yours", "yourself", "yourselves",
+            "sen", "siz", "sana", "size", "seni", "sizi", "senin", "sizin", "senden", "sizden",
+        }
         they_pronouns = {
             "they", "them", "their", "theirs", "themselves", "he", "him", "his", "she", "her", "hers",
-            "onlar", "onlara", "onlari", "onları", "onlarin", "onların", "o", "ona", "onu", "onun"
+            "onlar", "onlara", "onlari", "onları", "onlarin", "onların", "onlardan", "o", "ona", "onu", "onun", "ondan",
         }
 
         i_count = sum(1 for w in words if w in i_pronouns)
@@ -87,26 +97,20 @@ class FeatureExtractor:
         pos_count = sum(1 for w in words if w in positive_lexicon)
         crit_count = sum(1 for w in words if w in critical_lexicon)
 
-        # 4. Lexical diversity (Type-Token Ratio)
+        # 4. Lexical diversity (Type-Token Ratio & Moving-Average TTR)
         unique_words = len(set(words))
         ttr = unique_words / total_words
+        mattr = compute_mattr(words, window_size=50)
 
         # 5. Rhetorical syntax metrics
         avg_sentence_len = total_words / total_sentences
         question_count = combined_text.count("?")
         exclamation_count = combined_text.count("!")
 
-        # 6. Top characteristic keywords
-        stopwords = {
-            "the", "a", "an", "and", "or", "but", "in", "on", "at", "to", "for", "of", "with",
-            "is", "was", "are", "were", "be", "been", "being", "have", "has", "had", "do", "does",
-            "did", "that", "this", "these", "those", "it", "its", "as", "by", "from", "about",
-            "bir", "ve", "veya", "ile", "de", "da", "bu", "şu", "su", "o", "için", "icin", "gibi",
-            "kadar", "daha", "en", "çok", "cok", "her", "tüm", "tum", "ise", "ama", "fakat", "lakin"
-        }
+        # 6. Top characteristic keywords (Turkish + English stopword filtered)
         word_freq: Dict[str, int] = {}
         for w in words:
-            if len(w) > 3 and w not in stopwords:
+            if len(w) > 3 and w not in BILINGUAL_STOPWORDS:
                 word_freq[w] = word_freq.get(w, 0) + 1
         sorted_keywords = sorted(word_freq.items(), key=lambda x: x[1], reverse=True)[:20]
 
@@ -129,6 +133,7 @@ class FeatureExtractor:
                 "total_sentences": total_sentences,
                 "unique_words": unique_words,
                 "type_token_ratio": round(ttr, 3),
+                "moving_avg_ttr": mattr,
                 "avg_sentence_length": round(avg_sentence_len, 2),
             },
             "pronoun_ratios": {
@@ -162,7 +167,7 @@ class FeatureExtractor:
             self.output_dir.mkdir(parents=True, exist_ok=True)
             out_file = self.output_dir / "features.json"
             with open(out_file, "w", encoding="utf-8") as f:
-                json.dump(features, f, indent=2, default=str)
+                json.dump(features, f, indent=2, default=str, ensure_ascii=False)
             logger.info(f"Saved behavioral signal features to {out_file}")
 
         return features
@@ -178,7 +183,7 @@ class FeatureExtractor:
         Measures dogmatic/absolutist linguistic density vs. rational/evidence-based qualifiers,
         detecting unsupported certainty patterns.
         """
-        lower_text = full_text.lower()
+        lower_text = tr_lower(full_text)
 
         # Dogmatic / Absolutist Lexicon & Phrases
         dogmatic_terms = [

@@ -46,17 +46,9 @@ class OfflineProvider(BaseLLMProvider):
     ) -> str:
         p_lower = prompt.lower()
 
-        # Structured JSON extraction tasks
+        # Structured JSON extraction tasks: return empty lists so callers use real text heuristics instead of fabricated entities
         if "extract entities" in p_lower or ("entity" in p_lower and "json" in p_lower):
-            return (
-                '{"entities": ['
-                '{"name": "Masonluk", "type": "Organization", "description": "Uluslararasi kardeslik dernegi"}, '
-                '{"name": "Aydinlanma", "type": "Concept", "description": "18. yy rasyonalizm hareketi"}, '
-                '{"name": "Sosyal Secim Teorisi", "type": "AcademicField", "description": "Kolektif karar mekanizmalari"}], '
-                '"relationships": ['
-                '{"source": "Masonluk", "target": "Aydinlanma", "relation": "ROOTED_IN", "weight": 0.90}, '
-                '{"source": "Sosyal Secim Teorisi", "target": "Aydinlanma", "relation": "ALIGNED_WITH", "weight": 0.75}]}'
-            )
+            return '{"entities": [], "relationships": [], "cognitive_dissonances": []}'
         elif "character.json" in p_lower or "elizaos" in p_lower:
             return (
                 '{"name": "Target Model", "bio": ["Evidence-focused researcher with high empirical standards"], '

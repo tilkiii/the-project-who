@@ -27,7 +27,7 @@ from src.utils.logger import console, print_banner, print_probabilistic_claim
 def evaluate_profile(
     target: str = typer.Option(..., "--target", "-t", help="Target individual name"),
 ) -> None:
-    """Run DSPy-driven evaluation of retrieval quality, profile consistency, and hallucination rate."""
+    """Run scientific evaluation of retrieval quality, profile consistency, and hallucination rate."""
     print_banner()
     dirs = settings.get_target_dirs(target)
     evaluator = ProfileEvaluator(target, dirs)
@@ -271,3 +271,71 @@ def export_dossier(
             border_style="green",
         )
     )
+
+
+def negotiate(
+    target: str = typer.Option(..., "--target", "-t", help="Target individual name"),
+    objective: str = typer.Option(..., "--objective", "-o", help="Desired agreement, partnership, or persuasion objective"),
+    leverage: Optional[str] = typer.Option(None, "--leverage", "-l", help="Available value offer, concession, or strategic leverage"),
+) -> None:
+    """Simulate a game-theoretic multi-turn negotiation matrix using Prospect Theory & Red-Line constraints."""
+    from src.engine.negotiation_engine import GameTheoreticNegotiator
+
+    print_banner()
+    dirs = settings.get_target_dirs(target)
+    engine = GameTheoreticNegotiator(target, dirs)
+    report = engine.simulate_negotiation(objective=objective, leverage=leverage)
+
+    up = report["utility_parameters"]
+    table = Table(title=f"♟️ Game-Theoretic Negotiation Matrix: {target}", header_style="bold cyan")
+    table.add_column("Strategy Branch", style="bold white", width=44)
+    table.add_column("Agreement Prob.", style="green", width=16)
+    table.add_column("Optimal Turn-3 Pivot", style="dim")
+
+    for b in report["game_tree_branches"]:
+        table.add_row(b["name"], b["agreement_probability_pct"], b["turn_3_optimal_pivot"])
+
+    console.print(table)
+    rec = report["recommended_strategy"]
+    console.print(
+        Panel(
+            f"[bold green]Recommended Strategy:[/bold green] {rec['name']} ([cyan]{rec['agreement_probability_pct']}[/cyan])\n"
+            f"[dim]Prospect Theory λ={up['loss_aversion_lambda']} | Concession Elasticity η={up['concession_elasticity_eta']}[/dim]\n\n"
+            f"{report['tactical_brief']}\n\n"
+            f"[dim]{report['epistemic_qualification']}[/dim]",
+            title="[bold magenta]📋 Optimal Multi-Turn Negotiation Playbook[/bold magenta]",
+            border_style="magenta",
+        )
+    )
+
+
+def backtest(
+    target: str = typer.Option(..., "--target", "-t", help="Target individual name"),
+    train_ratio: float = typer.Option(0.70, "--train-ratio", "-r", help="Fraction of earliest statements used for training (0.50-0.85)"),
+) -> None:
+    """Benchmark digital twin predictive fidelity & Brier calibration on masked temporal hold-out statements."""
+    from src.engine.backtester import TemporalBacktester
+
+    print_banner()
+    dirs = settings.get_target_dirs(target)
+    bt = TemporalBacktester(target, dirs)
+    report = bt.run_backtest(train_ratio=train_ratio)
+
+    console.print(
+        Panel(
+            f"[yellow]{report['probabilistic_statement']}[/yellow]",
+            title=f"[bold cyan]🎯 Temporal Hold-Out Backtesting Lab: {target}[/bold cyan]",
+            border_style="cyan",
+        )
+    )
+
+    if report.get("metrics"):
+        m = report["metrics"]
+        table = Table(title="Quantitative Twin Calibration Metrics", header_style="bold green")
+        table.add_column("Metric", style="bold white", width=32)
+        table.add_column("Measured Value", style="cyan")
+        table.add_row("Stance Alignment Accuracy", m["stance_alignment_pct"])
+        table.add_row("Mean Semantic Fidelity (Char 3-Gram)", str(m["mean_semantic_fidelity"]))
+        table.add_row("Brier Calibration Score (Lower = Better)", str(m["brier_calibration_score"]))
+        table.add_row("Calibration Verdict", m["calibration_tier"])
+        console.print(table)

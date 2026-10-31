@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from src.utils.logger import get_logger
+from src.utils.text_cleaner import tokenize_words, tr_lower
 
 logger = get_logger("who.engine.evaluator")
 
@@ -33,7 +34,7 @@ class ProfileEvaluator:
                 corpus_texts.append(rf.read_text(encoding="utf-8"))
             except Exception:
                 pass
-        combined_corpus = " ".join(corpus_texts).lower()
+        combined_corpus = tr_lower(" ".join(corpus_texts))
 
         # 2. Check Character & Vault Artifacts
         char_file = self.dirs.vault_dir / "character.json"
@@ -49,9 +50,8 @@ class ProfileEvaluator:
         quotes_to_verify = character_data.get("postExamples", [])
         verified_count = 0
         for q in quotes_to_verify:
-            # Check if key words appear in raw corpus
-            # Use 3+ char words to handle Turkish (many meaningful words are short)
-            q_words = [w.lower().strip(".,!?;:\"'()[]") for w in q.split() if len(w.strip(".,!?;:\"'()[]")) >= 3]
+            # Check if key words appear in raw corpus (Turkish-aware tokenization)
+            q_words = tokenize_words(q, min_len=3)
             if not q_words:
                 continue
             matches = sum(1 for w in q_words if w in combined_corpus)

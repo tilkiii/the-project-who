@@ -23,25 +23,6 @@ from src.utils.logger import get_logger
 
 logger = get_logger("who.learn.autonomous_researcher")
 
-# Conditional DSPy Signature Integration
-try:
-    import dspy
-
-    class AcademicMetricExtractionSignature(dspy.Signature):
-        """Extract statistical correlation coefficients, effect sizes, p-values, sample size, and methodology from academic abstracts."""
-
-        paper_title: str = dspy.InputField(desc="Title of the academic paper")
-        paper_abstract: str = dspy.InputField(desc="Abstract text of the paper")
-        behavioral_marker: str = dspy.InputField(desc="Observed target behavioral or linguistic marker being investigated")
-        extracted_findings: str = dspy.OutputField(
-            desc="JSON array containing statistical metrics: r, p_value, sample_size, psychometric_trait, methodology, confidence_score, and agent_reasoning_note"
-        )
-
-    DSPY_AVAILABLE = True
-except Exception:
-    dspy = None
-    DSPY_AVAILABLE = False
-
 
 def fisher_z(r: float) -> float:
     """Fisher's r-to-z transformation for meta-analytic correlation pooling."""
@@ -379,7 +360,7 @@ class AutonomousAcademicResearcher:
         return papers
 
     # -------------------------------------------------------------------------
-    # 3. Information Extraction, Statistical Synthesis & DSPy Pipeline
+    # 3. Information Extraction & Statistical Synthesis Pipeline
     # -------------------------------------------------------------------------
 
     def extract_metrics_from_papers(
@@ -388,7 +369,7 @@ class AutonomousAcademicResearcher:
         anomalies: List[Dict[str, Any]],
     ) -> List[Dict[str, Any]]:
         """
-        Use LLM and DSPy structured signatures to extract statistical correlation coefficients (r),
+        Use structured LLM extraction and empirical regex heuristics to extract statistical correlation coefficients (r),
         significance levels (p), sample sizes (N), and methodologies from academic abstracts.
         """
         extracted_findings: List[Dict[str, Any]] = []
@@ -412,7 +393,7 @@ class AutonomousAcademicResearcher:
                     matched_phenomenon = a_info.get("phenomenon", "")
                     break
 
-            # 1. Attempt LLM / DSPy Extraction
+            # 1. Attempt Structured LLM Extraction
             findings = self._llm_metric_extraction(
                 paper_title=title,
                 paper_abstract=abstract,
@@ -445,7 +426,7 @@ class AutonomousAcademicResearcher:
         doi: str,
         doi_url: str,
     ) -> List[Dict[str, Any]]:
-        """Prompt LLM / DSPy for rigorous statistical information extraction."""
+        """Prompt LLM for rigorous statistical information extraction."""
         system_prompt = (
             "You are the Lead Psychoinformatics Meta-Analyst for who?? OSINT framework.\n"
             "Your task is to analyze the provided academic title and abstract and extract statistical correlation findings.\n"
@@ -893,7 +874,7 @@ class AutonomousAcademicResearcher:
         if len(deduped_papers) < 3:
             deduped_papers.extend(self._canonical_psychological_benchmarks())
 
-        # 3. Information Extraction & Statistical Synthesis (DSPy / LLM)
+        # 3. Information Extraction & Statistical Synthesis (LLM + Heuristic)
         statistical_findings = self.extract_metrics_from_papers(deduped_papers[:6], anomalies)
 
         # 4. Bayesian Weight Updating & Dynamic Maintenance

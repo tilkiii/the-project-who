@@ -15,6 +15,7 @@ import re
 from typing import Any, Dict, List, Optional, Tuple
 
 from src.utils.logger import get_logger
+from src.utils.text_cleaner import tokenize_words
 
 logger = get_logger("who.learn.chronomics")
 
@@ -177,29 +178,29 @@ class CognitiveChronomics:
         day_metrics = metrics_by_window["DAY"]
         night_metrics = metrics_by_window["NIGHT"]
 
-        # If night corpus is minimal or empty, compute estimated baseline from corpus variance
-        has_night_data = night_metrics["total_words"] >= 20
-        has_day_data = day_metrics["total_words"] >= 20
+        # Only compute circadian shifts when actual night data exists (Zero-Hallucination compliant)
+        has_night_data = night_metrics["total_words"] >= 5
+        has_day_data = day_metrics["total_words"] >= 5
 
-        # Calculate circadian shifts
-        # 1. Epistemic Filter Decay: drop in tentative/doubt ratio during night hours
         day_epistemic = day_metrics["epistemic_calibration_ratio"]
-        night_epistemic = night_metrics["epistemic_calibration_ratio"] if has_night_data else max(0.1, day_epistemic * 0.72)
-
-        epistemic_decay_pct = round(((day_epistemic - night_epistemic) / (day_epistemic or 1.0)) * 100, 1)
-
-        # 2. Lexical Diversity (TTR) Shift
         day_ttr = day_metrics["type_token_ratio"]
-        night_ttr = night_metrics["type_token_ratio"] if has_night_data else max(0.1, day_ttr * 0.88)
-        lexical_shift_pct = round(((day_ttr - night_ttr) / (day_ttr or 1.0)) * 100, 1)
-
-        # 3. Sentiment & Critical Valence Drift
         day_crit = day_metrics["critical_density"]
-        night_crit = night_metrics["critical_density"] if has_night_data else day_crit * 1.35
-        critical_drift_pct = round(((night_crit - day_crit) / (day_crit or 1.0)) * 100, 1)
 
-        # Probabilistic confidence rating based on timestamp coverage
-        timestamp_confidence = min(0.92, 0.50 + (len(segments) / 80.0) * 0.4)
+        if has_night_data and has_day_data:
+            night_epistemic = night_metrics["epistemic_calibration_ratio"]
+            epistemic_decay_pct = round(((day_epistemic - night_epistemic) / (day_epistemic or 1.0)) * 100, 1)
+
+            night_ttr = night_metrics["type_token_ratio"]
+            lexical_shift_pct = round(((day_ttr - night_ttr) / (day_ttr or 1.0)) * 100, 1)
+
+            night_crit = night_metrics["critical_density"]
+            critical_drift_pct = round(((night_crit - day_crit) / (day_crit or 1.0)) * 100, 1)
+            timestamp_confidence = min(0.92, 0.50 + (len(segments) / 80.0) * 0.4)
+        else:
+            epistemic_decay_pct = 0.0
+            lexical_shift_pct = 0.0
+            critical_drift_pct = 0.0
+            timestamp_confidence = 0.25 if segments else 0.0
 
         report = {
             "circadian_windows_analyzed": {
@@ -256,8 +257,7 @@ class CognitiveChronomics:
                 "critical_density": 0.0,
             }
 
-        combined = " ".join(texts).lower()
-        words = re.findall(r"\b[a-zA-ZçğıöşüÇĞİÖŞÜ']+\b", combined)
+        words = tokenize_words(" ".join(texts), min_len=1)
         total_words = len(words)
         if total_words == 0:
             return {"total_words": 0, "type_token_ratio": 0.0, "epistemic_calibration_ratio": 1.0}

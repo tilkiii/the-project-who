@@ -196,18 +196,22 @@ def cyber(
     table.add_column("Observed Status / Metric", style="cyan")
     table.add_column("Security Finding", style="white")
 
+    dns_posture = [k for k, flag in [("MX", dns.get("has_mx")), ("SPF", dns.get("has_spf")), ("DMARC", dns.get("has_dmarc"))] if flag]
+    posture_str = f" ({'/'.join(dns_posture)})" if dns_posture else ""
+
     table.add_row("Email Syntax & Format", "Valid" if res["validation"]["is_valid_format"] else "Invalid", f"Domain: {res['validation']['domain']}")
-    table.add_row("DNS & Mail Resolution", f"IP: {dns.get('resolved_ip') or 'None'}", "Host Active" if dns.get("resolves") else "Unresolvable Host")
+    table.add_row("DNS & Mail Resolution", f"IP: {dns.get('resolved_ip') or 'None'}{posture_str}", "Host Active" if dns.get("resolves") else "Unresolvable Host")
     table.add_row("Burner / Disposable Check", "Passed" if not dns.get("is_disposable") else "DISPOSABLE RISK", "Legitimate Provider" if not dns.get("is_disposable") else "Temporary Mail Service")
     table.add_row("Passive Service Discovery", f"{len(res['passive_services_detected'])} account(s) found", ", ".join(s['service'] for s in res['passive_services_detected']) or "None detected")
     table.add_row("Breach Exposure Risk", f"Risk: {breach['risk_tier']}", f"Hygiene Rating: %{breach['digital_hygiene_score_pct']}")
 
+    incidents_str = ", ".join(b["source"] for b in breach.get("documented_breach_incidents", [])) or "Yok (Sıfır Halüsinasyon Modu — Uydurma kayıt üretilmedi)"
     console.print(table)
     console.print(Panel(
         f"[yellow]{breach['probabilistic_statement']}[/yellow]\n"
-        f"[dim]Belgelenmiş Tarihsel Olaylar: {', '.join(b['source'] for b in breach['documented_breach_incidents'])}[/dim]",
-        title="[bold red]⚠️ Siber Tehdit & Sızıntı Değerlendirmesi[/bold red]",
-        border_style="red"
+        f"[dim]Doğrulanmış Sızıntı Kayıtları: {incidents_str}[/dim]",
+        title="[bold magenta]🛡️ Siber Tehdit & Altyapı Değerlendirmesi[/bold magenta]",
+        border_style="magenta"
     ))
 
 
@@ -396,9 +400,10 @@ def vision(
         av_table.add_column("RGB Cosine", style="magenta")
         av_table.add_column("Verdict Tier", style="bold green", overflow="fold")
 
-        anchor = avatar_list[0]
+        anchor_img = avatar_list[0]
+        last_statement = ""
         for other in avatar_list[1:]:
-            cmp_res = AvatarIdentityMatcher.compare_avatars(anchor, other, target_name=target)
+            cmp_res = AvatarIdentityMatcher.compare_avatars(anchor_img, other, target_name=target)
             av_table.add_row(
                 cmp_res["image_a"],
                 cmp_res["image_b"],
@@ -407,10 +412,12 @@ def vision(
                 f"{cmp_res['histogram_cosine']:.3f}",
                 cmp_res["match_tier"],
             )
-            console.print(av_table)
+            last_statement = cmp_res["probabilistic_statement"]
+        console.print(av_table)
+        if last_statement:
             console.print(
                 Panel(
-                    f"[yellow]{cmp_res['probabilistic_statement']}[/yellow]",
+                    f"[yellow]{last_statement}[/yellow]",
                     title="[bold cyan]📐 Epistemik Görsel Eşleştirme Değerlendirmesi[/bold cyan]",
                     border_style="cyan",
                 )
@@ -432,3 +439,127 @@ def vision(
             "[yellow]Provide at least one visual operation flag:[/yellow] "
             "[cyan]--images (-i)[/cyan], [cyan]--video (-v)[/cyan], or [cyan]--compare-avatars (-c)[/cyan].\n"
         )
+
+
+def anchor(
+    target: str = typer.Option(..., "--target", "-t", help="Target individual name"),
+    website: Optional[str] = typer.Option(None, "--website", "-w", help="Primary personal website URL for rel='me' verification"),
+    github: Optional[str] = typer.Option(None, "--github", "-g", help="GitHub handle for GPG/SSH cryptographic key anchoring"),
+    orcid: Optional[str] = typer.Option(None, "--orcid", "-o", help="ORCID identifier (e.g. 0000-0002-1825-0097)"),
+    domain: Optional[str] = typer.Option(None, "--domain", "-d", help="Domain name for DNS TXT ownership verification"),
+    pgp: Optional[str] = typer.Option(None, "--pgp", help="Known OpenPGP hex fingerprint"),
+) -> None:
+    """Verify cryptographic (GPG/SSH/DNS TXT) and bidirectional rel='me' identity anchors under Zero-Substitution."""
+    from src.harvest.identity_anchor import CryptographicIdentityAnchor
+
+    print_banner()
+    dirs = settings.get_target_dirs(target)
+    engine = CryptographicIdentityAnchor(target, dirs)
+    report = engine.run_anchor_verification(
+        website=website,
+        github=github,
+        orcid=orcid,
+        domain=domain,
+        pgp_fingerprint=pgp,
+    )
+
+    table = Table(title=f"🔐 Cryptographic & Bidirectional Identity Anchors: {target}", header_style="bold cyan")
+    table.add_column("Anchor Type", style="bold white", width=28)
+    table.add_column("Verified Identifier", style="cyan")
+    table.add_column("Confidence", style="green", width=12)
+    table.add_column("Primary Evidence", style="dim")
+
+    for a in report.get("verified_anchors", []):
+        table.add_row(
+            a["anchor_type"],
+            a["identifier"],
+            f"{int(a['confidence_score'] * 100)}%",
+            a["evidence"],
+        )
+
+    if report.get("verified_anchors"):
+        console.print(table)
+    else:
+        console.print("[yellow]No verified primary cryptographic or bidirectional rel='me' anchors detected.[/yellow]")
+
+    if report.get("disambiguation_notice"):
+        console.print(
+            Panel(
+                f"[yellow]{report['disambiguation_notice']}[/yellow]\n"
+                f"[dim]Engellenen isim benzeri kayıt sayısı: {report['rejected_namesakes_count']}[/dim]",
+                title="[bold yellow]🛡️ Sıfır İkame Kapısı (Zero-Substitution Gate)[/bold yellow]",
+                border_style="yellow",
+            )
+        )
+
+
+def archaeology(
+    target: str = typer.Option(..., "--target", "-t", help="Target individual name"),
+    url: str = typer.Option(..., "--url", "-u", help="Target web URL to inspect across Wayback Machine archival history"),
+    max_snapshots: int = typer.Option(4, "--snapshots", "-n", help="Maximum distinct historical snapshots to compare"),
+) -> None:
+    """Uncover silent biographical deletions, removed affiliations, and stance revisions via Wayback Digital Archaeology."""
+    from src.harvest.wayback_archaeologist import WaybackDigitalArchaeologist
+
+    print_banner()
+    dirs = settings.get_target_dirs(target)
+    arch = WaybackDigitalArchaeologist(target, dirs)
+    report = arch.audit_url_history(url, max_snapshots=max_snapshots)
+
+    console.print(
+        Panel(
+            f"[yellow]{report['probabilistic_statement']}[/yellow]\n"
+            f"[dim]Snapshots Analyzed: {report['snapshots_analyzed']} | Lexical Drift: %{report['lexical_drift_pct']}[/dim]",
+            title=f"[bold cyan]🏛️ Wayback Digital Archaeology: {target}[/bold cyan]",
+            border_style="cyan",
+        )
+    )
+
+    if report.get("silent_deletions"):
+        del_table = Table(title="Silent Deletions Across Archival Epochs", header_style="bold red")
+        del_table.add_column("Epoch Span", style="yellow", width=24)
+        del_table.add_column("Deleted Verbatim Statement", style="white")
+        for d in report["silent_deletions"][:8]:
+            del_table.add_row(f"{d['present_in_epoch']} -> {d['absent_in_epoch']}", d["deleted_quote"])
+        console.print(del_table)
+
+
+def code_osint(
+    target: str = typer.Option(..., "--target", "-t", help="Target individual name"),
+    github: Optional[str] = typer.Option(None, "--github", "-g", help="GitHub username to audit"),
+    repo_path: Optional[str] = typer.Option(None, "--repo-path", "-r", help="Local Git repository path for author commit chronomics"),
+) -> None:
+    """Profile a technical target's verified engineering stack, commit timezone fingerprint, and coding chronomics."""
+    from src.harvest.code_intelligence import CodeIntelligenceHarvester
+
+    print_banner()
+    dirs = settings.get_target_dirs(target)
+    harvester = CodeIntelligenceHarvester(target, dirs)
+
+    if github:
+        report = harvester.analyze_github_account(github)
+    elif repo_path:
+        report = harvester.analyze_local_git_repo(Path(repo_path))
+    else:
+        console.print("[bold red]Error:[/bold red] Provide either [cyan]--github (-g)[/cyan] or [cyan]--repo-path (-r)[/cyan].")
+        raise typer.Exit(1)
+
+    if report.get("status") == "REJECTED_ZERO_SUBSTITUTION":
+        console.print(
+            Panel(
+                f"[yellow]{report.get('disambiguation_notice')}[/yellow]\n"
+                f"[dim]Reddedilen profil adı: '{report.get('declared_name')}' ({report.get('rejection_reason')})[/dim]",
+                title="[bold red]🛡️ Sıfır İkame Kapısı Engeli[/bold red]",
+                border_style="red",
+            )
+        )
+        return
+
+    console.print(
+        Panel(
+            f"[bold green]Status:[/bold green] {report.get('status')}\n"
+            f"[yellow]{report.get('probabilistic_statement', '')}[/yellow]",
+            title=f"[bold cyan]💻 Technical Twin Code Intelligence: {target}[/bold cyan]",
+            border_style="cyan",
+        )
+    )

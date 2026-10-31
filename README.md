@@ -58,8 +58,8 @@ It adheres strictly to **epistemic honesty, probabilistic reasoning, and explici
 5. **Multi-Target Social Network Intelligence & D3.js Force Graphs (`who network`):**
    Consolidates knowledge graphs across multiple individuals to identify shared bridge concepts, betweenness broker nodes, and mutual affiliations in an interactive D3.js force-directed visualizer.
 
-6. **Autonomous Academic Research & DSPy Skill Synthesis (`who learn`, `who psych-insights`):**
-   Autonomously searches global scientific archives (arXiv, PubMed, Semantic Scholar, Crossref) for peer-reviewed empirical studies matching the target's observed linguistic and cognitive traits. Leverages DSPy prompt optimization to extract statistical correlation coefficients ($r$), sample sizes ($N$), and $p$-values, Bayesian-calibrates `scientific_weights.json`, and synthesizes grounded behavioral skill profiles (`generated_mapping_skill.json`) to scientifically educate the digital twin.
+6. **Autonomous Academic Research & Behavioral Skill Synthesis (`who learn`, `who psych-insights`):**
+   Autonomously searches global scientific archives (arXiv, PubMed, Semantic Scholar, Crossref) for peer-reviewed empirical studies matching the target's observed linguistic and cognitive traits. Extracts statistical correlation coefficients ($r$), sample sizes ($N$), and $p$-values, Bayesian-calibrates `scientific_weights.json`, and synthesizes grounded behavioral skill profiles (`generated_mapping_skill.json`) to scientifically educate the digital twin.
 
 7. **Zero-Hallucination Evidence Grounding (Multimodal Harvester & OSINT):**
    Feeds the digital twin using word-level speaker diarization (`WhisperX`), document hierarchy parsing (`Docling`), OCR (`PaddleOCR`), continuous RSS monitoring (`who monitor`), and multi-platform digital footprint reconnaissance (`who hunt`, `who cyber`) enforced by the **Strict Zero-Substitution Protocol**.
@@ -82,7 +82,6 @@ flowchart TD
         INGEST --> B2[Topic Mapper\nBERTopic Trajectory Evolution]
         B1 & B2 --> B3[Autonomous Academic Researcher\narXiv / PubMed / Semantic Scholar]
         B3 --> B4[Skill Synthesizer\ngenerated_mapping_skill.json]
-        B4 --> B5[DSPy Prompt Optimizer\nTuned Signatures & Pipelines]
     end
 
     subgraph Layer3["3. Multilayer Vault Store (who_vault)"]
@@ -269,6 +268,30 @@ who export-dossier --target "Target Name" --output "target_dossier.html"
 # 25. Capture temporal cognitive snapshots & measure epistemic drift across time
 who snapshot --target "Target Name" --label "q3_baseline"
 who diff --target "Target Name"
+
+# 26. Cryptographic & bidirectional rel="me" identity anchoring (Zero-Substitution proof graph)
+who anchor --target "Target Name" --website "https://target.site" --github "handle" --orcid "0000-0002-1825-0097"
+
+# 27. Wayback Machine digital archaeology (silent deletions & stance revisions across years)
+who archaeology --target "Target Name" --url "https://target.site/about" --snapshots 4
+
+# 28. Technical Twin code & commit intelligence (stack evolution & commit timezone chronomics)
+who code-osint --target "Target Name" --github "handle"
+
+# 29. Forensic stylometry & authorship verification (Burrows' Delta, Impostors & ghostwriter/LLM outlier audit)
+who stylometry --target "Target Name" --questioned-file "/path/to/disputed_note.txt"
+
+# 30. Evidence-backed cognitive blindspot, rhetorical fallacy & epistemic safeguard audit
+who blindspots --target "Target Name"
+
+# 31. Toulmin argumentation mining (Claim-Grounds-Warrant-Rebuttal) & Fuzzy Cognitive Map keystones
+who arguments --target "Target Name"
+
+# 32. Game-theoretic multi-turn negotiation simulator (Prospect Theory & Red-Line constraints)
+who negotiate --target "Target Name" --objective "Joint open-protocol research alliance" --leverage "Open benchmark dataset"
+
+# 33. Temporal hold-out backtesting & Brier calibration lab
+who backtest --target "Target Name" --train-ratio 0.70
 ```
 
 ---
@@ -285,7 +308,6 @@ who diff --target "Target Name"
 | [`m-bain/whisperX`](https://github.com/m-bain/whisperX) | WhisperX | BSD-2-Clause | High-speed STT with PyAnnote word-level speaker diarization |
 | [`yt-dlp/yt-dlp`](https://github.com/yt-dlp/yt-dlp) | yt-dlp | Unlicense | Universal media and audio extraction across YouTube, podcasts, and Vimeo |
 | [`MaartenGr/BERTopic`](https://github.com/MaartenGr/BERTopic) | BERTopic | MIT | Dynamic topic modeling, temporal evolution, and trajectory tracking |
-| [`stanfordnlp/dspy`](https://github.com/stanfordnlp/dspy) | DSPy (Stanford) | MIT | Programmatic prompt optimization, compilation, and evaluation |
 | [`BerriAI/litellm`](https://github.com/BerriAI/litellm) | LiteLLM | MIT | Unified interface for OpenAI, Anthropic, Gemini, Groq, Ollama, and vLLM |
 | [`neo4j/neo4j`](https://github.com/neo4j/neo4j) | Neo4j & GDS | GPL/Commercial | Persistent enterprise knowledge graph, PageRank, and community detection |
 | [`chroma-core/chroma`](https://github.com/chroma-core/chroma) | ChromaDB | Apache 2.0 | AI-native open-source embedding database for semantic vector retrieval |

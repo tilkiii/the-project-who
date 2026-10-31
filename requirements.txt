@@ -36,6 +36,3 @@ beautifulsoup4>=4.12.0
 bertopic>=0.16.0
 scikit-learn>=1.4.0
 sentence-transformers>=2.5.0
-
-# Prompt Optimization & Evaluation
-dspy-ai>=2.4.0

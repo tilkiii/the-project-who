@@ -14,7 +14,6 @@ from rich.table import Table
 from src.config import settings
 from src.learn.academic_researcher import AcademicResearcher
 from src.learn.feature_extractor import FeatureExtractor
-from src.learn.prompt_optimizer import PromptOptimizer
 from src.learn.skill_synthesizer import SkillSynthesizer
 from src.learn.topic_mapper import TopicMapper
 from src.utils.logger import console, print_banner
@@ -69,11 +68,6 @@ def learn(
     console.print("[*] Compiling evidence-backed behavioral mapping skill...")
     ss = SkillSynthesizer(output_dir=dirs.learned_skills_dir)
     skill = ss.synthesize_mapping_skill(target, features, topics, lit)
-
-    # 5. DSPy Prompt Optimization
-    console.print("[*] Optimizing DSPy programmatic prompts and evaluation parameters...")
-    po = PromptOptimizer(output_dir=dirs.learned_skills_dir)
-    po.optimize_prompts(target, skill)
 
     # Display Results Table
     table = Table(title=f"Learned Behavioral Architecture: {target}", header_style="bold cyan")
@@ -446,3 +440,123 @@ def diff(
             border_style="yellow",
         )
     )
+
+
+def stylometry(
+    target: str = typer.Option(..., "--target", "-t", help="Target individual name"),
+    questioned_text: Optional[str] = typer.Option(None, "--questioned-text", "-q", help="Anonymous or disputed text snippet to test authorship"),
+    questioned_file: Optional[str] = typer.Option(None, "--questioned-file", "-f", help="Path to disputed text file for authorship attribution"),
+) -> None:
+    """Build forensic stylometry fingerprint (Burrows' Delta & Burstiness) and verify questioned authorship."""
+    from src.learn.stylometry_engine import ForensicStylometryEngine
+
+    print_banner()
+    dirs = settings.get_target_dirs(target)
+    doc_files = sorted(list(dirs.raw_data_dir.glob("*.md")) + list(dirs.raw_data_dir.glob("*.txt")))
+    if not doc_files:
+        console.print("[bold red]No raw corpus found.[/bold red] Run [cyan]who harvest[/cyan] first.")
+        raise typer.Exit(1)
+
+    docs = [{"source_id": df.name, "content": df.read_text(encoding="utf-8")} for df in doc_files]
+    engine = ForensicStylometryEngine(output_dir=dirs.learned_skills_dir, vault_dir=dirs.vault_dir)
+    fp = engine.build_author_fingerprint(target, docs)
+
+    console.print(
+        Panel(
+            f"[yellow]{fp.get('probabilistic_statement')}[/yellow]",
+            title=f"[bold cyan]🖋️ Forensic Stylometry Fingerprint: {target}[/bold cyan]",
+            border_style="cyan",
+        )
+    )
+
+    disputed = questioned_text
+    if not disputed and questioned_file and Path(questioned_file).exists():
+        disputed = Path(questioned_file).read_text(encoding="utf-8")
+
+    if disputed:
+        ver = engine.verify_questioned_text(disputed, fp)
+        console.print(
+            Panel(
+                f"[bold]Verdict:[/bold] [bold green]{ver.get('verdict')}[/bold green] "
+                f"(Authorship Probability: [cyan]{ver.get('authorship_probability_pct', '0%')}[/cyan], "
+                f"Burrows' Delta: `{ver.get('burrows_delta', 'N/A')}`)\n\n"
+                f"[yellow]{ver.get('probabilistic_statement', '')}[/yellow]",
+                title="[bold magenta]🔍 Questioned Authorship Verification[/bold magenta]",
+                border_style="magenta",
+            )
+        )
+
+
+def blindspots(
+    target: str = typer.Option(..., "--target", "-t", help="Target individual name"),
+) -> None:
+    """Audit target discourse for evidence-backed cognitive biases, rhetorical fallacies, and epistemic safeguards."""
+    from src.learn.cognitive_bias_auditor import CognitiveBiasAuditor
+
+    print_banner()
+    dirs = settings.get_target_dirs(target)
+    doc_files = sorted(list(dirs.raw_data_dir.glob("*.md")) + list(dirs.raw_data_dir.glob("*.txt")))
+    if not doc_files:
+        console.print("[bold red]No raw corpus found.[/bold red] Run [cyan]who harvest[/cyan] first.")
+        raise typer.Exit(1)
+
+    docs = [{"source_id": df.name, "content": df.read_text(encoding="utf-8")} for df in doc_files]
+    auditor = CognitiveBiasAuditor(output_dir=dirs.learned_skills_dir, vault_dir=dirs.vault_dir)
+    report = auditor.audit_corpus(target, docs)
+
+    table = Table(title=f"🧠 Cognitive Blindspot & Heuristic Audit: {target}", header_style="bold cyan")
+    table.add_column("Heuristic / Bias Pattern", style="bold white", width=36)
+    table.add_column("Count", style="yellow", width=8)
+    table.add_column("Density/1k", style="cyan", width=12)
+    table.add_column("Sample Verbatim Quote", style="dim")
+
+    for b in report.get("detected_biases", []):
+        sample_q = b["evidence_quotes"][0]["quote"][:75] + "..." if b.get("evidence_quotes") else ""
+        table.add_row(b["label"], str(b["occurrences"]), str(b["density_per_1k_words"]), sample_q)
+
+    if report.get("detected_biases"):
+        console.print(table)
+    console.print(
+        Panel(
+            f"[yellow]{report['probabilistic_statement']}[/yellow]",
+            title=f"[bold green]Cognitive Resilience: %{report.get('cognitive_resilience_score_pct', 0)}[/bold green]",
+            border_style="green",
+        )
+    )
+
+
+def arguments(
+    target: str = typer.Option(..., "--target", "-t", help="Target individual name"),
+) -> None:
+    """Mine Toulmin argumentation chains (Claim-Grounds-Warrant-Rebuttal) and Fuzzy Cognitive Map keystone beliefs."""
+    from src.vault.argument_miner import ToulminArgumentMiner
+
+    print_banner()
+    dirs = settings.get_target_dirs(target)
+    doc_files = sorted(list(dirs.raw_data_dir.glob("*.md")) + list(dirs.raw_data_dir.glob("*.txt")))
+    if not doc_files:
+        console.print("[bold red]No raw corpus found.[/bold red] Run [cyan]who harvest[/cyan] first.")
+        raise typer.Exit(1)
+
+    docs = [{"source_id": df.name, "content": df.read_text(encoding="utf-8")} for df in doc_files]
+    miner = ToulminArgumentMiner(target, vault_dir=dirs.vault_dir)
+    report = miner.mine_arguments(docs)
+
+    console.print(
+        Panel(
+            f"[yellow]{report['probabilistic_statement']}[/yellow]",
+            title=f"[bold cyan]⚖️ Toulmin Argumentation & Causal Belief Map: {target}[/bold cyan]",
+            border_style="cyan",
+        )
+    )
+
+    keystones = report.get("fuzzy_cognitive_map", {}).get("keystone_assumptions", [])
+    if keystones:
+        ks_table = Table(title="Keystone Assumptions (Counterfactual Belief Leverage)", header_style="bold magenta")
+        ks_table.add_column("Keystone Assumption", style="bold white", width=28)
+        ks_table.add_column("Systemic Leverage", style="green", width=18)
+        ks_table.add_column("Downstream Impacted Stances", style="cyan")
+        for ks in keystones:
+            imp = ", ".join(f"{i['concept']} (Δ={i['shift_magnitude']})" for i in ks.get("impacted_stances", []))
+            ks_table.add_row(ks["keystone_concept"], str(ks["systemic_perturbation_leverage"]), imp or "Direct effect")
+        console.print(ks_table)

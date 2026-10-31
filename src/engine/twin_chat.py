@@ -12,6 +12,7 @@ from typing import Any, Dict, List, Optional
 
 from src.config import call_llm
 from src.utils.logger import console, get_logger
+from src.utils.text_cleaner import tokenize_words, tr_lower
 from src.vault.vector_embedder import VectorEmbedder
 
 logger = get_logger("who.engine.twin_chat")
@@ -50,6 +51,7 @@ class TwinChat:
             else "TONE: Direct 1-on-1 conversational register. Use collegial, succinct, candid phrasing while preserving empirical integrity."
         )
 
+        mindset_excerpt = self.mindset_summary[:500].strip()
         system_prompt = (
             f"You are the cognitive digital twin of {self.target_name}.\n"
             f"REASONING & STYLE CONSTRAINTS:\n"
@@ -57,6 +59,7 @@ class TwinChat:
             f"- {tone_instruction}\n"
             "- Always maintain scientific rigor and probabilistic humility: do not fabricate personal certainty beyond evidence.\n"
             f"- BIO CONTEXT: {' '.join(self.character.get('bio', []))}\n"
+            + (f"- COGNITIVE MINDSET SUMMARY:\n{mindset_excerpt}\n" if mindset_excerpt else "")
         )
 
         # Conversation memory
@@ -82,10 +85,15 @@ class TwinChat:
         if self.mode in ("formal", "informal"):
             return self.mode
 
-        # Autodetect heuristic
-        msg_lower = user_message.lower()
-        informal_markers = {"hey", "hi", "yo", "sup", "gonna", "wanna", "lol", "dude", "bro", "cool"}
-        if any(m in msg_lower.split() for m in informal_markers) or len(user_message.split()) < 6:
+        # Autodetect heuristic (Turkish & English)
+        tokens = set(tokenize_words(user_message, min_len=2))
+        informal_markers = {
+            "hey", "hi", "yo", "sup", "gonna", "wanna", "lol", "dude", "bro", "cool",
+            "selam", "merhaba", "naber", "nasılsın", "hocam", "dostum", "kanka", "slm",
+        }
+        if tokens & informal_markers:
+            return "informal"
+        if len(tokens) < 4 and "?" not in user_message:
             return "informal"
         return "formal"
 

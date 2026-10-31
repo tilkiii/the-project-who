@@ -12,6 +12,7 @@ import re
 from typing import Any, Dict, List, Optional
 
 from src.utils.logger import get_logger
+from src.utils.text_cleaner import BILINGUAL_STOPWORDS, tokenize_words, tr_lower
 from src.vault.graph_store import GraphStore
 from src.vault.vector_embedder import VectorEmbedder
 
@@ -82,15 +83,15 @@ class ExplainabilityEngine:
 
     def _check_cognitive_dissonance(self, claim: str) -> Dict[str, Any]:
         """Verify whether the audited claim intersects with known cognitive dissonance / contradiction clusters."""
-        claim_lower = claim.lower()
+        claim_lower = tr_lower(claim)
         contradiction_edges = []
         matching_clusters = []
 
         # Check in graph edges
         for rel in self.graph_store.get_all_relationships():
             if rel.get("relation") == "CONTRADICTS":
-                src = rel.get("source", "").lower()
-                tgt = rel.get("target", "").lower()
+                src = tr_lower(rel.get("source", ""))
+                tgt = tr_lower(rel.get("target", ""))
                 if src in claim_lower or tgt in claim_lower:
                     contradiction_edges.append(rel)
 
@@ -101,7 +102,7 @@ class ExplainabilityEngine:
                 with open(metrics_file, "r", encoding="utf-8") as f:
                     gm = json.load(f)
                     for cluster in gm.get("cognitive_dissonance", {}).get("dissonance_clusters", []):
-                        if any(c.lower() in claim_lower for c in cluster.get("concepts", [])):
+                        if any(tr_lower(c) in claim_lower for c in cluster.get("concepts", [])):
                             matching_clusters.append(cluster)
             except Exception:
                 pass
@@ -139,15 +140,16 @@ class ExplainabilityEngine:
         return calibrated
 
     def _find_graph_paths(self, claim: str) -> List[List[str]]:
-        """Search the graph for entities mentioned in claim and trace connections."""
+        """Search the graph for entities mentioned in claim and trace connections (Turkish-aware)."""
         paths = []
-        words = [w.lower() for w in re.findall(r"\b[a-zA-Z]{4,}\b", claim)]
+        words = [w for w in tokenize_words(claim, min_len=3) if w not in BILINGUAL_STOPWORDS]
         nodes = self.graph_store.get_all_nodes()
         matching_nodes = []
 
         for n in nodes:
             n_name = n.get("name", "")
-            if any(w in n_name.lower() for w in words):
+            n_lower = tr_lower(n_name)
+            if any(w in n_lower for w in words):
                 matching_nodes.append(n_name)
 
         g = self.graph_store.nx_graph
@@ -174,11 +176,11 @@ class ExplainabilityEngine:
             with open(topics_file, "r", encoding="utf-8") as f:
                 data = json.load(f)
             matching = []
-            claim_lower = claim.lower()
+            claim_lower = tr_lower(claim)
             for t in data.get("topics", []):
                 t_name = t.get("name", "")
                 kws = t.get("keywords", [])
-                if any(k.lower() in claim_lower for k in kws) or t_name.lower() in claim_lower:
+                if any(tr_lower(k) in claim_lower for k in kws) or tr_lower(t_name) in claim_lower:
                     matching.append(t_name)
             return matching
         except Exception:

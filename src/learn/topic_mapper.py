@@ -15,6 +15,7 @@ import re
 from typing import Any, Dict, List, Optional, Tuple
 
 from src.utils.logger import get_logger
+from src.utils.text_cleaner import BILINGUAL_STOPWORDS, tokenize_words, tr_lower
 
 logger = get_logger("who.learn.topics")
 
@@ -90,19 +91,12 @@ class TopicMapper:
         }
 
     def _fallback_topic_modeling(self, texts: List[str], nr_topics: int = 5) -> Dict[str, Any]:
-        """Term-frequency co-occurrence based clustering fallback."""
-        stopwords = {
-            "the", "a", "an", "and", "or", "but", "in", "on", "at", "to", "for", "of", "with",
-            "is", "was", "are", "were", "be", "been", "being", "have", "has", "had", "do", "does",
-            "did", "that", "this", "these", "those", "it", "its", "as", "by", "from", "about",
-            "can", "could", "will", "would", "should", "not", "their", "they", "we", "you", "i"
-        }
-
-        # Tokenize per document
+        """Term-frequency co-occurrence based clustering fallback (Turkish & English aware)."""
+        # Tokenize per document preserving Turkish characters
         doc_tokens = []
         term_doc_count: Dict[str, int] = {}
         for text in texts:
-            toks = [w.lower() for w in re.findall(r"\b[a-zA-Z]{4,}\b", text) if w.lower() not in stopwords]
+            toks = [w for w in tokenize_words(text, min_len=4) if w not in BILINGUAL_STOPWORDS]
             doc_tokens.append(toks)
             for t in set(toks):
                 term_doc_count[t] = term_doc_count.get(t, 0) + 1
@@ -163,12 +157,12 @@ class TopicMapper:
         topic_activity: Dict[str, Dict[str, int]] = {}
         for t in topics:
             t_name = t["name"]
-            keywords = [k.lower() for k in t["keywords"]]
+            keywords = [tr_lower(k) for k in t["keywords"]]
             topic_activity[t_name] = {"early": 0, "middle": 0, "recent": 0}
 
             for epoch_name, epoch_docs in epochs.items():
                 for doc in epoch_docs:
-                    c_lower = doc.get("content", "").lower()
+                    c_lower = tr_lower(doc.get("content", ""))
                     if any(kw in c_lower for kw in keywords):
                         topic_activity[t_name][epoch_name] += 1
 

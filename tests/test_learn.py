@@ -1,5 +1,5 @@
 """
-Tests for Module 2: who_learn (Feature Extractor, Topic Mapper, Academic Researcher, Skill Synthesizer, Prompt Optimizer).
+Tests for Module 2: who_learn (Feature Extractor, Topic Mapper, Academic Researcher, Skill Synthesizer).
 """
 
 from pathlib import Path
@@ -7,7 +7,6 @@ import pytest
 
 from src.learn.academic_researcher import AcademicResearcher
 from src.learn.feature_extractor import FeatureExtractor
-from src.learn.prompt_optimizer import PromptOptimizer
 from src.learn.skill_synthesizer import SkillSynthesizer
 from src.learn.topic_mapper import TopicMapper
 
@@ -77,17 +76,3 @@ def test_skill_synthesizer(tmp_path: Path):
     assert "behavioral_profile" in skill
     assert len(skill["generation_rules"]) > 0
     assert (tmp_path / "generated_mapping_skill.json").exists()
-
-
-def test_prompt_optimizer(tmp_path: Path):
-    po = PromptOptimizer(output_dir=tmp_path)
-    skill = {
-        "generation_rules": ["Ground claims in observed evidence."],
-        "forbidden_phrasings": ["Determine exactly how the target thinks"],
-        "behavioral_profile": {"cognitive_style": "Calibrated"},
-    }
-    opt = po.optimize_prompts("Alice", skill)
-
-    assert "compiled_templates" in opt
-    assert "oracle_system_prompt" in opt["compiled_templates"]
-    assert (tmp_path / "optimized_prompts.json").exists()

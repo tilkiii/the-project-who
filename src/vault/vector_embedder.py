@@ -13,7 +13,7 @@ from typing import Any, Dict, List, Optional
 
 from src.config import get_embedding, settings
 from src.utils.logger import get_logger
-from src.utils.text_cleaner import chunk_text
+from src.utils.text_cleaner import chunk_text, sanitize_slug
 
 logger = get_logger("who.vault.vector")
 
@@ -36,7 +36,7 @@ class VectorEmbedder:
             try:
                 import chromadb
                 client = chromadb.PersistentClient(path=str(self.chroma_dir))
-                safe_col_name = f"who_{self.target_name.lower().replace(' ', '_')}"[:63]
+                safe_col_name = f"who_{sanitize_slug(self.target_name)}"[:63]
                 self.collection = client.get_or_create_collection(
                     name=safe_col_name,
                     metadata={"hnsw:space": "cosine"}
@@ -110,8 +110,11 @@ class VectorEmbedder:
             except Exception as e:
                 logger.error(f"ChromaDB upsert error: {e}")
 
-        # Store in local fallback list and persist
-        self.local_chunks.extend(all_chunks)
+        # Deduplicate local fallback list by chunk ID and persist
+        existing_by_id = {c.get("id"): c for c in self.local_chunks if c.get("id")}
+        for c in all_chunks:
+            existing_by_id[c["id"]] = c
+        self.local_chunks = list(existing_by_id.values())
         self._persist_local_vector_index()
         return len(all_chunks)
 
