@@ -116,3 +116,26 @@ def test_mindset_profiler(tmp_path: Path):
     assert "bio" in char_data
     assert "lore" in char_data
     assert "style" in char_data
+
+
+def test_graph_export_custom_output_utf8_no_double_write(tmp_path: Path):
+    vault_dir = tmp_path / "vault"
+    custom_out = tmp_path / "exports" / "custom_graph.json"
+
+    store = GraphStore("Mücteba Özdemir", vault_dir=vault_dir)
+    store.nx_graph.add_node("Mücteba Özdemir", type="Person", description="Özgürlük ve Çelişki Analizi")
+    store.nx_graph.add_node("Bilişsel Tutarlılık", type="Concept", description="Doğrudan kanıt")
+    store.nx_graph.add_edge("Mücteba Özdemir", "Bilişsel Tutarlılık", relation="SAVUNUR", weight=0.92)
+
+    exported = store.export_graph_json(output_path=custom_out)
+    store.close()
+
+    assert custom_out.exists()
+    # Custom output export must not overwrite or create vault/concept_network.json
+    assert not (vault_dir / "concept_network.json").exists()
+
+    raw_text = custom_out.read_text(encoding="utf-8")
+    assert "Mücteba Özdemir" in raw_text
+    assert "Bilişsel Tutarlılık" in raw_text
+    assert "\\u00fc" not in raw_text
+    assert len(exported["nodes"]) == 2

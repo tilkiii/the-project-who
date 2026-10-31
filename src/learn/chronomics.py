@@ -8,6 +8,7 @@ Corresponds to Layer 4 (Behavioral Signal Memory) & Layer 5 (Topic Evolution Mem
 from __future__ import annotations
 
 from datetime import datetime, time
+import email.utils
 import json
 from pathlib import Path
 import re
@@ -288,6 +289,8 @@ class CognitiveChronomics:
 
     def _parse_iso_or_custom(self, s: str) -> Optional[datetime]:
         """Attempt to parse various common date and time formats."""
+        if not s or not s.strip():
+            return None
         s_clean = s.strip()
         s_clean = re.sub(r"^[\[\(]+|[\]\)]+$", "", s_clean).strip()
         s_norm = re.sub(r",\s*", " ", s_clean)
@@ -311,6 +314,14 @@ class CognitiveChronomics:
                     return datetime.strptime(candidate, fmt)
                 except ValueError:
                     pass
+        try:
+            return datetime.fromisoformat(s_clean.replace("Z", "+00:00")).replace(tzinfo=None)
+        except Exception:
+            pass
+        try:
+            return email.utils.parsedate_to_datetime(s_clean).replace(tzinfo=None)
+        except Exception:
+            pass
         return None
 
     def _empty_chronomics_report(self) -> Dict[str, Any]:

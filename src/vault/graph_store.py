@@ -164,7 +164,7 @@ class GraphStore:
             rels.append({"source": u, "target": v, **data})
         return rels
 
-    def export_graph_json(self) -> Dict[str, Any]:
+    def export_graph_json(self, output_path: Optional[Path] = None) -> Dict[str, Any]:
         """Export current graph state to concept_network.json."""
         payload = {
             "target_name": self.target_name,
@@ -172,11 +172,15 @@ class GraphStore:
             "nodes": self.get_all_nodes(),
             "relationships": self.get_all_relationships(),
         }
-        if self.vault_dir:
-            self.vault_dir.mkdir(parents=True, exist_ok=True)
-            out_file = self.vault_dir / "concept_network.json"
-            with open(out_file, "w", encoding="utf-8") as f:
-                json.dump(payload, f, indent=2)
+        target_file = Path(output_path) if output_path is not None else ((self.vault_dir / "concept_network.json") if self.vault_dir else None)
+        if target_file is not None:
+            target_file.parent.mkdir(parents=True, exist_ok=True)
+            with open(target_file, "w", encoding="utf-8") as f_export:
+                json.dump(payload, f_export, indent=2, ensure_ascii=False)
+
+
+
+
         return payload
 
     def _load_local_graph(self) -> None:

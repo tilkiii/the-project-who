@@ -134,7 +134,11 @@ class LiveMonitor:
             except Exception:
                 pass
 
-        baseline_manip = baseline_features.get("epistemic_manipulation_index", {}).get("dogmatic_density", 0.5)
+        baseline_manip_dict = baseline_features.get("epistemic_manipulation_index", {})
+        baseline_manip = baseline_manip_dict.get(
+            "dogmatic_density_per_k",
+            baseline_manip_dict.get("dogmatic_density", 0.5),
+        )
         baseline_cal = baseline_features.get("epistemic_markers", {}).get("epistemic_calibration_ratio", 1.0)
 
         fe = FeatureExtractor()
@@ -150,10 +154,10 @@ class LiveMonitor:
             processed_hashes.add(item_hash)
 
             # Analyze item
-            doc_feats = fe.extract_features(raw_content)
+            doc_feats = fe.extract_features([raw_content])
             epistemic = doc_feats.get("epistemic_markers", {})
             manip = doc_feats.get("epistemic_manipulation_index", {})
-            item_dogmatic = manip.get("dogmatic_density", 0.0)
+            item_dogmatic = manip.get("dogmatic_density_per_k", manip.get("dogmatic_density", 0.0))
             item_cal = epistemic.get("epistemic_calibration_ratio", 1.0)
 
             # 1. Nocturnal Circadian Anomaly
@@ -161,8 +165,8 @@ class LiveMonitor:
             is_nocturnal = False
             try:
                 # Try parsing timestamp
-                dt = chronomics._parse_iso_or_custom(ts_str) or datetime.now()
-                hr = dt.hour
+                dt = chronomics._parse_iso_or_custom(ts_str) if ts_str else None
+                hr = dt.hour if dt is not None else -1
                 if 0 <= hr < 5:
                     is_nocturnal = True
             except Exception:

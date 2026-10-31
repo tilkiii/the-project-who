@@ -370,12 +370,13 @@ def graph_export(
     """Export the complete Knowledge Graph to a JSON file."""
     dirs = settings.get_target_dirs(target)
     gs = GraphStore(target, vault_dir=dirs.vault_dir)
-    data = gs.export_graph_json()
+    dest = Path(output) if output else (dirs.vault_dir / "concept_network.json")
+    data = gs.export_graph_json(output_path=dest)
     gs.close()
 
-    dest = Path(output) if output else dirs.vault_dir / "concept_network.json"
-    if output:
-        with open(dest, "w", encoding="utf-8") as f:
-            json.dump(data, f, indent=2)
+
+
+
+
 
     console.print(f"[bold green]Knowledge Graph exported to:[/bold green] {dest} ({len(data.get('nodes', []))} nodes, {len(data.get('relationships', []))} edges)")

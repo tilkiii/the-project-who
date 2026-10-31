@@ -106,3 +106,17 @@ def test_cli_hunt_cyber_network_commands():
     assert res_net.exit_code == 0
     assert "Social Network Link Analysis" in res_net.output
     assert "Interactive D3.js Social Graph" in res_net.output
+
+
+def test_social_graph_no_html_flag(tmp_path: Path):
+    targets = ["Remzi Sanver", "Test Target"]
+    no_html_dir = tmp_path / "no_html_out"
+    analyzer = SocialGraphAnalyzer(targets, output_dir=no_html_dir)
+    analyzer.build_multi_target_network(export_html=False)
+
+    assert len(list(no_html_dir.glob("social_network_*.json"))) == 1
+    assert len(list(no_html_dir.glob("social_network_*.html"))) == 0
+
+    res_cli = runner.invoke(app, ["network", "--targets", "Remzi Sanver, Test Target", "--no-html"])
+    assert res_cli.exit_code == 0
+    assert "HTML skipped" in res_cli.output

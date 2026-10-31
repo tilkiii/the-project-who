@@ -26,7 +26,7 @@ def network(
     console.print(f"[bold green]Constructing Unified Social Network Graph for:[/bold green] [bold cyan]{' & '.join(t_list)}[/bold cyan]\n")
 
     analyzer = SocialGraphAnalyzer(t_list)
-    net_res = analyzer.build_multi_target_network()
+    net_res = analyzer.build_multi_target_network(export_html=export_html)
 
     table = Table(title="🌐 Social Network Link Analysis", header_style="bold cyan")
     table.add_column("Metric / Dimension", style="bold white", width=28)
@@ -48,5 +48,10 @@ def network(
             border_style="yellow"
         ))
 
-    html_path = analyzer.output_dir / f"social_network_{'_'.join(''.join(c if c.isalnum() else '' for c in t) for t in t_list[:3])}.html"
-    console.print(f"\n[bold green]✔ Interactive D3.js Social Graph rendered:[/bold green] [cyan]{html_path}[/cyan]\n")
+    safe_prefix = "_".join("".join(c if c.isalnum() else "" for c in t) for t in t_list[:3])
+    if export_html:
+        html_path = analyzer.output_dir / f"social_network_{safe_prefix}.html"
+        console.print(f"\n[bold green]✔ Interactive D3.js Social Graph rendered:[/bold green] [cyan]{html_path}[/cyan]\n")
+    else:
+        json_path = analyzer.output_dir / f"social_network_{safe_prefix}.json"
+        console.print(f"\n[bold green]✔ Social Network JSON exported (HTML skipped):[/bold green] [cyan]{json_path}[/cyan]\n")

@@ -25,7 +25,7 @@ class SocialGraphAnalyzer:
         self.target_names = [t.strip() for t in target_names if t.strip()]
         self.output_dir = output_dir or Path("profiles/social_graphs")
 
-    def build_multi_target_network(self) -> Dict[str, Any]:
+    def build_multi_target_network(self, export_html: bool = True) -> Dict[str, Any]:
         """Merge individual target knowledge graphs into a unified multi-target social network."""
         logger.info(f"Building unified social graph across {len(self.target_names)} targets: {self.target_names}")
 
@@ -131,7 +131,7 @@ class SocialGraphAnalyzer:
         }
 
         # Generate D3 HTML Visualizer
-        html_content = self._render_d3_html(network_payload)
+        html_content = self._render_d3_html(network_payload) if export_html else None
         self._persist_network(network_payload, html_content)
 
         return network_payload
@@ -282,7 +282,7 @@ class SocialGraphAnalyzer:
 </body>
 </html>"""
 
-    def _persist_network(self, network_data: Dict[str, Any], html_content: str) -> None:
+    def _persist_network(self, network_data: Dict[str, Any], html_content: Optional[str] = None) -> None:
         """Persist JSON and interactive HTML report to social graphs directory."""
         self.output_dir.mkdir(parents=True, exist_ok=True)
         safe_prefix = "_".join("".join(c if c.isalnum() else "" for c in t) for t in self.target_names[:3])
@@ -292,7 +292,12 @@ class SocialGraphAnalyzer:
         with open(out_json, "w", encoding="utf-8") as f:
             json.dump(network_data, f, indent=2, ensure_ascii=False)
 
-        with open(out_html, "w", encoding="utf-8") as f:
-            f.write(html_content)
+        if html_content is not None:
+            with open(out_html, "w", encoding="utf-8") as f_html:
+                f_html.write(html_content)
+            logger.info(f"Saved Social Network JSON ({out_json}) and HTML visualizer ({out_html})")
+        else:
+            logger.info(f"Saved Social Network Intelligence JSON to {out_json}")
 
-        logger.info(f"Saved Social Network Intelligence to {out_json} and interactive visualizer to {out_html}")
+
+

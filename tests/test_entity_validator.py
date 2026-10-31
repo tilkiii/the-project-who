@@ -49,3 +49,80 @@ def test_filter_verified_entities():
     assert verified[0]["name"] == "Mücteba Özdemir"
     assert len(rejected) == 2
     assert "Muhammet Mücteba Özdemir" in [r["name"] for r in rejected]
+
+
+def test_academic_harvester_zero_substitution_semantic_scholar(tmp_path, monkeypatch):
+    import httpx
+    from src.harvest.academic_harvester import AcademicHarvester
+
+    class DummyResp:
+        status_code = 200
+
+        def json(self):
+            return {
+                "data": [
+                    {
+                        "name": "Muhammet Mücteba Özdemir",
+                        "papers": [
+                            {"title": "Contaminated Namesake Paper", "year": 2024, "abstract": "Wrong person", "citationCount": 12}
+                        ],
+                    },
+                    {
+                        "name": "Mücteba Özdemir",
+                        "papers": [
+                            {"title": "Verified Primary Target Paper", "year": 2025, "abstract": "Exact match", "citationCount": 5}
+                        ],
+                    },
+                ]
+            }
+
+    monkeypatch.setattr(httpx.Client, "get", lambda self, url, *a, **kw: DummyResp())
+
+    harvester = AcademicHarvester(output_dir=tmp_path)
+    pubs = harvester.search_author_publications("Mucteba Özdemir")
+
+    assert len(pubs) == 1
+    assert pubs[0]["title"] == "Verified Primary Target Paper"
+    assert "Contaminated Namesake Paper" not in [p["title"] for p in pubs]
+    saved_files = list(tmp_path.glob("academic_*.md"))
+    assert len(saved_files) == 1
+
+
+def test_academic_harvester_zero_substitution_arxiv(tmp_path, monkeypatch):
+    import httpx
+    from src.harvest.academic_harvester import AcademicHarvester
+
+    arxiv_xml = """<?xml version="1.0" encoding="UTF-8"?>
+    <feed xmlns="http://www.w3.org/2005/Atom">
+      <entry>
+        <title>Namesake Arxiv Preprint</title>
+        <summary>Should be blocked by Disambiguation Gate.</summary>
+        <published>2024-05-01T00:00:00Z</published>
+        <author><name>Muhammet Mücteba Özdemir</name></author>
+      </entry>
+      <entry>
+        <title>Verified Target Arxiv Preprint</title>
+        <summary>Authored by exact target identity.</summary>
+        <published>2025-09-15T00:00:00Z</published>
+        <author><name>Mücteba Özdemir</name></author>
+        <author><name>Remzi Sanver</name></author>
+      </entry>
+    </feed>"""
+
+    class DummyResp:
+        def __init__(self, url: str):
+            self.status_code = 200
+            self._url = url
+            self.text = arxiv_xml
+
+        def json(self):
+            return {"data": []}
+
+    monkeypatch.setattr(httpx.Client, "get", lambda self, url, *a, **kw: DummyResp(url))
+
+    harvester = AcademicHarvester(output_dir=tmp_path)
+    pubs = harvester.search_author_publications("Mucteba Özdemir")
+
+    assert len(pubs) == 1
+    assert pubs[0]["title"] == "Verified Target Arxiv Preprint"
+    assert pubs[0]["authors"] == ["Mücteba Özdemir", "Remzi Sanver"]

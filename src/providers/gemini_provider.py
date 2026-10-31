@@ -1,7 +1,7 @@
 """
 Google Gemini provider for who??.
-Supports Gemini 3.1 Flash Lite, Gemini 3.8 Flash, and Gemini Embedding.
-Uses official google-genai SDK with resilient model-chain fallback.
+Supports Gemini 2.5 Flash, Gemini 2.0 Flash, Gemini 3.1 Flash Lite, and Gemini / text-embedding-004 Embeddings.
+Uses official google-genai SDK when installed, with resilient REST API and model-chain fallback.
 """
 
 from __future__ import annotations
@@ -17,12 +17,15 @@ logger = get_logger("who.providers.gemini")
 
 # Fast, verified model priority list for generation and embeddings
 CANDIDATE_GENERATION_MODELS = [
-    "gemini-3.1-flash-lite",
-    "gemini-3.8-flash",
+    "gemini-2.5-flash",
+    "gemini-2.0-flash",
+    "gemini-1.5-flash",
     "gemini-flash-latest",
+    "gemini-3.1-flash-lite",
 ]
 
 CANDIDATE_EMBEDDING_MODELS = [
+    "text-embedding-004",
     "gemini-embedding-001",
     "gemini-embedding-2",
 ]
@@ -33,8 +36,8 @@ class GeminiProvider(BaseLLMProvider):
 
     provider_id: str = "gemini"
     display_name: str = "Google Gemini"
-    default_model: str = "gemini-3.1-flash-lite"
-    default_embedding_model: str = "gemini-embedding-001"
+    default_model: str = "gemini-2.5-flash"
+    default_embedding_model: str = "text-embedding-004"
     env_keys: List[str] = ["GEMINI_API_KEY", "GOOGLE_API_KEY"]
 
     def __init__(self) -> None:
@@ -73,6 +76,9 @@ class GeminiProvider(BaseLLMProvider):
         api_key = self._get_api_key()
         if not api_key:
             raise ValueError("GEMINI_API_KEY is not set.")
+
+        if self._client is None:
+            self._init_sdk()
 
         preferred_model = model or os.getenv("GEMINI_MODEL", self.default_model)
         if preferred_model.startswith("gemini/"):
@@ -156,6 +162,24 @@ class GeminiProvider(BaseLLMProvider):
                 return "".join(text_chunks)
             return ""
 
+    def _embed_rest(
+        self,
+        api_key: str,
+        model: str,
+        text: str,
+    ) -> List[float]:
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:embedContent?key={api_key}"
+        payload: Dict[str, Any] = {
+            "model": f"models/{model}",
+            "content": {"parts": [{"text": text}]},
+        }
+        with httpx.Client(timeout=20.0) as client:
+            resp = client.post(url, json=payload)
+            resp.raise_for_status()
+            data = resp.json()
+            values = data.get("embedding", {}).get("values", [])
+            return [float(v) for v in values] if values else []
+
     def embed(
         self,
         text: str,
@@ -164,6 +188,9 @@ class GeminiProvider(BaseLLMProvider):
         api_key = self._get_api_key()
         if not api_key:
             raise ValueError("GEMINI_API_KEY is not set.")
+
+        if self._client is None:
+            self._init_sdk()
 
         preferred_model = model or os.getenv("GEMINI_EMBEDDING_MODEL", self.default_embedding_model)
         if preferred_model.startswith("gemini/"):
@@ -189,6 +216,15 @@ class GeminiProvider(BaseLLMProvider):
                 except Exception as e:
                     logger.debug(f"Gemini embed SDK with model '{target_model}' error: {e}")
 
-        # 2. Universal hash fallback
+        # 2. REST API fallback (works without google-genai SDK installed)
+        for target_model in trial_models:
+            try:
+                vec = self._embed_rest(api_key=api_key, model=target_model, text=text)
+                if vec:
+                    return vec
+            except Exception as e:
+                logger.debug(f"Gemini embed REST fallback with model '{target_model}' error: {e}")
+
+        # 3. Universal hash fallback
         from src.providers.offline_provider import hash_embedding
         return hash_embedding(text)

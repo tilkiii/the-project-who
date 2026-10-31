@@ -15,6 +15,7 @@ import webbrowser
 
 from src.config import settings
 from src.utils.logger import get_logger
+from src.utils.text_cleaner import sanitize_slug
 
 logger = get_logger("who.ui.server")
 
@@ -660,6 +661,15 @@ class DashboardRequestHandler(SimpleHTTPRequestHandler):
             self.wfile.write(DASHBOARD_HTML.encode("utf-8"))
             return
 
+        if path == "/api/status":
+            self._send_json({
+                "status": "ok",
+                "service": "who-engine",
+                "active_provider": settings.active_provider,
+                "targets_count": len(get_all_target_names()),
+            })
+            return
+
         if path == "/api/targets":
             targets = get_all_target_names()
             self._send_json({"targets": targets})
@@ -673,13 +683,13 @@ class DashboardRequestHandler(SimpleHTTPRequestHandler):
 
         if path.startswith("/api/target/") and path.endswith("/graph"):
             parts = path.split("/")
-            target_slug = parts[3]
+            target_slug = sanitize_slug(urllib.parse.unquote(parts[3]))
             graph = get_target_graph_data(target_slug)
             self._send_json(graph)
             return
 
         if path.startswith("/api/target/"):
-            target_slug = path.split("/")[3]
+            target_slug = sanitize_slug(urllib.parse.unquote(path.split("/")[3]))
             summary = get_target_profile_summary(target_slug)
             self._send_json(summary)
             return

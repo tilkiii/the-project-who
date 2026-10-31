@@ -54,3 +54,58 @@ def test_cli_ui_help():
     result = runner.invoke(app, ["ui", "--help"])
     assert result.exit_code == 0
     assert "Launch the interactive Web Dashboard" in result.output
+
+
+def test_dashboard_api_status_healthcheck():
+    """Verify /api/status endpoint used by Docker HEALTHCHECK returns 200 OK."""
+    import json
+    import threading
+    import urllib.request
+    from http.server import ThreadingHTTPServer
+    from src.ui.dashboard import DashboardRequestHandler
+
+    server = ThreadingHTTPServer(("127.0.0.1", 0), DashboardRequestHandler)
+    port = server.server_address[1]
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        with urllib.request.urlopen(f"http://127.0.0.1:{port}/api/status", timeout=5) as resp:
+            assert resp.status == 200
+            payload = json.loads(resp.read().decode("utf-8"))
+            assert payload["status"] == "ok"
+            assert payload["service"] == "who-engine"
+            assert "active_provider" in payload
+            assert "targets_count" in payload
+    finally:
+        server.shutdown()
+        server.server_close()
+
+
+def test_gemini_provider_rest_embedding_fallback(monkeypatch):
+    """Verify GeminiProvider.embed uses REST API when google-genai SDK is unavailable."""
+    import httpx
+    from src.providers.gemini_provider import GeminiProvider
+
+    monkeypatch.setenv("GEMINI_API_KEY", "test-dummy-gemini-key")
+    called_urls = []
+
+    class DummyPostResp:
+        def raise_for_status(self):
+            return None
+
+        def json(self):
+            return {"embedding": {"values": [0.12, -0.34, 0.56, 0.78]}}
+
+    def fake_post(self, url, json=None, **kwargs):
+        called_urls.append((url, json))
+        return DummyPostResp()
+
+    monkeypatch.setattr(httpx.Client, "post", fake_post)
+
+    provider = GeminiProvider()
+    provider._client = None  # Force SDK-absent path
+    vec = provider.embed("Epistemic calibration test text")
+
+    assert vec == [0.12, -0.34, 0.56, 0.78]
+    assert len(called_urls) == 1
+    assert "text-embedding-004:embedContent" in called_urls[0][0]

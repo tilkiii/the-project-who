@@ -35,6 +35,13 @@ def test_live_monitor_anomaly_detection(tmp_path: Path):
             "url": "https://example.org/post1",
             "timestamp": "2026-10-30T02:30:00Z",
             "source_type": "simulated_rss",
+        },
+        {
+            "title": "Afternoon Ultimatum",
+            "content": "Kesinlikle hiçbir şüphe yoktur ki bu karar asla tartışılamaz ve mutlaka uygulanacaktır.",
+            "url": "https://example.org/post2",
+            "timestamp": "Fri, 30 Oct 2026 14:30:00 GMT",
+            "source_type": "simulated_rss_rfc2822",
         }
     ]
 
@@ -46,7 +53,14 @@ def test_live_monitor_anomaly_detection(tmp_path: Path):
     trigger_types = [t["type"] for t in first_anom["triggers"]]
 
     # Expect at least circadian nocturnal or dogmatism trigger
-    assert any(t in trigger_types for t in ["CIRCADIAN_NOCTURNAL_SPIKE", "DOGMATISM_SURGE"])
+    assert "CIRCADIAN_NOCTURNAL_SPIKE" in trigger_types
+    assert "DOGMATISM_SURGE" in trigger_types
+
+    second_anom = anomalies[1]
+    assert second_anom["item_title"] == "Afternoon Ultimatum"
+    second_triggers = [t["type"] for t in second_anom["triggers"]]
+    assert "DOGMATISM_SURGE" in second_triggers
+    assert "CIRCADIAN_NOCTURNAL_SPIKE" not in second_triggers
 
     # Verify alerts file was saved
     assert monitor.alerts_file.exists()

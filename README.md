@@ -298,7 +298,7 @@ python -m pytest -v
 ## Author & Maintainer
 
 - **Author:** [Mucteba Özdemir](https://github.com/tilkiii) (`@tilkiii`)
-- **Repository:** [`https://github.com/tilkiii/who`](https://github.com/tilkiii/who)
+- **Repository:** [`https://github.com/tilkiii/the-project-who`](https://github.com/tilkiii/the-project-who)
 
 ---
 
