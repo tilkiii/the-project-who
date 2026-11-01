@@ -1,0 +1,15 @@
+{
+  "nodes": [
+    {"id": "Mechanism Design", "label": "Concept", "degree": 4, "pagerank": 0.94},
+    {"id": "Equilibrium Analysis", "label": "Concept", "degree": 3, "pagerank": 0.89},
+    {"id": "Bayesian Updating", "label": "Concept", "degree": 2, "pagerank": 0.85},
+    {"id": "Incentive Alignment", "label": "Concept", "degree": 2, "pagerank": 0.82},
+    {"id": "Algorithmic Governance", "label": "Concept", "degree": 2, "pagerank": 0.78}
+  ],
+  "edges": [
+    {"source": "Mechanism Design", "target": "Equilibrium Analysis", "weight": 1.0},
+    {"source": "Equilibrium Analysis", "target": "Incentive Alignment", "weight": 0.9},
+    {"source": "Bayesian Updating", "target": "Equilibrium Analysis", "weight": 0.85},
+    {"source": "Mechanism Design", "target": "Algorithmic Governance", "weight": 0.8}
+  ]
+}
