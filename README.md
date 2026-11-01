@@ -1,14 +1,16 @@
-# who?? — Evidence-Grounded Cognitive Digital Twin & Behavioral Modeling Framework
+<p align="center">
+  <img src="assets/logo.svg" alt="who?? logo" width="520" />
+</p>
 
 <p align="center">
   <a href="https://github.com/tilkiii/the-project-who/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/tilkiii/the-project-who/ci.yml?branch=main&label=CI&logo=github" alt="CI Status" /></a>
-  <a href="https://tilkiii.github.io/the-project-who/"><img src="https://img.shields.io/badge/docs-MkDocs%20Material-teal.svg?logo=materialformkdocs" alt="Documentation" /></a>
+  <a href="docs/"><img src="https://img.shields.io/badge/docs-reference-teal.svg?logo=googledocs&logoColor=white" alt="Documentation" /></a>
   <a href="https://github.com/astral-sh/ruff"><img src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json" alt="Ruff" /></a>
-  <a href="https://pypi.org/project/the-project-who/"><img src="https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12-blue?logo=python" alt="Python Versions" /></a>
+  <img src="https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12-blue?logo=python" alt="Python Versions" />
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green.svg" alt="License: MIT" /></a>
 </p>
 
-A scientific framework to construct **empirical, evidence-backed Cognitive Digital Twins** of individuals or organizations based on their real-world verbal and written footprint.
+An open-source scientific framework to construct **empirical, evidence-backed Cognitive Digital Twins** of individuals or organizations based on their real-world verbal and written footprint.
 
 Instead of generic chatbot roleplay, `who??` reverse-engineers a target's cognitive operating system—grounding reasoning, psychometrics, and behavioral boundaries in verified primary discourse and peer-reviewed academic literature.
 
@@ -26,26 +28,54 @@ Designed to serve as a **personal agent toolkit** via the Model Context Protocol
 
 ## Key Capabilities
 
-- **Evidence-Grounded Dialogue (`who chat`)**: Converse in-character with the digital twin across formal keynote and 1-on-1 registers. Responses adhere to verified memory, persona lore, and behavioral boundaries.
+- **Evidence-Grounded Dialogue (`who chat`)**: Converse in-character with the digital twin across formal and 1-on-1 registers. Responses strictly adhere to verified memory and calibrated decision boundaries.
 - **Hypothetical Scenario Simulator (`who simulate`)**: Model how the target plausibly reacts to proposals, ethical dilemmas, or adversarial stress-tests before real-world engagement.
-- **5-Axis Extended Psychometrics**: Quantifies Machiavellianism (SD3), Need for Cognitive Closure (NFCS), Prospect Loss Aversion, Affective Volatility (Circumplex), and Moral Foundations (MFT).
+- **5-Axis Extended Psychometrics**: Quantifies Machiavellianism (SD3), Need for Cognitive Closure (NFCS), Prospect Loss Aversion, Affective Volatility, and Moral Foundations (MFT).
 - **AI Scientific Referee & Rigor Index**: Evaluates retrieved papers across arXiv, PubMed, Semantic Scholar, and OpenAlex using a 0–100 rigor score ($S_N, S_r, S_v, S_c$) to derive empirical decision boundaries.
 - **Cognitive Knowledge Graph (NetworkX / Neo4j)**: Models conceptual networks, entity relations, and ideological tensions (cognitive dissonance).
 - **Personal Agent Integration (MCP Server & SDK)**: Expose twins, simulations, and research tools directly to Claude Desktop, Cursor, Antigravity, or custom multi-agent pipelines.
 
 ---
 
-## Architecture: 7-Layer Cognitive Memory
+## System Architecture & Data Flow
 
+```mermaid
+flowchart LR
+    subgraph Ingestion["1. Multimodal Ingestion & Verification"]
+        A[YouTube Transcripts] & B[Web Articles & Speeches] & C[Academic Treatises] --> D[PII Mask & Boilerplate Filter]
+        D --> E[Zero-Substitution Gate]
+    end
+
+    subgraph Memory["2. Epistemic Memory & Graphs"]
+        E --> F[ChromaDB Vector Store]
+        E --> G[NetworkX / Neo4j Knowledge Graph]
+    end
+
+    subgraph Modeling["3. Cognitive & Psychometric Modeling"]
+        F & G --> H[5-Dimension Psychometrics]
+        H --> I[Empirical Decision Boundaries]
+        I --> J[Autonomous Academic Referee]
+    end
+
+    subgraph Interfaces["4. Agent & Protocol Delivery"]
+        J --> K[Python SDK]
+        J --> L[Model Context Protocol Server]
+        J --> M[CLI Interactive Shell]
+    end
 ```
-Layer 7: Character Simulation & Dialogue Engine (TwinChat, Simulator, Oracle, Arena)
-Layer 6: Scientific Referee & Meta-Analytic Synthesis (arXiv, PubMed, OpenAlex, Rigor 0-100)
-Layer 5: Psychometrics & Empirical Decision Boundaries (5 Grand Dimensions, Behavioral Rules)
-Layer 4: Semantic Topic Trajectories (BERTopic, UMAP, HDBSCAN Evolution)
-Layer 3: Epistemic Knowledge Graph & GDS (PageRank, Centrality, Dissonance Paths)
-Layer 2: Semantic Vector Memory (ChromaDB Cosine Embeddings, Boilerplate Filter, PII Masking)
-Layer 1: Multimodal Footprint Acquisition (YouTube Diarization, Web Scrapers, Documents, Social)
-```
+
+---
+
+## Tech Stack
+
+| Category | Technologies & Tools |
+|---|---|
+| **Core & Systems** | Python 3.10+, Pydantic v2, Typer, Rich |
+| **Agent Protocols** | Model Context Protocol (MCP - JSON-RPC 2.0 stdio) |
+| **Vector & Graph Storage** | ChromaDB (Cosine embeddings), NetworkX, Neo4j Graph Data Science |
+| **LLM & Inference** | Google Gemini (Native API), OpenAI, Anthropic Claude, Groq, DSPy |
+| **Academic Meta-Analysis** | arXiv API, PubMed (E-Utilities), Semantic Scholar, OpenAlex |
+| **Quality & CI/CD** | Pytest, Ruff, Pre-commit, GitHub Actions Matrix CI |
 
 ---
 
@@ -177,7 +207,7 @@ who mcp
 
 ## Documentation & Community
 
-- **Documentation**: [https://tilkiii.github.io/the-project-who/](https://tilkiii.github.io/the-project-who/)
+- **Documentation**: Explore guides and architecture specifications in the [`docs/`](docs/) directory.
 - **Contributing**: Please read our [Contributing Guide](CONTRIBUTING.md) and [Code of Conduct](CODE_OF_CONDUCT.md).
 - **Security**: For reporting security vulnerabilities, refer to [SECURITY.md](SECURITY.md).
 
