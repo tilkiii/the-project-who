@@ -89,6 +89,8 @@ cd the-project-who
 pip install -e .
 ```
 
+> **Note for Windows users:** If the `who` command is not recognized in your shell after installation, ensure Python's `Scripts/` directory is in your system PATH, or invoke the CLI directly using `python -m who.cli`.
+
 For development dependencies (testing, linting, docs):
 ```bash
 pip install -e ".[dev]"

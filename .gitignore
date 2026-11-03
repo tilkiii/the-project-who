@@ -52,8 +52,6 @@ profiles/*
 AGENTS.md
 .gemini/
 
-# OS artifacts
-.DS_Store
-Thumbs.db
-.gemini/
-Thumbs.db
+# Scratch scripts & temporary local files
+scratch/
+assets/linkedin_cover.png

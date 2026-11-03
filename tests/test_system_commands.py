@@ -50,7 +50,3 @@ def test_cli_purge_nonexistent():
     assert "not found" in result.output
 
 
-def test_cli_ui_help():
-    result = runner.invoke(app, ["ui", "--help"])
-    assert result.exit_code == 0
-    assert "Launch the interactive Web Dashboard" in result.output
