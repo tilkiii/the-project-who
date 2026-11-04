@@ -33,4 +33,4 @@ jobs:
 
       - name: Run test suite
         run: |
-          python -m pytest tests/test_agent_sdk.py tests/test_mcp_server.py tests/test_osint_v2.py tests/test_extended_psychometrics.py tests/test_entity_validator.py tests/test_academic_agent.py -v
+          python -m pytest tests/ -v

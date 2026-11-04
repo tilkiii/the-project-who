@@ -6,7 +6,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
     PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1
 
-# Install system dependencies (build-essential, curl for healthchecks)
+# Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     curl \
@@ -22,17 +22,15 @@ COPY pyproject.toml README.md ./
 RUN pip install --no-cache-dir --upgrade pip wheel setuptools && \
     pip install --no-cache-dir -e .
 
-# Copy source code and default assets
+# Copy source code, benchmark profiles, and entrypoint
 COPY src/ ./src/
 COPY profiles/ ./profiles/
+COPY main.py ./
 
-# Expose Web Dashboard Port
-EXPOSE 8765
+# Healthcheck to verify system integrity and diagnostic readiness
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD who doctor || exit 1
 
-# Healthcheck to verify dashboard availability
-HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-    CMD curl -f http://localhost:8765/api/status || exit 1
-
-# Default command: launch who UI dashboard accessible from outside the container
+# Default command: launch who MCP server over stdio for AI agents
 ENTRYPOINT ["who"]
-CMD ["ui", "--host", "0.0.0.0", "--port", "8765", "--no-browser"]
+CMD ["mcp"]

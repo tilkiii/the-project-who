@@ -10,7 +10,7 @@ from who.utils.logger import console, print_banner
 # Subcommand implementations
 from who.cli.commands.harvest import harvest, hunt, monitor
 from who.cli.commands.network import network
-from who.cli.commands.system import mcp, providers, purge, targets
+from who.cli.commands.system import doctor, mcp, providers, purge, targets
 from who.cli.commands.twin import (
     arena,
     ask,
@@ -76,6 +76,7 @@ app.command(name="providers")(providers)
 app.command(name="targets")(targets)
 app.command(name="purge")(purge)
 app.command(name="mcp")(mcp)
+app.command(name="doctor")(doctor)
 
 
 def main() -> None:

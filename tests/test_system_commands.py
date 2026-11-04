@@ -50,3 +50,12 @@ def test_cli_purge_nonexistent():
     assert "not found" in result.output
 
 
+
+
+def test_cli_doctor():
+    result = runner.invoke(app, ["doctor"])
+    assert result.exit_code == 0
+    assert "Diagnostic System Health Matrix" in result.output
+    assert "Python Runtime" in result.output
+    assert "LLM Inference Provider" in result.output
+    assert "ALL CORE SUBSYSTEMS OPERATIONAL" in result.output

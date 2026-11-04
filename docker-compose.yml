@@ -5,8 +5,8 @@ services:
       dockerfile: Dockerfile
     container_name: who-engine
     restart: unless-stopped
-    ports:
-      - "8765:8765"
+    stdin_open: true
+    tty: true
     environment:
       - WHO_PROVIDER=${WHO_PROVIDER:-gemini}
       - GEMINI_API_KEY=${GEMINI_API_KEY:-}

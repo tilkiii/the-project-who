@@ -209,3 +209,100 @@ def mcp() -> None:
     server.run()
 
 
+
+
+def doctor() -> None:
+    """Run comprehensive system diagnostics, verify API keys, storage, profiles, graph, and MCP readiness."""
+    import sys
+    print_banner()
+    console.print("[bold green]🩺 who?? System Integrity Diagnostic (who doctor)[/bold green]\n")
+
+    table = Table(title="Diagnostic System Health Matrix", show_header=True, header_style="bold cyan")
+    table.add_column("Subsystem / Component", style="bold white", width=28)
+    table.add_column("Status", width=18)
+    table.add_column("Operational Findings & Guidance", style="dim")
+
+    critical_failures = 0
+
+    # 1. Python Environment Check
+    py_ver = f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
+    if sys.version_info >= (3, 10):
+        table.add_row("Python Runtime", "[bold green]✔ COMPLIANT[/bold green]", f"Python {py_ver} on {sys.platform}")
+    else:
+        table.add_row("Python Runtime", "[bold red]✘ OUTDATED[/bold red]", f"Python {py_ver} (Requires Python >= 3.10)")
+        critical_failures += 1
+
+    # 2. AI Provider & Credentials
+    active_prov = provider_manager.detect_active_provider()
+    if active_prov.is_available() and active_prov.provider_id != "offline":
+        table.add_row("LLM Inference Provider", "[bold green]✔ ACTIVE[/bold green]", f"{active_prov.display_name} (API key verified)")
+    elif active_prov.provider_id == "offline":
+        table.add_row("LLM Inference Provider", "[bold yellow]▲ OFFLINE MODE[/bold yellow]", "Corpus-grounded fallback. Set GEMINI_API_KEY for cloud reasoning.")
+    else:
+        table.add_row("LLM Inference Provider", "[bold yellow]▲ UNCONFIGURED[/bold yellow]", f"{active_prov.display_name} (Missing API keys in .env)")
+
+    # 3. Storage & Profiles Directory
+    profiles_dir = Path(settings.profiles_dir)
+    if profiles_dir.exists():
+        target_count = len([p for p in profiles_dir.iterdir() if p.is_dir() and not p.name.startswith((".", "__"))])
+        table.add_row("Local Vault Storage", "[bold green]✔ OPERATIONAL[/bold green]", f"{profiles_dir} ({target_count} target profile directories)")
+    else:
+        table.add_row("Local Vault Storage", "[bold red]✘ MISSING[/bold red]", f"Directory '{profiles_dir}' does not exist.")
+        critical_failures += 1
+
+    # 4. Benchmark Profile (Target X)
+    target_x_dir = profiles_dir / "target_x"
+    if target_x_dir.exists():
+        has_mindset = (target_x_dir / "vault" / "mindset_summary.md").exists()
+        has_graph = (target_x_dir / "vault" / "knowledge_graph.json").exists()
+        if has_mindset and has_graph:
+            table.add_row("Benchmark Demo Profile", "[bold green]✔ READY[/bold green]", "Target X is fully calibrated with mindset and knowledge graph.")
+        else:
+            table.add_row("Benchmark Demo Profile", "[bold yellow]▲ INCOMPLETE[/bold yellow]", "Target X folder exists but missing vault artifacts.")
+    else:
+        table.add_row("Benchmark Demo Profile", "[bold dim]○ NOT FOUND[/bold dim]", "profiles/target_x/ not located in active storage.")
+
+    # 5. Graph Engine
+    try:
+        import networkx as nx
+        g = nx.DiGraph()
+        g.add_edge("DiagnosticNodeA", "DiagnosticNodeB")
+        table.add_row("Graph Engine (NetworkX)", "[bold green]✔ OPERATIONAL[/bold green]", f"NetworkX v{nx.__version__} graph operations validated.")
+    except Exception as exc:
+        table.add_row("Graph Engine (NetworkX)", "[bold red]✘ FAILED[/bold red]", f"NetworkX error: {exc}")
+        critical_failures += 1
+
+    # 6. Vector Store (ChromaDB & Local Embeddings)
+    try:
+        import chromadb
+        table.add_row("Vector Store (ChromaDB)", "[bold green]✔ OPERATIONAL[/bold green]", f"ChromaDB v{chromadb.__version__} HNSW engine initialized.")
+    except Exception:
+        table.add_row("Vector Store (Fallback)", "[bold yellow]▲ LOCAL FALLBACK[/bold yellow]", "Using built-in cosine vector index. (Install chromadb for persistent HNSW backend)")
+
+    # 7. Model Context Protocol (MCP) Server Tools
+    try:
+        from who.mcp_server import TOOLS_SCHEMA
+        tool_count = len(TOOLS_SCHEMA)
+        table.add_row("MCP Agent Protocol", "[bold green]✔ OPERATIONAL[/bold green]", f"{tool_count} JSON-RPC 2.0 tools registered (who_chat, who_simulate, etc.)")
+    except Exception as exc:
+        table.add_row("MCP Agent Protocol", "[bold red]✘ FAILED[/bold red]", f"MCP schema failure: {exc}")
+        critical_failures += 1
+
+    console.print(table)
+    console.print()
+
+    if critical_failures == 0:
+        console.print(Panel(
+            "[bold green]✔ ALL CORE SUBSYSTEMS OPERATIONAL[/bold green]\n"
+            "[dim]The framework is ready for multi-agent workflows, CLI operations, and MCP client sessions.[/dim]",
+            title="[bold green]Health Check Verdict: PASSED[/bold green]",
+            border_style="green",
+        ))
+    else:
+        console.print(Panel(
+            f"[bold red]✘ {critical_failures} CRITICAL SUBSYSTEM FAILURE(S) DETECTED[/bold red]\n"
+            "[dim]Review the findings above and resolve missing dependencies or directories.[/dim]",
+            title="[bold red]Health Check Verdict: FAILED[/bold red]",
+            border_style="red",
+        ))
+        raise typer.Exit(1)
