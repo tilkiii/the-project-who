@@ -139,6 +139,7 @@ def monitor(
     target: str = typer.Option(..., "--target", "-t", help="Target individual name"),
     sources: Optional[str] = typer.Option(None, "--sources", "-s", help="Comma-separated RSS feeds or URLs to monitor"),
     simulate_feed: bool = typer.Option(False, "--simulate-feed", help="Simulate a live feed item to test anomaly triggers"),
+    drift: bool = typer.Option(False, "--drift", "-d", help="Quantify longitudinal cognitive & epistemic drift against baseline profile"),
 ) -> None:
     """Scan live external feeds and detect real-time circadian, dogmatic, or cognitive anomalies."""
     print_banner()
@@ -151,6 +152,56 @@ def monitor(
     feed_items = []
     if url_list:
         feed_items.extend(monitor_engine.fetch_live_feed(url_list))
+
+    if drift:
+        console.print(f"[bold cyan]🔬 Quantifying Longitudinal Cognitive Drift for:[/bold cyan] [bold white]{target}[/bold white]\n")
+        drift_res = monitor_engine.analyze_temporal_drift(items=feed_items if feed_items else None)
+
+        verdict = drift_res.get("verdict", "STABLE_EQUILIBRIUM")
+        v_color = "green" if verdict == "STABLE_EQUILIBRIUM" else ("yellow" if verdict == "EPISTEMIC_DIFFUSION" else "red")
+
+        console.print(Panel(
+            f"[bold {v_color}]Phase Shift Classification: {verdict}[/bold {v_color}]\n"
+            f"[white]{drift_res.get('verdict_description')}[/white]\n"
+            f"[dim]Concept Stability Index: {drift_res.get('concept_stability_pct')}%[/dim]",
+            title="[bold magenta]📈 Epistemic Drift Diagnostic[/bold magenta]",
+            border_style=v_color,
+        ))
+
+        # Render Metrics Delta Table
+        table = Table(title=f"📊 Mathematical Drift Deltas (Δ) vs Baseline: {target}", header_style="bold cyan")
+        table.add_column("Psycholinguistic Dimension", style="bold white", width=26)
+        table.add_column("Baseline", style="dim", width=12)
+        table.add_column("Observed", style="white", width=12)
+        table.add_column("Delta (Δ)", style="bold yellow", width=12)
+        table.add_column("Longitudinal Trend", style="bold", width=16)
+
+        deltas = drift_res.get("metrics_delta", {})
+        for metric_name, m_val in deltas.items():
+            trend = m_val.get("trend", "● STABLE")
+            t_color = "red" if "SURGING" in trend else ("cyan" if "DECAYING" in trend else "green")
+            table.add_row(
+                metric_name.replace("_", " ").title(),
+                f"{m_val.get('baseline', 0.0):.2f}",
+                f"{m_val.get('observed', 0.0):.2f}",
+                f"{m_val.get('delta', 0.0):+.2f}",
+                f"[{t_color}]{trend}[/{t_color}]",
+            )
+        console.print(table)
+        console.print()
+
+        # Concepts shift
+        shifts = drift_res.get("conceptual_shifts", {})
+        if shifts.get("surging_concepts"):
+            console.print(f"[bold yellow]Newly Surging Concepts:[/bold yellow] {', '.join(shifts.get('surging_concepts', []))}")
+        if shifts.get("retained_concepts"):
+            console.print(f"[bold green]Retained Baseline Concepts:[/bold green] {', '.join(shifts.get('retained_concepts', []))}\n")
+
+        # Synthesis
+        if drift_res.get("drift_synthesis"):
+            console.print(Panel(drift_res.get("drift_synthesis"), title="[bold cyan]Longitudinal Strategic Synthesis[/bold cyan]", border_style="cyan"))
+        console.print(f"[dim italic]{drift_res.get('epistemic_qualification')}[/dim italic]\n")
+        return
 
     if simulate_feed or not feed_items:
         sim_dt = datetime.now()

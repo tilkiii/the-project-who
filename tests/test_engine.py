@@ -91,3 +91,22 @@ def test_twin_chat(target_dirs):
     chat_informal = TwinChat("Alice", target_dirs, mode="informal")
     resp_informal = chat_informal.respond("Hey Alice, what's up?")
     assert len(resp_informal) > 0
+
+
+def test_simulator_monte_carlo(target_dirs):
+    sim = Simulator("Alice", target_dirs)
+    res = sim.simulate_monte_carlo("Counterparty demands unilateral board veto under 48h deadline", iterations=15, random_seed=42)
+
+    assert "dominant_branch" in res
+    assert "branch_probabilities" in res
+    assert len(res["branch_probabilities"]) == 4
+    assert sum(res["branch_probabilities"].values()) == pytest.approx(1.0, abs=0.01)
+    assert "expected_nash_payoff" in res
+    assert "critical_sensitivity" in res
+    assert "strategic_synthesis" in res
+    assert res["dominant_branch"] in [
+        "REJECT_AND_COUNTER",
+        "STRATEGIC_CONCESSION",
+        "SUBGAME_EQUILIBRIUM_ACCEPT",
+        "DEADLOCK_WALKAWAY",
+    ]

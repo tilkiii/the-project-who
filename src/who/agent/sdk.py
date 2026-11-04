@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from who.config import settings
 from who.engine.composer import Composer
@@ -66,6 +66,7 @@ class CognitiveTwin:
         self._explain_engine: Optional[ExplainabilityEngine] = None
         self._composer: Optional[Composer] = None
         self._oracle: Optional[Oracle] = None
+        self._drift_detector: Any = None
 
     @property
     def chat_engine(self) -> TwinChat:
@@ -112,6 +113,43 @@ class CognitiveTwin:
         Returns simulation analysis, hypothesis, confidence score, and primary quotes.
         """
         return self.simulator.simulate_scenario(scenario)
+
+    def simulate_monte_carlo(
+        self,
+        scenario: str,
+        iterations: int = 25,
+        parameter_ranges: Optional[Dict[str, Tuple[float, float]]] = None,
+        random_seed: Optional[int] = 42,
+    ) -> Dict[str, Any]:
+        """
+        Execute multi-iteration Monte Carlo game-theoretic simulation of the target's strategic response.
+        Returns outcome probability distributions (Counter, Concession, Deadlock, Accept),
+        Nash equilibrium payoffs, sensitivity tipping variables, and strategic negotiation synthesis.
+        """
+        return self.simulator.simulate_monte_carlo(
+            scenario=scenario,
+            iterations=iterations,
+            parameter_ranges=parameter_ranges,
+            random_seed=random_seed,
+        )
+
+    @property
+    def drift_detector(self) -> Any:
+        if self._drift_detector is None:
+            from who.learn.drift_detector import TemporalDriftDetector
+            self._drift_detector = TemporalDriftDetector(self.target_name, self.dirs)
+        return self._drift_detector
+
+    def analyze_drift(
+        self,
+        new_texts: Optional[List[str]] = None,
+        new_documents: Optional[List[Dict[str, Any]]] = None,
+    ) -> Dict[str, Any]:
+        """
+        Quantify longitudinal cognitive drift between baseline corpus and recent public footprint.
+        Calculates Delta-Calibration, Delta-Dogmatism, Delta-TTR, and Concept Centrality Shifts.
+        """
+        return self.drift_detector.detect_drift(new_texts=new_texts, new_documents=new_documents)
 
     def explain(self, claim: str) -> Dict[str, Any]:
         """

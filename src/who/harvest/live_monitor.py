@@ -235,3 +235,11 @@ class LiveMonitor:
         with open(self.alerts_file, "w", encoding="utf-8") as f:
             json.dump(all_alerts[:50], f, indent=2, ensure_ascii=False)
         logger.info(f"Saved {len(new_anomalies)} new anomaly alerts to {self.alerts_file}")
+
+    def analyze_temporal_drift(self, items: Optional[List[Dict[str, Any]]] = None) -> Dict[str, Any]:
+        """
+        Analyze longitudinal cognitive and epistemic drift for the monitored target footprint.
+        """
+        from who.learn.drift_detector import TemporalDriftDetector
+        detector = TemporalDriftDetector(self.target_name, self.dirs)
+        return detector.detect_drift(new_documents=items)

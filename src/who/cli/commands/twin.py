@@ -155,15 +155,67 @@ def ask(
 def simulate(
     target: str = typer.Option(..., "--target", "-t", help="Target individual name"),
     scenario: str = typer.Option(..., "--scenario", "-s", help="Scenario to simulate"),
+    monte_carlo: bool = typer.Option(False, "--monte-carlo", "-m", help="Run multi-iteration Monte Carlo game-theoretic simulation"),
+    iterations: int = typer.Option(25, "--iterations", "-n", help="Number of Monte Carlo stochastic iterations (10-100)"),
 ) -> None:
     """Simulate plausible reactions and counter-moves under explicit scenario assumptions."""
     dirs = settings.get_target_dirs(target)
     sim = Simulator(target, dirs)
-    res = sim.simulate_scenario(scenario)
 
-    console.print(f"\n[bold cyan]Simulated Scenario:[/bold cyan] {scenario}")
-    console.print(Panel(res.get("simulation_analysis", ""), title=f"[bold magenta]Plausible Reaction Simulation ({int(res.get('confidence_score', 0.75) * 100)}% Confidence)[/bold magenta]", border_style="magenta"))
-    console.print(f"[dim italic]{res.get('epistemic_qualification')}[/dim italic]\n")
+    if monte_carlo:
+        console.print(f"\n[bold cyan]Executing Monte Carlo Game-Theoretic Simulation:[/bold cyan] {target}")
+        console.print(f"[dim]Scenario: '{scenario}' • Perturbations: N={iterations}[/dim]\n")
+        res = sim.simulate_monte_carlo(scenario, iterations=iterations)
+
+        probs = res.get("branch_probabilities", {})
+        dom = res.get("dominant_branch", "")
+
+        # Render Distribution Table
+        table = Table(title=f"🎲 Monte Carlo Decision Space Distribution (N={iterations})", header_style="bold magenta")
+        table.add_column("Decision Branch", style="bold white", width=28)
+        table.add_column("Probability", style="bold green", width=14)
+        table.add_column("Distribution Curve", style="cyan", width=22)
+        table.add_column("Epistemic Posture", style="dim")
+
+        branch_meta = {
+            "REJECT_AND_COUNTER": ("Normative rejection of asymmetric terms; demands reciprocal veto/terms.", "red"),
+            "STRATEGIC_CONCESSION": ("Yields on secondary terms in exchange for verified structural guarantees.", "yellow"),
+            "SUBGAME_EQUILIBRIUM_ACCEPT": ("Pareto-optimal alignment satisfies participation constraints.", "green"),
+            "DEADLOCK_WALKAWAY": ("Friction exceeds loss-aversion tolerance; unilateral walkaway.", "magenta"),
+        }
+
+        for branch, pct in sorted(probs.items(), key=lambda x: x[1], reverse=True):
+            bar_len = int(pct * 16)
+            bar = "█" * bar_len + "░" * (16 - bar_len)
+            is_dom = " ★ DOMINANT" if branch == dom else ""
+            pct_str = f"{int(pct * 100)}%{is_dom}"
+            desc, _ = branch_meta.get(branch, ("", "white"))
+            table.add_row(branch, pct_str, f"[{bar}]", desc)
+
+        console.print(table)
+        console.print()
+
+        # Render Metrics & Sensitivity Panel
+        bounds = res.get("payoff_bounds", {})
+        sens = res.get("critical_sensitivity", {})
+        payoff_summary = (
+            f"[bold white]Dominant Nash Equilibrium:[/bold white] [bold cyan]{dom}[/bold cyan] ({int(probs.get(dom, 0)*100)}% likelihood)\n"
+            f"[bold white]Expected Nash Payoff (E[U]):[/bold white] [bold green]{res.get('expected_nash_payoff')}[/bold green] "
+            f"[dim](P10: {bounds.get('p10')} | Median: {bounds.get('median')} | P90: {bounds.get('p90')})[/dim]\n"
+            f"[bold white]Critical Sensitivity Variable:[/bold white] [bold yellow]{sens.get('key_variable')}[/bold yellow]\n"
+            f"[dim]{sens.get('finding')}[/dim]"
+        )
+        console.print(Panel(payoff_summary, title="[bold green]📊 Nash Equilibrium & Payoff Distribution[/bold green]", border_style="green"))
+
+        # Render Strategic Synthesis
+        if res.get("strategic_synthesis"):
+            console.print(Panel(res.get("strategic_synthesis", ""), title="[bold magenta]Strategic Negotiation Guidance[/bold magenta]", border_style="magenta"))
+        console.print(f"[dim italic]{res.get('epistemic_qualification')}[/dim italic]\n")
+    else:
+        res = sim.simulate_scenario(scenario)
+        console.print(f"\n[bold cyan]Simulated Scenario:[/bold cyan] {scenario}")
+        console.print(Panel(res.get("simulation_analysis", ""), title=f"[bold magenta]Plausible Reaction Simulation ({int(res.get('confidence_score', 0.75) * 100)}% Confidence)[/bold magenta]", border_style="magenta"))
+        console.print(f"[dim italic]{res.get('epistemic_qualification')}[/dim italic]\n")
 
 
 def compose(

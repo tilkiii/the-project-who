@@ -108,3 +108,21 @@ def test_academic_researcher_evaluate():
     assert "ranked_papers" in evaluation
     assert len(evaluation["ranked_papers"]) == 1
     assert evaluation["ranked_papers"][0]["scores"]["total_rigor_score"] > 40
+
+def test_cognitive_twin_simulate_monte_carlo(populated_target):
+    twin = CognitiveTwin(populated_target)
+    sim = twin.simulate_monte_carlo("Counterparty offers aggressive valuation for immediate operational takeover", iterations=10, random_seed=42)
+    assert isinstance(sim, dict)
+    assert "dominant_branch" in sim
+    assert "branch_probabilities" in sim
+    assert "expected_nash_payoff" in sim
+    assert "critical_sensitivity" in sim
+
+
+def test_cognitive_twin_analyze_drift(populated_target):
+    twin = CognitiveTwin(populated_target)
+    drift = twin.analyze_drift(new_texts=["Perhaps we might observe tentative empirical results across nodes."])
+    assert isinstance(drift, dict)
+    assert "verdict" in drift
+    assert "metrics_delta" in drift
+    assert "epistemic_calibration" in drift["metrics_delta"]

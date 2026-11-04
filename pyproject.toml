@@ -12,11 +12,21 @@ license = {text = "MIT"}
 authors = [
     {name = "Mucteba Özdemir", email = "ozdemirmucteba@outlook.com"}
 ]
+keywords = [
+    "digital-twin",
+    "cognitive-modeling",
+    "osint",
+    "ai-agents",
+    "game-theory",
+    "monte-carlo",
+    "mcp",
+    "knowledge-graph",
+    "behavioral-simulation",
+]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "Intended Audience :: Science/Research",
-    "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
@@ -57,7 +67,15 @@ dev = [
     "ruff>=0.3.0",
     "mypy>=1.9.0",
     "pre-commit>=3.6.0",
+    "build>=1.0.0",
+    "twine>=5.0.0",
 ]
+
+[project.urls]
+Homepage = "https://github.com/tilkiii/the-project-who"
+Documentation = "https://github.com/tilkiii/the-project-who#readme"
+Repository = "https://github.com/tilkiii/the-project-who"
+"Bug Tracker" = "https://github.com/tilkiii/the-project-who/issues"
 
 [project.scripts]
 who = "who.cli:main"

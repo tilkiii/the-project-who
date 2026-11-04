@@ -17,7 +17,8 @@ def test_cli_help():
     assert "Enterprise-Grade Multimodal OSINT Engine" in result.output or "who" in result.output
 
 
-def test_cli_harvest_and_pipeline(tmp_path: Path):
+def test_cli_harvest_and_pipeline(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setattr("who.harvest.academic_harvester.AcademicHarvester.search_author_publications", lambda self, author, max_results=5: [])
     target = "Test Target"
     # Create sample doc for harvest
     doc_file = tmp_path / "test_notes.md"

@@ -1,52 +1,51 @@
-<p align="center">
-  <img src="assets/logo.svg" alt="who?? logo" width="520" />
-</p>
+<div align="center">
+
+<img src="assets/logo.svg" alt="who?? logo" width="140" height="140" />
+
+# who??
+### Evidence-Grounded Cognitive Digital Twin & Behavioral Modeling Toolkit for AI Agents
+
+[![CI](https://github.com/tilkiii/the-project-who/actions/workflows/ci.yml/badge.svg)](https://github.com/tilkiii/the-project-who/actions/workflows/ci.yml)
+[![PyPI version](https://img.shields.io/badge/pypi-v1.0.0-blue.svg)](https://pypi.org/project/the-project-who/)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Code Style: Ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://github.com/astral-sh/ruff)
+[![Architecture: Clean Spec](https://img.shields.io/badge/architecture-clean%20spec-green.svg)](docs/)
 
 <p align="center">
-  <a href="https://github.com/tilkiii/the-project-who/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/tilkiii/the-project-who/ci.yml?branch=main&label=CI&logo=github" alt="CI Status" /></a>
-  <a href="docs/"><img src="https://img.shields.io/badge/docs-reference-teal.svg?logo=googledocs&logoColor=white" alt="Documentation" /></a>
-  <a href="https://github.com/astral-sh/ruff"><img src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json" alt="Ruff" /></a>
-  <img src="https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12-blue?logo=python" alt="Python Versions" />
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green.svg" alt="License: MIT" /></a>
+  <b>Transform fragmented OSINT footprints, speeches, transcripts, and academic publications into mathematically calibrated cognitive digital twins, probabilistic scenario simulators, and MCP agent tools.</b>
 </p>
 
-An open-source scientific framework to construct **empirical, evidence-backed Cognitive Digital Twins** of individuals or organizations based on their real-world verbal and written footprint.
-
-Instead of generic chatbot roleplay, `who??` reverse-engineers a target's cognitive operating system—grounding reasoning, psychometrics, and behavioral boundaries in verified primary discourse and peer-reviewed academic literature.
-
-Designed to serve as a **personal agent toolkit** via the Model Context Protocol (MCP) or direct Python SDK.
+</div>
 
 ---
 
-## Terminal Showcase
+## Overview
 
-<p align="center">
-  <img src="assets/terminal_demo.svg" alt="who terminal showcase" width="100%" />
-</p>
+**`who??`** is an open-source, evidence-grounded framework designed to reconstruct psychological profiles, empirical decision boundaries, and interactive digital twins from open-source intelligence (OSINT).
 
----
+Unlike generic character chatbots that hallucinate personalities from loose vibes, `who??` operates under strict **epistemic grounding**: every behavioral rule, simulated negotiation counter-move, and psychometric metric is linked to primary corpus citations and peer-reviewed behavioral science papers (arXiv, PubMed, Semantic Scholar, OpenAlex).
 
-## Key Capabilities
-
-- **Evidence-Grounded Dialogue (`who chat`)**: Converse in-character with the digital twin across formal and 1-on-1 registers. Responses strictly adhere to verified memory and calibrated decision boundaries.
-- **Hypothetical Scenario Simulator (`who simulate`)**: Model how the target plausibly reacts to proposals, ethical dilemmas, or adversarial stress-tests before real-world engagement.
-- **5-Axis Extended Psychometrics**: Quantifies Machiavellianism (SD3), Need for Cognitive Closure (NFCS), Prospect Loss Aversion, Affective Volatility, and Moral Foundations (MFT).
-- **AI Scientific Referee & Rigor Index**: Evaluates retrieved papers across arXiv, PubMed, Semantic Scholar, and OpenAlex using a 0–100 rigor score ($S_N, S_r, S_v, S_c$) to derive empirical decision boundaries.
-- **Cognitive Knowledge Graph (NetworkX / Neo4j)**: Models conceptual networks, entity relations, and ideological tensions (cognitive dissonance).
-- **Personal Agent Integration (MCP Server & SDK)**: Expose twins, simulations, and research tools directly to Claude Desktop, Cursor, Antigravity, or custom multi-agent pipelines.
+```
+   Public Footprint             Knowledge & Graph                Cognitive Twin
+ [Articles / Transcripts] ──► [ChromaDB + NetworkX/Neo4j] ──► [Agent SDK / MCP / CLI]
+ [Podcasts / PDFs / RSS]  ──► [5-Dimension Psychometrics] ──► [Monte Carlo Simulator]
+```
 
 ---
 
-## System Architecture & Data Flow
+## Architectural Pipeline
 
 ```mermaid
-flowchart LR
-    subgraph Ingestion["1. Multimodal Ingestion & Verification"]
-        A[YouTube Transcripts] & B[Web Articles & Speeches] & C[Academic Treatises] --> D[PII Mask & Boilerplate Filter]
-        D --> E[Zero-Substitution Gate]
+flowchart TD
+    subgraph Harvesting["1. Multimodal Harvesting"]
+        A[Web & RSS Articles] --> D[Clean & Normalizer]
+        B[PDF / DOCX Ingestion] --> D
+        C[YouTube / Podcast Media] --> D
     end
 
-    subgraph Memory["2. Epistemic Memory & Graphs"]
+    subgraph Memory["2. Dual-Layer Cognitive Vault"]
+        D --> E[Entity Disambiguation Gate]
         E --> F[ChromaDB Vector Store]
         E --> G[NetworkX / Neo4j Knowledge Graph]
     end
@@ -60,7 +59,8 @@ flowchart LR
     subgraph Interfaces["4. Agent & Protocol Delivery"]
         J --> K[Python SDK]
         J --> L[Model Context Protocol Server]
-        J --> M[CLI Interactive Shell]
+        J --> M[Monte Carlo Scenario Simulator]
+        J --> N[Temporal Cognitive Drift Engine]
     end
 ```
 
@@ -83,6 +83,12 @@ flowchart LR
 
 ### 1. Installation
 
+Install directly from PyPI:
+```bash
+pip install the-project-who
+```
+
+Or install from source:
 ```bash
 git clone https://github.com/tilkiii/the-project-who.git
 cd the-project-who
@@ -91,38 +97,35 @@ pip install -e .
 
 > **Note for Windows users:** If the `who` command is not recognized in your shell after installation, ensure Python's `Scripts/` directory is in your system PATH, or invoke the CLI directly using `python -m who.cli`.
 
-For development dependencies (testing, linting, docs):
+For development dependencies (testing, linting, packaging):
 ```bash
 pip install -e ".[dev]"
 ```
 
 ### 2. Configure Environment (`.env`)
 
+Copy the template and set your API keys:
 ```bash
 cp .env.example .env
 ```
 
-Add your preferred AI provider key:
 ```ini
-# Google Gemini (Default)
+# Primary Recommended LLM Provider (Google Gemini)
 GEMINI_API_KEY=your_gemini_api_key_here
 
-# Or other providers:
-# OPENAI_API_KEY=your_openai_key
-# ANTHROPIC_API_KEY=your_claude_key
-# GROQ_API_KEY=your_groq_key
-```
-
-Verify configured providers:
-```bash
-who providers
+# Alternative Providers (optional)
+OPENAI_API_KEY=your_openai_key_here
+ANTHROPIC_API_KEY=your_anthropic_key_here
+GROQ_API_KEY=your_groq_key_here
 ```
 
 ---
 
-## Personal Agent Integration
+## Core Interfaces
 
-### Option A: Python SDK
+### Option A: Python Agent SDK
+
+Integrate `who??` directly into custom agent loops, LangChain, LlamaIndex, or AutoGen:
 
 ```python
 from who import CognitiveTwin, AcademicResearcher, list_targets
@@ -138,20 +141,30 @@ twin = CognitiveTwin("Target X", mode="formal")
 reply = twin.chat("What is your equilibrium strategy when negotiating with an asymmetric counterpart?")
 print(reply)
 
-# 4. Simulate scenario reaction
-sim = twin.simulate_scenario("Counterpart demands unilateral veto power under threat of network fork.")
-print(sim["simulation_analysis"])
+# 4. Monte Carlo Game-Theoretic Simulation (Game Theory 2.0)
+sim = twin.simulate_monte_carlo(
+    scenario="Hostile consortium demands transfer of cryptographic keys under 24h deadline.",
+    iterations=25,
+)
+print(f"Dominant Branch: {sim['dominant_branch']} ({sim['branch_probabilities'][sim['dominant_branch']]*100}%)")
+print(f"Expected Nash Payoff: {sim['expected_nash_payoff']}")
+print(f"Critical Sensitivity Driver: {sim['critical_sensitivity']['key_variable']}")
 
-# 5. Autonomous academic research & literature grounding
+# 5. Longitudinal Cognitive Drift Audit
+drift = twin.analyze_drift()
+print(f"Drift Classification: {drift['verdict']}")
+
+# 6. Autonomous academic research & literature grounding
 researcher = AcademicResearcher(target_name="Target X")
 results = researcher.research_topic("Bayesian mechanism design equilibrium", limit=3)
 ```
 
 Explore runnable examples in the [`examples/`](examples/) cookbook:
 - [`01_quick_chat.py`](examples/01_quick_chat.py): Connect and chat with a cognitive twin.
-- [`02_simulate_scenario.py`](examples/02_simulate_scenario.py): Run adversarial scenario simulations.
+- [`02_simulate_scenario.py`](examples/02_simulate_scenario.py): Run single-pass adversarial scenario simulations.
 - [`03_academic_research.py`](examples/03_academic_research.py): Search peer-reviewed literature across arXiv/PubMed.
 - [`04_mcp_agent_client.py`](examples/04_mcp_agent_client.py): Direct JSON-RPC MCP server client.
+- [`05_monte_carlo_negotiation.py`](examples/05_monte_carlo_negotiation.py): Multi-iteration Monte Carlo negotiation & game theory simulation.
 
 ---
 
@@ -177,7 +190,7 @@ who mcp
 
 **Available MCP Tools:**
 - `who_chat(target, message, mode)`: Direct dialogue with cognitive digital twin.
-- `who_simulate(target, scenario)`: Run adversarial / hypothetical counter-move simulation.
+- `who_simulate(target, scenario, monte_carlo, iterations)`: Run adversarial simulation or multi-iteration Monte Carlo game theory analysis.
 - `who_get_profile(target)`: Retrieve psychometrics, boundaries, and active operational rules.
 - `who_explain(target, claim)`: Verify claim against primary corpus and knowledge graph paths.
 - `who_academic_research(topic, target, limit, ingest)`: Search peer-reviewed literature with AI Referee scoring.
@@ -189,19 +202,25 @@ who mcp
 ## CLI Reference
 
 ```bash
-# List available targets
+# List available targets in vault
 who targets
 
 # Interactive terminal chat with active guardrails
 who chat --target "Target X"
 
-# Simulate hypothetical reaction
-who simulate --target "Target X" --scenario "Controversial proposal"
+# Single-pass hypothetical scenario simulation
+who simulate --target "Target X" --scenario "Controversial acquisition proposal"
+
+# Multi-iteration Monte Carlo Game-Theoretic Simulation
+who simulate --target "Target X" --scenario "Controversial acquisition proposal" --monte-carlo --iterations 25
+
+# Autonomous live watcher & temporal cognitive drift analysis
+who monitor --target "Target X" --drift
 
 # Autonomous literature search
 who research --topic "Mechanism design equilibrium" --source arxiv
 
-# Start MCP server
+# Start standard MCP stdio server
 who mcp
 ```
 

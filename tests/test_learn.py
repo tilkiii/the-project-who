@@ -91,3 +91,42 @@ def test_prompt_optimizer(tmp_path: Path):
     assert "compiled_templates" in opt
     assert "oracle_system_prompt" in opt["compiled_templates"]
     assert (tmp_path / "optimized_prompts.json").exists()
+
+
+def test_temporal_drift_detector(tmp_path: Path):
+    from who.config import settings
+    from who.learn.drift_detector import TemporalDriftDetector
+
+    dirs = settings.get_target_dirs("Alice")
+    # Setup baseline features and knowledge graph
+    (dirs.learned_skills_dir / "features.json").write_text(
+        '{"epistemic_markers": {"epistemic_calibration_ratio": 1.4}, "epistemic_manipulation_index": {"dogmatic_density": 0.3}, "lexical_diversity": {"type_token_ratio": 0.65}, "top_characteristic_terms": [["consensus", 5], ["proof", 4]]}',
+        encoding="utf-8"
+    )
+    (dirs.vault_dir / "knowledge_graph.json").write_text(
+        '{"nodes": [{"id": "consensus", "label": "consensus"}, {"id": "proof", "label": "proof"}], "edges": []}',
+        encoding="utf-8"
+    )
+
+    detector = TemporalDriftDetector("Alice", dirs)
+
+    # 1. Test unhedged dogmatic surge
+    dogmatic_texts = [
+        "Kesinlikle herkes bilmelidir ki bu sistem asla tartışılamaz. Şüphesiz mutlak gerçek budur, asla başka alternatif olamaz."
+    ]
+    res_dogma = detector.detect_drift(new_texts=dogmatic_texts)
+
+    assert "verdict" in res_dogma
+    assert res_dogma["verdict"] in ["DOGMATIC_HARDENING", "STABLE_EQUILIBRIUM", "EPISTEMIC_DIFFUSION", "CONCEPTUAL_PIVOT"]
+    assert "metrics_delta" in res_dogma
+    assert "epistemic_calibration" in res_dogma["metrics_delta"]
+    assert "dogmatic_density" in res_dogma["metrics_delta"]
+    assert "drift_synthesis" in res_dogma
+
+    # 2. Test tentative exploratory shift
+    tentative_texts = [
+        "Perhaps the model seems plausible, although it might suggest several possible alternative interpretations."
+    ]
+    res_tentative = detector.detect_drift(new_texts=tentative_texts)
+    assert "verdict" in res_tentative
+    assert "concept_stability_pct" in res_tentative

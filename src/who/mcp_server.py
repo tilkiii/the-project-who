@@ -46,7 +46,7 @@ TOOLS_SCHEMA: List[Dict[str, Any]] = [
     },
     {
         "name": "who_simulate",
-        "description": "Simulate target's plausible counter-move and reaction to a hypothetical proposition, dilemma, or adversarial stress-test.",
+        "description": "Simulate target's plausible counter-move and reaction to a hypothetical proposition, or run multi-iteration Monte Carlo game-theoretic simulation with payoff distributions.",
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -56,7 +56,17 @@ TOOLS_SCHEMA: List[Dict[str, Any]] = [
                 },
                 "scenario": {
                     "type": "string",
-                    "description": "Hypothetical proposition or scenario (e.g. 'Kendisine kurumsal sadakatini bozması karşılığında asimetrik bir menfaat vaat edilirse nasıl tepki verir?').",
+                    "description": "Hypothetical proposition or negotiation scenario to simulate.",
+                },
+                "monte_carlo": {
+                    "type": "boolean",
+                    "default": False,
+                    "description": "Whether to execute multi-iteration Monte Carlo simulation of decision branch probabilities and Nash equilibrium payoffs.",
+                },
+                "iterations": {
+                    "type": "integer",
+                    "default": 25,
+                    "description": "Number of stochastic iterations if monte_carlo is True.",
                 },
             },
             "required": ["target", "scenario"],
@@ -278,7 +288,11 @@ class MCPServer:
         if name == "who_simulate":
             target = args["target"]
             scenario = args["scenario"]
+            monte_carlo = bool(args.get("monte_carlo", False))
             twin = CognitiveTwin(target)
+            if monte_carlo:
+                iterations = int(args.get("iterations", 25))
+                return twin.simulate_monte_carlo(scenario, iterations=iterations)
             return twin.simulate_scenario(scenario)
 
         if name == "who_get_profile":
