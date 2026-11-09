@@ -9,6 +9,7 @@
 [![PyPI version](https://img.shields.io/badge/pypi-v1.0.0-blue.svg)](https://pypi.org/project/the-project-who/)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![MCP Server](https://img.shields.io/badge/MCP-Server%20Ready-purple.svg)](https://modelcontextprotocol.io)
 [![Code Style: Ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://github.com/astral-sh/ruff)
 [![Architecture: Clean Spec](https://img.shields.io/badge/architecture-clean%20spec-green.svg)](docs/)
 
@@ -31,6 +32,21 @@ Unlike generic character chatbots that hallucinate personalities from loose vibe
  [Articles / Transcripts] ──► [ChromaDB + NetworkX/Neo4j] ──► [Agent SDK / MCP / CLI]
  [Podcasts / PDFs / RSS]  ──► [5-Dimension Psychometrics] ──► [Monte Carlo Simulator]
 ```
+
+> [!TIP]
+> **⚡ Instant Claude Desktop & Cursor MCP Setup:**
+> Add `who??` directly to your `claude_desktop_config.json`:
+> ```json
+> {
+>   "mcpServers": {
+>     "who": {
+>       "command": "uvx",
+>       "args": ["the-project-who", "mcp"]
+>     }
+>   }
+> }
+> ```
+> *Run directly without manual environment cloning.*
 
 ---
 
