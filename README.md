@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="assets/logo.svg" alt="who?? logo" width="140" height="140" />
+<img src="assets/logo.svg" alt="who?? logo" width="120" height="120" />
 
 # who??
 ### Evidence-Grounded Cognitive Digital Twin & Behavioral Modeling Toolkit for AI Agents

@@ -1,16 +1,16 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 160" width="100%" height="100%" style="background: transparent;">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 140 140" width="100%" height="100%" role="img" aria-label="who?? cognitive digital twin logo">
   <defs>
     <linearGradient id="logoGrad" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#2dd4bf" />
       <stop offset="50%" stop-color="#38bdf8" />
       <stop offset="100%" stop-color="#818cf8" />
     </linearGradient>
-    <linearGradient id="neonGlow" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" stop-color="#2dd4bf" stop-opacity="0.8" />
-      <stop offset="100%" stop-color="#818cf8" stop-opacity="0.8" />
+    <linearGradient id="shieldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a" />
+      <stop offset="100%" stop-color="#020617" />
     </linearGradient>
-    <filter id="bloom" x="-20%" y="-20%" width="140%" height="140%">
-      <feGaussianBlur stdDeviation="6" result="blur" />
+    <filter id="bloom" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="4.5" result="blur" />
       <feMerge>
         <feMergeNode in="blur" />
         <feMergeNode in="SourceGraphic" />
@@ -18,47 +18,44 @@
     </filter>
   </defs>
 
-  <!-- Left Icon Mark: Interconnected Neural Identity Matrix -->
-  <g transform="translate(30, 20)">
-    <!-- Outer Hex-Ring -->
-    <polygon points="60,6 108,34 108,86 60,114 12,86 12,34" 
-             fill="#0f172a" stroke="#1e293b" stroke-width="3" />
-    <polygon points="60,6 108,34 108,86 60,114 12,86 12,34" 
-             fill="none" stroke="url(#logoGrad)" stroke-width="2" stroke-dasharray="6,4" />
+  <!-- Modern Squircle Base Container -->
+  <rect x="6" y="6" width="128" height="128" rx="28" fill="url(#shieldGrad)" stroke="#1e293b" stroke-width="2" />
 
-    <!-- Neural Graph Synapses -->
-    <line x1="32" y1="42" x2="60" y2="28" stroke="url(#logoGrad)" stroke-width="2" opacity="0.6" />
-    <line x1="60" y1="28" x2="88" y2="42" stroke="url(#logoGrad)" stroke-width="2" opacity="0.6" />
-    <line x1="32" y1="42" x2="42" y2="76" stroke="url(#logoGrad)" stroke-width="2" opacity="0.6" />
-    <line x1="88" y1="42" x2="78" y2="76" stroke="url(#logoGrad)" stroke-width="2" opacity="0.6" />
-    <line x1="42" y1="76" x2="60" y2="92" stroke="url(#logoGrad)" stroke-width="2" opacity="0.6" />
-    <line x1="78" y1="76" x2="60" y2="92" stroke="url(#logoGrad)" stroke-width="2" opacity="0.6" />
-    <line x1="42" y1="76" x2="78" y2="76" stroke="url(#logoGrad)" stroke-width="2.5" />
+  <!-- Outer Hexagonal Identity Framework -->
+  <polygon points="70,18 114,43 114,97 70,122 26,97 26,43" 
+           fill="#0b1329" stroke="#1e293b" stroke-width="2.5" />
+  <polygon points="70,18 114,43 114,97 70,122 26,97 26,43" 
+           fill="none" stroke="url(#logoGrad)" stroke-width="1.8" stroke-dasharray="6,4" opacity="0.9" />
 
-    <!-- Cognitive Core Node (Digital Twin Synapse) -->
-    <circle cx="60" cy="58" r="14" fill="#0f172a" stroke="url(#logoGrad)" stroke-width="3" filter="url(#bloom)" />
-    <circle cx="60" cy="58" r="6" fill="#38bdf8" />
+  <!-- Neural Graph Synapses (Connections) -->
+  <!-- Outer loop -->
+  <line x1="70" y1="36" x2="98" y2="52" stroke="url(#logoGrad)" stroke-width="1.8" opacity="0.55" />
+  <line x1="98" y1="52" x2="98" y2="88" stroke="url(#logoGrad)" stroke-width="1.8" opacity="0.55" />
+  <line x1="98" y1="88" x2="70" y2="104" stroke="url(#logoGrad)" stroke-width="1.8" opacity="0.55" />
+  <line x1="70" y1="104" x2="42" y2="88" stroke="url(#logoGrad)" stroke-width="1.8" opacity="0.55" />
+  <line x1="42" y1="88" x2="42" y2="52" stroke="url(#logoGrad)" stroke-width="1.8" opacity="0.55" />
+  <line x1="42" y1="52" x2="70" y2="36" stroke="url(#logoGrad)" stroke-width="1.8" opacity="0.55" />
 
-    <!-- Peripheral Graph Nodes -->
-    <circle cx="32" cy="42" r="4" fill="#2dd4bf" />
-    <circle cx="60" cy="28" r="4" fill="#38bdf8" />
-    <circle cx="88" cy="42" r="4" fill="#818cf8" />
-    <circle cx="42" cy="76" r="4" fill="#2dd4bf" />
-    <circle cx="78" cy="76" r="4" fill="#818cf8" />
-    <circle cx="60" cy="92" r="4" fill="#38bdf8" />
-  </g>
+  <!-- Spokes connecting to the central cognitive core -->
+  <line x1="70" y1="36" x2="70" y2="70" stroke="url(#logoGrad)" stroke-width="2.2" opacity="0.75" />
+  <line x1="98" y1="52" x2="70" y2="70" stroke="url(#logoGrad)" stroke-width="2.2" opacity="0.75" />
+  <line x1="98" y1="88" x2="70" y2="70" stroke="url(#logoGrad)" stroke-width="2.2" opacity="0.75" />
+  <line x1="70" y1="104" x2="70" y2="70" stroke="url(#logoGrad)" stroke-width="2.2" opacity="0.75" />
+  <line x1="42" y1="88" x2="70" y2="70" stroke="url(#logoGrad)" stroke-width="2.2" opacity="0.75" />
+  <line x1="42" y1="52" x2="70" y2="70" stroke="url(#logoGrad)" stroke-width="2.2" opacity="0.75" />
 
-  <!-- Typography Brand Mark -->
-  <g transform="translate(170, 42)" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif">
-    <!-- Main Title -->
-    <text x="0" y="52" font-size="58" font-weight="800" letter-spacing="-1.5">
-      <tspan fill="#f8fafc">who</tspan>
-      <tspan fill="url(#logoGrad)">??</tspan>
-    </text>
+  <!-- Latent Dimension Axis -->
+  <line x1="42" y1="70" x2="98" y2="70" stroke="url(#logoGrad)" stroke-width="1.4" stroke-dasharray="3,3" opacity="0.45" />
 
-    <!-- Subtitle Pill / Tagline -->
-    <text x="2" y="80" fill="#94a3b8" font-size="13" font-weight="600" letter-spacing="1.5">
-      COGNITIVE DIGITAL TWINS &amp; BEHAVIORAL AI AGENTS
-    </text>
-  </g>
+  <!-- Peripheral Knowledge Nodes -->
+  <circle cx="70" cy="36" r="4.5" fill="#2dd4bf" filter="url(#bloom)" />
+  <circle cx="98" cy="52" r="4.5" fill="#38bdf8" />
+  <circle cx="98" cy="88" r="4.5" fill="#818cf8" filter="url(#bloom)" />
+  <circle cx="70" cy="104" r="4.5" fill="#38bdf8" />
+  <circle cx="42" cy="88" r="4.5" fill="#2dd4bf" filter="url(#bloom)" />
+  <circle cx="42" cy="52" r="4.5" fill="#818cf8" />
+
+  <!-- Central Cognitive Twin Core Node -->
+  <circle cx="70" cy="70" r="14" fill="#0f172a" stroke="url(#logoGrad)" stroke-width="3" filter="url(#bloom)" />
+  <circle cx="70" cy="70" r="6" fill="#38bdf8" />
 </svg>
