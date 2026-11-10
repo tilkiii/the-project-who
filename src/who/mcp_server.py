@@ -17,7 +17,7 @@ logger = get_logger("who.mcp")
 
 PROTOCOL_VERSION = "2024-11-05"
 SERVER_NAME = "who-twin-mcp"
-SERVER_VERSION = "4.5.0"
+SERVER_VERSION = "1.0.0"
 
 TOOLS_SCHEMA: List[Dict[str, Any]] = [
     {
@@ -28,7 +28,7 @@ TOOLS_SCHEMA: List[Dict[str, Any]] = [
             "properties": {
                 "target": {
                     "type": "string",
-                    "description": "Name or directory slug of the target profile (e.g. 'remzi_sanver').",
+                    "description": "Name or directory slug of the target profile (e.g. 'target_x').",
                 },
                 "message": {
                     "type": "string",

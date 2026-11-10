@@ -53,13 +53,13 @@ def test_live_monitor_anomaly_detection(tmp_path: Path):
 
 
 def test_swarm_arena_execution(tmp_path: Path):
-    targets = ["Remzi Sanver", "Test Target"]
+    targets = ["Target X", "Test Target"]
     topic = "Akademik otonomi ile merkezi kurumsal yönetim arasındaki denge"
 
     arena = SwarmArena(participant_names=targets, topic=topic, rounds=1, output_dir=tmp_path)
     participants = arena.load_participants()
 
-    assert "Remzi Sanver" in participants
+    assert "Target X" in participants
     assert "Test Target" in participants
 
     debate_res = arena.run_debate()
@@ -75,7 +75,7 @@ def test_swarm_arena_execution(tmp_path: Path):
     assert len(report_files) == 1
     content = report_files[0].read_text(encoding="utf-8")
     assert "Multi-Agent Swarm Arena" in content
-    assert "Remzi Sanver" in content
+    assert "Target X" in content
 
 
 def test_cli_monitor_and_arena_commands():
@@ -85,7 +85,7 @@ def test_cli_monitor_and_arena_commands():
     assert "Live OSINT Monitor" in res_monitor.output
 
     # 2. Test CLI arena
-    res_arena = runner.invoke(app, ["arena", "--targets", "Remzi Sanver, Test Target", "--topic", "Oyun teorisi ve konsensüs protokolleri", "--rounds", "1"])
+    res_arena = runner.invoke(app, ["arena", "--targets", "Target X, Test Target", "--topic", "Oyun teorisi ve konsensüs protokolleri", "--rounds", "1"])
     assert res_arena.exit_code == 0
     assert "Swarm Arena Debate" in res_arena.output
     assert "Konsensüs" in res_arena.output

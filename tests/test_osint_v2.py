@@ -59,7 +59,7 @@ def test_social_osint_hunter(tmp_path: Path):
 
 
 def test_social_graph_analyzer(tmp_path: Path):
-    targets = ["Remzi Sanver", "Test Target"]
+    targets = ["Target X", "Test Target"]
     analyzer = SocialGraphAnalyzer(targets, output_dir=tmp_path)
     network = analyzer.build_multi_target_network()
 
@@ -84,7 +84,7 @@ def test_cli_hunt_network_commands():
     assert "Username Hunt" in res_hunt.output
 
     # 2. Test CLI network
-    res_net = runner.invoke(app, ["network", "--targets", "Remzi Sanver, Test Target"])
+    res_net = runner.invoke(app, ["network", "--targets", "Target X, Test Target"])
     assert res_net.exit_code == 0
     assert "Social Network Link Analysis" in res_net.output
     assert "Interactive D3.js Social Graph" in res_net.output

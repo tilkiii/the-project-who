@@ -11,7 +11,7 @@ from who.utils.entity_validator import (
 def test_normalize_name():
     assert normalize_name("Mücteba Özdemir") == "mucteba ozdemir"
     assert normalize_name("Mucteba Özdemir") == "mucteba ozdemir"
-    assert normalize_name("  Remzi   Sanver  ") == "remzi sanver"
+    assert normalize_name("  Target   Alpha  ") == "target alpha"
 
 
 def test_strict_match_accepts_exact_names():
@@ -28,11 +28,11 @@ def test_strict_match_rejects_unauthorized_expansion():
 
 
 def test_strict_match_rejects_partial_or_different_names():
-    is_match, reason = is_strict_entity_match("Remzi Sanver", "Remzi")
+    is_match, reason = is_strict_entity_match("Target Alpha", "Target")
     assert is_match is False
     assert "MISSING_TOKENS" in reason
 
-    is_match2, reason2 = is_strict_entity_match("Remzi Sanver", "Ahmet Sanver")
+    is_match2, reason2 = is_strict_entity_match("Target Alpha", "Beta Alpha")
     assert is_match2 is False
     assert "TOKEN_MISMATCH" in reason2
 

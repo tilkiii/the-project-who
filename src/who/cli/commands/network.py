@@ -13,7 +13,7 @@ from who.vault.social_graph import SocialGraphAnalyzer
 
 
 def network(
-    targets: str = typer.Option(..., "--targets", "-t", help="Comma-separated target names to cross-reference (e.g. 'Remzi Sanver, Test Target')"),
+    targets: str = typer.Option(..., "--targets", "-t", help="Comma-separated target names to cross-reference (e.g. 'Target X, Test Target')"),
     export_html: bool = typer.Option(True, "--export-html/--no-html", help="Generate standalone D3.js interactive HTML visualizer"),
 ) -> None:
     """Perform multi-target entity resolution, detect bridge broker nodes, and build social graphs."""

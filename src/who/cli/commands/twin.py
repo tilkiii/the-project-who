@@ -264,7 +264,7 @@ def chat(
 
 
 def arena(
-    targets: str = typer.Option(..., "--targets", "-t", help="Comma-separated target participant names (e.g. 'Remzi Sanver, Test Target')"),
+    targets: str = typer.Option(..., "--targets", "-t", help="Comma-separated target participant names (e.g. 'Target X, Test Target')"),
     topic: str = typer.Option(..., "--topic", "-p", help="Debate proposition, dilemma, or policy question"),
     rounds: int = typer.Option(2, "--rounds", "-r", help="Number of multi-agent debate rounds (1-5)"),
 ) -> None:

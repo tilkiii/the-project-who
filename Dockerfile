@@ -15,17 +15,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 
-# Copy dependency specifications first for optimal Docker caching
-COPY pyproject.toml README.md ./
+# Copy package metadata and source code for installation
+COPY pyproject.toml README.md main.py ./
+COPY src/ ./src/
+COPY profiles/ ./profiles/
 
 # Install project and dependencies
 RUN pip install --no-cache-dir --upgrade pip wheel setuptools && \
     pip install --no-cache-dir -e .
-
-# Copy source code, benchmark profiles, and entrypoint
-COPY src/ ./src/
-COPY profiles/ ./profiles/
-COPY main.py ./
 
 # Healthcheck to verify system integrity and diagnostic readiness
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \

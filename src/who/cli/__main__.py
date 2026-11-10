@@ -1,5 +1,5 @@
 """
-Executable entrypoint when invoked via python -m src.cli
+Executable entrypoint when invoked via python -m who.cli
 """
 
 from who.cli import main
