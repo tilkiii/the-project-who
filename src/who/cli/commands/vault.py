@@ -50,7 +50,7 @@ def learn(
             pass
 
     # 1. Feature Extraction
-    console.print("[*] Extracting linguistic markers, pronoun density, epistemic cadence, and chronomics...")
+    console.print("[*] Extracting negation-aware psychometrics, Bayesian 95% credible intervals, CAPS matrix, and chronomics...")
     fe = FeatureExtractor(output_dir=dirs.learned_skills_dir)
     features = fe.extract_features(texts, documents=docs)
 
@@ -77,7 +77,7 @@ def learn(
 
     # Display Results Table
     table = Table(title=f"Learned Behavioral Architecture: {target}", header_style="bold cyan")
-    table.add_column("Category", style="bold white", width=25)
+    table.add_column("Category", style="bold white", width=28)
     table.add_column("Observed Empirical Value", style="white")
 
     cog_style = skill.get("behavioral_profile", {}).get("cognitive_style", "Empirical")
@@ -86,12 +86,34 @@ def learn(
     top_terms = ", ".join(features.get("top_characteristic_terms", [])[:6])
 
     manip = features.get("epistemic_manipulation_index", {})
+    manip_ci = manip.get("credible_interval_95", [0.0, 1.0])
+    loss_av = features.get("loss_aversion_index", {})
+    loss_ci = loss_av.get("credible_interval_95", [1.0, 2.5])
+    pref = features.get("stated_vs_revealed_preference", {})
+    caps = features.get("caps_contextual_matrix", {})
     chron = features.get("chronomics", {}).get("circadian_drift_summary", {})
 
     table.add_row("Cognitive Style", f"[bold green]{cog_style}[/bold green]")
     table.add_row("Social Orientation", social_orient)
     table.add_row("Epistemic Calibration", f"{cal_ratio} (tentative/certainty marker ratio)")
-    table.add_row("Manipulation Index", f"{manip.get('score_pct', '0%')} ({manip.get('risk_tier', 'EMPIRICALLY_CALIBRATED')})")
+    table.add_row(
+        "Manipulation Index (95% CI)",
+        f"{manip.get('score_pct', '0%')} [95% CI: {manip_ci[0]}–{manip_ci[1]}] ({manip.get('risk_tier', 'EMPIRICALLY_CALIBRATED')})"
+    )
+    table.add_row(
+        "Loss Aversion β (95% CI)",
+        f"β={loss_av.get('estimated_score', 1.5)} [95% CI: {loss_ci[0]}–{loss_ci[1]}] ({loss_av.get('evidence_density_tier', 'MODERATE')})"
+    )
+    if pref:
+        table.add_row(
+            "Stated vs. Revealed Pref.",
+            f"Δ={pref.get('preference_divergence_index', 0.0)} ({pref.get('verdict', 'CONGRUENT_ACTION_AND_RHETORIC')})"
+        )
+    if caps:
+        table.add_row(
+            "CAPS Contextual Plasticity",
+            f"Plasticity={caps.get('contextual_plasticity_index', 0.0)} across {len(caps.get('if_then_signatures', []))} IF-THEN domains"
+        )
     if chron:
         table.add_row(
             "Circadian Epistemic Drift",
@@ -405,7 +427,6 @@ def research(
         output_dir = target_dirs.learned_skills_dir
 
         if not query_topic:
-            # Check if topics exist
             t_file = target_dirs.learned_skills_dir / "topics.json"
             if t_file.exists():
                 try:
@@ -458,7 +479,6 @@ def research(
     console.print(table)
     console.print()
 
-    # Ingest into target corpus if requested
     if target and ingest:
         ingested = ar.ingest_academic_corpus(target, papers)
         console.print(Panel(
@@ -469,9 +489,7 @@ def research(
             border_style="green",
         ))
 
-    # Export literature review if requested
     if export:
         out_path = Path(export)
         out_path.write_text(res.get("literature_review_markdown", ""), encoding="utf-8")
         console.print(f"[bold green]✔ Structured Academic Literature Review exported to:[/bold green] [cyan]{out_path}[/cyan]\n")
-

@@ -1,16 +1,19 @@
 """
 Interactive digital twin chat engine.
 Simulates real-time dialogue using persona lore, active behavioral guardrails,
-and memory retrieval.
+CAPS situational context rules, Two-Stage Stylometric JSD Referee Gate, and memory retrieval.
 """
 
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from who.config import call_llm
+from who.engine.evaluator import ProfileEvaluator
+from who.learn.feature_extractor import CAPS_CONTEXT_MARKERS
 from who.utils.logger import console, get_logger
 from who.utils.text_cleaner import is_boilerplate_or_junk
 from who.vault.vector_embedder import VectorEmbedder
@@ -19,24 +22,41 @@ logger = get_logger("who.engine.twin_chat")
 
 
 class TwinChat:
-    """Simulates real-time interactive dialogue with the digital twin with dynamic tone modes."""
+    """Simulates real-time interactive dialogue with the digital twin with dynamic tone modes and Stylometric Referee Gate."""
 
     def __init__(self, target_name: str, target_dirs: Any, mode: str = "autodetect"):
         self.target_name = target_name
         self.dirs = target_dirs
         self.mode = mode.lower()  # 'autodetect', 'formal', 'informal'
         self.history: List[Dict[str, str]] = []
+        self.last_turn_diagnostics: Dict[str, Any] = {}
         self.vector_store = VectorEmbedder(target_name, chroma_dir=self.dirs.chroma_dir)
+        self.evaluator = ProfileEvaluator(target_name, target_dirs)
 
         # Load character config, mindset & operational boundary rules
         self.character = self._load_character()
         self.mindset_summary = self._load_mindset()
         self.operational_rules = self._load_operational_rules()
 
+    def _detect_caps_context(self, user_message: str) -> str:
+        """Identify active Mischel CAPS situational context from user message."""
+        words = set(re.findall(r"\b\w+\b", user_message.lower()))
+        scores = {
+            ctx: sum(1 for w in words if w in markers)
+            for ctx, markers in CAPS_CONTEXT_MARKERS.items()
+        }
+        if any(scores.values()):
+            return max(scores, key=scores.get)
+        return "INTERPERSONAL_DIALOGUE"
+
     def respond(self, user_message: str) -> str:
-        """Generate twin response conforming to character lore, epistemic rules, and selected tone."""
-        # 1. Determine active tone
+        """
+        Generate twin response conforming to character lore, epistemic rules, CAPS context,
+        and Two-Stage Stylometric JSD Referee Gate.
+        """
+        # 1. Determine active tone & CAPS situational context
         active_tone = self._resolve_tone(user_message)
+        active_caps_context = self._detect_caps_context(user_message)
 
         # 2. Retrieve relevant context quotes (filter out boilerplate & web junk)
         quotes_ctx = ""
@@ -58,8 +78,12 @@ class TwinChat:
         # 3. Assemble System Prompt
         style = self.character.get("style", {})
         all_style = ", ".join(style.get("all", ["rasyonel", "kanıt odaklı", "ölçülü"]))
-        
-        rules_text = "\n".join(f"- {r}" for r in self.operational_rules[:5]) if self.operational_rules else "- Rasyonel, ölçülü ve kurumsal bütünlüğü koru."
+
+        rules_text = (
+            "\n".join(f"- {r}" for r in self.operational_rules[:5])
+            if self.operational_rules
+            else "- Rasyonel, ölçülü ve kurumsal bütünlüğü koru."
+        )
 
         tone_instruction = (
             "TON: Resmi ve akademik üslup. Analitik sözcükler, yapılandırılmış mantıksal argümanlar ve kavramsal derinlik kullan."
@@ -69,10 +93,11 @@ class TwinChat:
 
         system_prompt = (
             f"Sen {self.target_name}'in bilişsel dijital ikizisin (cognitive digital twin).\n"
-            f"Kullanıcı seninle doğrudan canlı bir sohbet yürütüyor.\n\n"
+            f"Kullanıcı seninle doğrudan canlı bir sohbet yürütüyor.\n"
+            f"AKTİF BAĞLAMSAL DURUM (CAPS): {active_caps_context} | {tone_instruction}\n\n"
             f"DİYALOG KURALLARI:\n"
             f"1. KESİNLİKLE bir istihbarat raporu, analiz metni veya üçüncü şahıs formatında ('Corpus kanıt analizi', 'Hedef profil şöyledir') konuşma! Sen üçüncü şahıs bir yapay zeka analisti değilsin; bizzat {self.target_name} olarak birinci tekil şahıs ('Ben') dilinde yanıt ver.\n"
-            f"2. Hitabın ve Duruşun: Entelektüel, kibar, rasyonel, öz-denetimi yüksek ve stoik. Karşındaki kişi gündelik, argo, lakayt ('lan', 'siz ekledik ya', 'ne haber') konuşsa bile, vakarını ve nezaketini koruyarak muhatabına doğrudan hitap et (Örn: 'Efendim, haklısınız...', 'Şöyle izah edeyim...').\n"
+            f"2. Hitabın ve Duruşun: Entelektüel, kibar, rasyonel, öz-denetimi yüksek ve stoik ({all_style}). Karşındaki kişi gündelik, argo, lakayt ('lan', 'siz ekledik ya', 'ne haber') konuşsa bile, vakarını ve nezaketini koruyarak muhatabına doğrudan hitap et (Örn: 'Efendim, haklısınız...', 'Şöyle izah edeyim...').\n"
             f"3. Dil: Yanıtını doğrudan ve akıcı Türkçe ile ver.\n"
             f"4. Davranışsal Karar Sınırları ve Kuralların:\n{rules_text}\n"
             f"5. Biyografi & Entelektüel Kimlik: {' '.join(self.character.get('bio', []))}\n"
@@ -90,13 +115,35 @@ class TwinChat:
 
         user_prompt = "\n".join(user_prompt_parts)
 
+        # Stage 1: Candidate Persona Generation
         response_text = call_llm(user_prompt, system_prompt=system_prompt, temperature=0.4)
 
         # Clean any accidental offline note leak if offline was used
         if "> [!NOTE]" in response_text and "offline modda" in response_text:
-            # Keep only the persona dialogue part
-            lines = [l for l in response_text.splitlines() if not l.startswith(">") and "offline modda" not in l and "Corpus Kanıt" not in l]
+            lines = [
+                l for l in response_text.splitlines()
+                if not l.startswith(">") and "offline modda" not in l and "Corpus Kanıt" not in l
+            ]
             response_text = "\n".join(lines).strip()
+
+        # Stage 2: Stylometric Fingerprint & Epistemic Referee Gate
+        referee_audit = self.evaluator.verify_stylometric_and_epistemic_fidelity(response_text)
+        if referee_audit.get("boundary_violations"):
+            cleaned_lines = [
+                line for line in response_text.splitlines()
+                if "corpus kanıt analizi" not in line.lower() and "hedef profil" not in line.lower()
+            ]
+            response_text = "\n".join(cleaned_lines).strip() or response_text
+            referee_audit = self.evaluator.verify_stylometric_and_epistemic_fidelity(response_text)
+
+        self.last_turn_diagnostics = {
+            "active_tone": active_tone,
+            "active_caps_context": active_caps_context,
+            "stylometric_jsd": referee_audit.get("stylometric_jsd", 0.05),
+            "stylometric_fidelity_score": referee_audit.get("stylometric_fidelity_score", 0.85),
+            "referee_gate_passed": referee_audit.get("referee_gate_passed", True),
+            "evidence_ledger": referee_audit.get("evidence_ledger", []),
+        }
 
         # Save to interaction memory
         self.history.append({"role": "user", "content": user_message})
@@ -109,7 +156,6 @@ class TwinChat:
         if self.mode in ("formal", "informal"):
             return self.mode
 
-        # Autodetect heuristic
         msg_lower = user_message.lower()
         informal_markers = {"hey", "hi", "yo", "sup", "gonna", "wanna", "lol", "dude", "bro", "cool", "lan", "ya", "yok", "naber", "selam"}
         if any(m in msg_lower.split() for m in informal_markers) or len(user_message.split()) < 6:
@@ -149,4 +195,3 @@ class TwinChat:
             except Exception:
                 pass
         return []
-

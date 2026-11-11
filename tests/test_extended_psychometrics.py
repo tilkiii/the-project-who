@@ -1,6 +1,7 @@
 """
 Unit and integration tests for Extended Psychometrics, AI Scientific Referee,
-Knowledge Bank, and Boundary Synthesizer.
+Knowledge Bank, Boundary Synthesizer, Negation-Aware Bayesian Psychometrics,
+CAPS Contextual Matrix, and Stated vs. Revealed Preference Divergence.
 """
 
 from pathlib import Path
@@ -32,6 +33,8 @@ def test_feature_extractor_extended_psychometrics(tmp_path: Path):
     mach = features["machiavellianism_index"]
     assert "score" in mach
     assert "tier" in mach
+    assert "credible_interval_95" in mach
+    assert len(mach["credible_interval_95"]) == 2
     assert mach["machiavellian_hits"] > 0
     assert "Makyavelizm" in mach["probabilistic_statement"]
 
@@ -39,6 +42,7 @@ def test_feature_extractor_extended_psychometrics(tmp_path: Path):
     assert "need_for_closure_index" in features
     closure = features["need_for_closure_index"]
     assert "score" in closure
+    assert "credible_interval_95" in closure
     assert closure["closure_hits"] > 0
     assert "Bilişsel Kapanma" in closure["probabilistic_statement"]
 
@@ -46,6 +50,7 @@ def test_feature_extractor_extended_psychometrics(tmp_path: Path):
     assert "loss_aversion_index" in features
     loss = features["loss_aversion_index"]
     assert "loss_to_gain_ratio" in loss
+    assert "credible_interval_95" in loss
     assert loss["loss_hits"] > 0
     assert "Prospekt Risk Yönelimi" in loss["probabilistic_statement"]
 
@@ -54,22 +59,88 @@ def test_feature_extractor_extended_psychometrics(tmp_path: Path):
     volatility = features["affective_volatility_index"]
     assert "volatility_score" in volatility
     assert "composure_score" in volatility
+    assert "credible_interval_95" in volatility
     assert "Duygusal Denge" in volatility["probabilistic_statement"]
 
     # 5. Moral Foundations
     assert "moral_foundations_profile" in features
     moral = features["moral_foundations_profile"]
     assert "dominant_foundation" in moral
+    assert "credible_interval_95" in moral
     assert moral["individualizing_hits"] > 0
 
+    # 6. CAPS Contextual Matrix & Stated vs. Revealed Preference
+    assert "caps_contextual_matrix" in features
+    assert "stated_vs_revealed_preference" in features
+
     assert (tmp_path / "features.json").exists()
+
+
+def test_negation_aware_psychometrics_and_bayesian_ci(tmp_path: Path):
+    """Verify syntactic negation reversal and Bayesian 95% credible interval shrinkage."""
+    fe = FeatureExtractor(output_dir=tmp_path)
+
+    # Corpus where threat/loss words are explicitly negated ("korku yok", "tehlike değil", "not a threat")
+    negated_loss_corpus = [
+        "Hiçbir zaman korku yok ve asla tehlike değil; biz daima kazanç, fırsat ve başarı odaklıyız.",
+        "We are never afraid of risk and this is not a threat; we pursue opportunity, reward, and growth.",
+    ]
+    # Corpus where threat/loss words are affirmatively asserted
+    affirmative_loss_corpus = [
+        "Büyük bir korku, tehlike, zarar ve yıkım tehdidi altındayız; kayıp ve kriz kaçınılmaz.",
+        "Severe danger, threat, loss, and crisis are imminent; we must avoid damage and catastrophe.",
+    ]
+
+    neg_features = fe.extract_features(negated_loss_corpus)
+    aff_features = fe.extract_features(affirmative_loss_corpus)
+
+    neg_loss = neg_features["loss_aversion_index"]
+    aff_loss = aff_features["loss_aversion_index"]
+
+    # Negated threat words should result in significantly lower loss aversion than affirmative threat words
+    assert neg_loss["negated_reversals"] > 0
+    assert neg_loss["estimated_score"] < aff_loss["estimated_score"]
+
+    # Verify Bayesian 95% Credible Interval shrinks as corpus sample size grows
+    large_corpus = affirmative_loss_corpus * 25
+    large_features = fe.extract_features(large_corpus)
+    small_margin = aff_loss["uncertainty_margin"]
+    large_margin = large_features["loss_aversion_index"]["uncertainty_margin"]
+    assert large_margin < small_margin
+
+
+def test_caps_matrix_and_stated_vs_revealed_preference(tmp_path: Path):
+    """Verify Mischel's CAPS IF-THEN matrix and Samuelson's Stated vs. Revealed Preference Divergence."""
+    fe = FeatureExtractor(output_dir=tmp_path)
+    corpus = [
+        "Teorik metodoloji, bilimsel hipotez ve akademik literatür çerçevesinde olasılıksal analiz şarttır.",
+        "Acil kriz, tehdit ve olağanüstü kaos durumunda derhal kesin karar ve net kural uygulanmalıdır.",
+        "Müzakere masasında stratejik anlaşma, kontrat ve pazarlık kozlarımızı korumalıyız.",
+        "Biz her zaman uzlaşı, diyalog, hoşgörü ve ortak mutabakat ilkelerine bağlılığımızı beyan ederiz.",
+        "Ancak uygulamada teklifi reddetti, anlaşmadan çekildi, veto etti ve bağımsız karar alarak iptal etti.",
+    ]
+    features = fe.extract_features(corpus)
+
+    caps = features["caps_contextual_matrix"]
+    assert "contextual_plasticity_index" in caps
+    assert "contexts" in caps
+    assert "FORMAL_ACADEMIC" in caps["contexts"]
+    assert "HIGH_STAKES_CRISIS" in caps["contexts"]
+    assert len(caps["if_then_signatures"]) >= 1
+
+    pref = features["stated_vs_revealed_preference"]
+    assert "stated_cooperation_polarity" in pref
+    assert "revealed_cooperation_polarity" in pref
+    assert "preference_divergence_index" in pref
+    # Rhetoric is cooperative ("uzlaşı, diyalog, hoşgörü") while action is autonomous exit ("reddetti, çekildi, veto")
+    assert pref["stated_cooperation_polarity"] > pref["revealed_cooperation_polarity"]
+    assert pref["preference_divergence_index"] > 0.10
 
 
 def test_scientific_referee_scoring_and_ranking(tmp_path: Path):
     """Test AI Peer-Review rigor scoring, filtering, and consensus pooling."""
     referee = ScientificReferee(profiles_dir=tmp_path)
 
-    # Study 1: Large sample, peer reviewed top journal -> Gold Standard
     gold_paper = {
         "title": "Large-Scale Computational Psycholinguistics of Strategic Behavior",
         "abstract": "We analyze N = 4,500 participants and find significant correlation r = 0.44 (p < 0.001) between Machiavellianism and instrumental utility language.",
@@ -82,7 +153,6 @@ def test_scientific_referee_scoring_and_ranking(tmp_path: Path):
         "url": "https://doi.org/10.1038/s41562-024-001",
     }
 
-    # Study 2: Low sample, non-significant preprint -> Low rigor / rejected
     weak_paper = {
         "title": "Exploratory pilot observation of 15 students",
         "abstract": "Small exploratory sample N = 15 shows weak r = 0.05, p = 0.42.",
@@ -95,7 +165,6 @@ def test_scientific_referee_scoring_and_ranking(tmp_path: Path):
         "url": "https://arxiv.org/abs/2401.99999",
     }
 
-    # Score individual papers
     gold_eval = referee.score_paper_rigor(gold_paper, marker="machiavellianism_index", prior_mean_r=0.40)
     weak_eval = referee.score_paper_rigor(weak_paper, marker="machiavellianism_index", prior_mean_r=0.40)
 
@@ -107,14 +176,12 @@ def test_scientific_referee_scoring_and_ranking(tmp_path: Path):
     assert weak_eval["rigor_tier"] in ("REJECTED_LOW_RIGOR", "EXPLORATORY_PREPRINT")
     assert weak_eval["scores"]["total_rigor_score"] < gold_eval["scores"]["total_rigor_score"]
 
-    # Evaluate corpus
     corpus_result = referee.evaluate_and_rank_corpus([weak_paper, gold_paper], marker="machiavellianism_index")
     assert corpus_result["total_evaluated"] == 2
     assert corpus_result["approved_count"] >= 1
     assert len(corpus_result["gold_standard_papers"]) == 1
     assert corpus_result["gold_standard_papers"][0]["title"] == gold_paper["title"]
 
-    # Test Knowledge Bank persistence
     kb_path = referee.maintain_knowledge_bank(
         marker="machiavellianism_index",
         evaluation_result=corpus_result,
@@ -139,7 +206,6 @@ def test_boundary_synthesizer_rules(tmp_path: Path):
     """Test boundary synthesis and behavioral simulation rule derivation."""
     bs = BoundarySynthesizer(profiles_dir=tmp_path)
 
-    # 1. Decision Boundaries
     boundaries = bs.synthesize_metric_boundaries(
         marker="machiavellianism_index",
         consensus_r=0.44,
@@ -149,7 +215,6 @@ def test_boundary_synthesizer_rules(tmp_path: Path):
     assert "classification_tiers" in boundaries
     assert boundaries["calibrated_distribution"]["extreme_cutoff"] > 0
 
-    # 2. Rule Derivation for high Machiavellianism and high Need for Closure
     test_features = {
         "machiavellianism_index": {"score": 0.65, "tier": "YÜKSEK / MAKYAVELİST"},
         "need_for_closure_index": {"score": 0.58, "tier": "YÜKSEK KAPALILIK"},
@@ -169,7 +234,6 @@ def test_boundary_synthesizer_rules(tmp_path: Path):
     assert "INDIVIDUAL_RIGHTS_PRIMACY" in rule_ids
     assert "RHETORICAL_ASSERTION_DOMINANCE" in rule_ids
 
-    # Save to profile
     target_dir = tmp_path / "test_target"
     out_file = bs.save_target_boundaries_and_rules(target_dir, {"mach": boundaries}, rules)
     assert out_file.exists()
@@ -180,7 +244,6 @@ def test_autonomous_researcher_cycle_integration(tmp_path: Path, monkeypatch):
     target_dir = tmp_path / "test_profile"
     researcher = AutonomousAcademicResearcher(output_dir=target_dir, profiles_dir=tmp_path)
 
-    # Mock external network queries for fast, deterministic testing
     monkeypatch.setattr(researcher, "query_arxiv", lambda q, max_results=1: [])
     monkeypatch.setattr(researcher, "query_pubmed", lambda q, max_results=1: [])
     monkeypatch.setattr(researcher, "query_semantic_scholar", lambda q, max_results=1: [])
@@ -199,7 +262,6 @@ def test_autonomous_researcher_cycle_integration(tmp_path: Path, monkeypatch):
         "moral_foundations_profile": {"dominant_foundation": "BİREY & HAKKANİYET ODAKLI"},
     }
 
-    # 1. Anomaly detection should detect all relevant dimensions
     anomalies = researcher.detect_behavioral_anomalies(test_features, [])
     marker_names = [a["marker"] for a in anomalies]
 
@@ -209,21 +271,17 @@ def test_autonomous_researcher_cycle_integration(tmp_path: Path, monkeypatch):
     assert "affective_volatility_reactivity" in marker_names
     assert "moral_foundation_individual_fairness" in marker_names
 
-    # 2. Query generation should generate triads
     queries = researcher.generate_scientific_queries(anomalies)
     assert len(queries) == len(anomalies)
     assert len(queries[0]["queries"]) == 3
 
-    # 3. Master research cycle
     papers = researcher.research_markers(test_features, [], max_papers_per_query=1)
     assert len(papers) > 0
 
-    # Verify generated profile artifacts
     assert (target_dir / "retrieved_academic_literature.json").exists()
     assert (target_dir / "behavioral_boundaries.json").exists()
     assert (tmp_path / "scientific_knowledge_bank.json").exists()
 
-    # 4. Verify skill synthesizer includes boundaries and operational rules
     ss = SkillSynthesizer(output_dir=target_dir)
     skill = ss.synthesize_mapping_skill("Test Target", test_features, [], papers)
     assert (target_dir / "generated_mapping_skill.json").exists()

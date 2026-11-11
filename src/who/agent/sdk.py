@@ -66,6 +66,7 @@ class CognitiveTwin:
         self._explain_engine: Optional[ExplainabilityEngine] = None
         self._composer: Optional[Composer] = None
         self._oracle: Optional[Oracle] = None
+        self._evaluator: Optional[ProfileEvaluator] = None
         self._drift_detector: Any = None
 
     @property
@@ -98,6 +99,12 @@ class CognitiveTwin:
             self._oracle = Oracle(self.target_name, self.dirs)
         return self._oracle
 
+    @property
+    def evaluator(self) -> ProfileEvaluator:
+        if self._evaluator is None:
+            self._evaluator = ProfileEvaluator(self.target_name, self.dirs)
+        return self._evaluator
+
     def chat(self, message: str, tone: Optional[str] = None) -> str:
         """
         Chat directly in-character with the target's cognitive digital twin.
@@ -110,7 +117,8 @@ class CognitiveTwin:
     def simulate_scenario(self, scenario: str) -> Dict[str, Any]:
         """
         Simulate target's plausible counter-move and reaction to a hypothetical or adversarial proposition.
-        Returns simulation analysis, hypothesis, confidence score, and primary quotes.
+        Returns simulation analysis, CAPS context, dual-layer (stated vs revealed) prediction,
+        Brier-calibrated confidence score, stylometric JSD, and evidence ledger.
         """
         return self.simulator.simulate_scenario(scenario)
 
@@ -124,7 +132,8 @@ class CognitiveTwin:
         """
         Execute multi-iteration Monte Carlo game-theoretic simulation of the target's strategic response.
         Returns outcome probability distributions (Counter, Concession, Deadlock, Accept),
-        Nash equilibrium payoffs, sensitivity tipping variables, and strategic negotiation synthesis.
+        Nash equilibrium payoffs, CAPS situational shifts, dual-layer stated vs. revealed moves,
+        and strategic negotiation synthesis.
         """
         return self.simulator.simulate_monte_carlo(
             scenario=scenario,
@@ -132,6 +141,20 @@ class CognitiveTwin:
             parameter_ranges=parameter_ranges,
             random_seed=random_seed,
         )
+
+    def backtest(self, holdout_ratio: float = 0.25) -> Dict[str, Any]:
+        """
+        Run Out-of-Sample Temporal Holdout Backtesting (T-Split Validation).
+        Computes Brier Score (BS), Holdout Accuracy %, Semantic Alignment, and Empirical Confidence (1 - BS).
+        """
+        return self.evaluator.run_temporal_backtest(holdout_ratio=holdout_ratio)
+
+    def verify_response(self, candidate_text: str) -> Dict[str, Any]:
+        """
+        Verify a candidate response against the target's stylometric distribution (Jensen-Shannon Divergence),
+        operational boundary rules, and primary corpus Evidence Ledger.
+        """
+        return self.evaluator.verify_stylometric_and_epistemic_fidelity(candidate_text)
 
     @property
     def drift_detector(self) -> Any:
@@ -171,12 +194,15 @@ class CognitiveTwin:
 
     def get_profile(self) -> Dict[str, Any]:
         """
-        Get target's comprehensive psychometric profile, empirical boundaries, active rules, and lore.
+        Get target's comprehensive psychometric profile, CAPS matrix, stated vs revealed preferences,
+        empirical boundaries, active rules, and lore.
         """
         profile: Dict[str, Any] = {
             "name": self.target_name,
             "slug": self.slug,
             "psychometrics": {},
+            "caps_contextual_matrix": {},
+            "stated_vs_revealed_preference": {},
             "boundaries": {},
             "operational_rules": [],
             "character_lore": {},
@@ -191,6 +217,8 @@ class CognitiveTwin:
                     skill_data = json.load(f)
                     b_prof = skill_data.get("behavioral_profile", {})
                     profile["psychometrics"] = b_prof.get("extended_psychometrics", {})
+                    profile["caps_contextual_matrix"] = b_prof.get("caps_contextual_matrix", {})
+                    profile["stated_vs_revealed_preference"] = b_prof.get("stated_vs_revealed_preference", {})
                     profile["boundaries"] = skill_data.get("empirical_decision_boundaries", {})
                     profile["operational_rules"] = [
                         r for r in skill_data.get("generation_rules", [])

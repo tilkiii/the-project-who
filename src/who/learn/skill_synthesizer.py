@@ -56,6 +56,13 @@ class SkillSynthesizer:
             top_themes = [t.get("name", "") for t in topics[:3]]
             rules.append(f"Primary thematic focus centers upon: {', '.join(top_themes)}.")
 
+        # Include CAPS IF-THEN contextual rules if available
+        caps_matrix = features.get("caps_contextual_matrix", {})
+        for sig in caps_matrix.get("if_then_signatures", [])[:2]:
+            rule_text = f"[CAPS_{sig.get('if_context', 'CONTEXT')}] {sig.get('then_behavior', '')}"
+            if rule_text not in rules:
+                rules.append(rule_text)
+
         # Check for empirical behavioral boundaries & operational rules
         boundaries_payload = {}
         if self.output_dir and (self.output_dir / "behavioral_boundaries.json").exists():
@@ -94,7 +101,11 @@ class SkillSynthesizer:
                     "loss_aversion": features.get("loss_aversion_index", {}),
                     "affective_volatility": features.get("affective_volatility_index", {}),
                     "moral_foundations": features.get("moral_foundations_profile", {}),
+                    "caps_contextual_matrix": features.get("caps_contextual_matrix", {}),
+                    "stated_vs_revealed_preference": features.get("stated_vs_revealed_preference", {}),
                 },
+                "caps_contextual_matrix": features.get("caps_contextual_matrix", {}),
+                "stated_vs_revealed_preference": features.get("stated_vs_revealed_preference", {}),
             },
             "empirical_decision_boundaries": boundaries_payload.get("boundaries", {}),
             "generation_rules": rules,
