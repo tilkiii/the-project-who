@@ -264,3 +264,6 @@ To maintain strict scientific transparency, users and researchers should account
 ## License
 
 MIT License. Designed for evidence-grounded research, behavioral simulation, and personal agent tooling.
+
+## Thanks
+We thank Sude Naz Akcabağ for her contributions.
