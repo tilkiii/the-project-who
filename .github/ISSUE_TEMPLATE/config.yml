@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Discussions & Community Questions
+    url: https://github.com/tilkiii/the-project-who/discussions
+    about: Ask questions, share workflows, and discuss cognitive modeling techniques with the community.

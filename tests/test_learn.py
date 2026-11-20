@@ -1,0 +1,165 @@
+"""
+Tests for Module 2: who_learn (Feature Extractor, Topic Mapper, Academic Researcher, Skill Synthesizer,
+Prompt Optimizer, Ornstein-Uhlenbeck Stochastic Drift Physics, and Inverse-Variance Fisher Information).
+"""
+
+from pathlib import Path
+import pytest
+
+from who.learn.academic_researcher import AcademicResearcher
+from who.learn.feature_extractor import FeatureExtractor
+from who.learn.prompt_optimizer import PromptOptimizer
+from who.learn.scientific_referee import ScientificReferee
+from who.learn.skill_synthesizer import SkillSynthesizer
+from who.learn.topic_mapper import TopicMapper
+
+
+def test_feature_extractor(tmp_path: Path):
+    fe = FeatureExtractor(output_dir=tmp_path)
+    texts = [
+        "I believe we must test hypotheses rigorously because empirical validation ensures robust outcomes.",
+        "Perhaps the system is likely to stabilize, though we definitely observed initial volatility.",
+        "Why do centralized models persist? Because power concentrates unless constrained by protocols!"
+    ]
+    features = fe.extract_features(texts)
+
+    assert "corpus_stats" in features
+    assert features["corpus_stats"]["total_words"] > 0
+    assert "pronoun_ratios" in features
+    assert "epistemic_markers" in features
+    assert features["epistemic_markers"]["epistemic_calibration_ratio"] > 0
+    assert (tmp_path / "features.json").exists()
+
+
+def test_topic_mapper(tmp_path: Path):
+    tm = TopicMapper(output_dir=tmp_path)
+    docs = [
+        {"content": "Decentralized consensus protocols ensure Byzantine fault tolerance across nodes."},
+        {"content": "Cryptographic zero-knowledge proofs enable privacy-preserving state verification."},
+        {"content": "Quadratic voting algorithms prevent governance capture in distributed protocols."},
+        {"content": "Byzantine agreement algorithms and consensus protocol scaling mechanisms."},
+    ]
+    res = tm.extract_topics(docs, nr_topics=2)
+
+    assert "topics" in res
+    assert len(res["topics"]) > 0
+    assert "topic_evolution" in res
+    assert (tmp_path / "topics.json").exists()
+    assert (tmp_path / "topic_evolution.json").exists()
+
+
+def test_academic_researcher(tmp_path: Path):
+    ar = AcademicResearcher(output_dir=tmp_path)
+    features = {
+        "epistemic_markers": {"epistemic_calibration_ratio": 1.6},
+        "pronoun_ratios": {"first_person_singular_pct": 2.5},
+    }
+    topics = [{"keywords": ["cryptography", "consensus"]}]
+    papers = ar.research_markers(features, topics, max_papers_per_query=1)
+
+    assert len(papers) >= 1
+    assert "title" in papers[0]
+    assert "doi_or_url" in papers[0]
+    assert (tmp_path / "retrieved_academic_literature.json").exists()
+
+
+def test_fisher_information_meta_analysis(tmp_path: Path):
+    referee = ScientificReferee(profiles_dir=tmp_path)
+    papers = [
+        {
+            "title": "Study A",
+            "abstract": "N = 1200, r = 0.38, p < 0.001",
+            "sample_size": 1200,
+            "r": 0.38,
+            "p_value": 0.0001,
+            "venue": "nature",
+        },
+        {
+            "title": "Study B",
+            "abstract": "N = 800, r = 0.42, p < 0.001",
+            "sample_size": 800,
+            "r": 0.42,
+            "p_value": 0.0005,
+            "venue": "science",
+        },
+    ]
+    res = referee.evaluate_and_rank_corpus(papers, marker="loss_aversion_index", prior_mean_r=0.35)
+    assert "fisher_meta_analysis" in res
+    fma = res["fisher_meta_analysis"]
+    assert fma["total_fisher_information"] == pytest.approx((1200 - 3) + (800 - 3), abs=1.0)
+    assert len(fma["ci_95_r"]) == 2
+    assert fma["ci_95_r"][0] < res["consensus_r"] < fma["ci_95_r"][1]
+
+
+def test_skill_synthesizer(tmp_path: Path):
+    ss = SkillSynthesizer(output_dir=tmp_path)
+    features = {
+        "epistemic_markers": {"epistemic_calibration_ratio": 1.4},
+        "pronoun_ratios": {"first_person_singular_pct": 2.0},
+        "corpus_stats": {"type_token_ratio": 0.55},
+    }
+    topics = [{"name": "Cryptographic Verification", "keywords": ["proof", "verification"]}]
+    lit = [{"title": "Linguistic Inquiry in Psychology", "doi_or_url": "https://doi.org/10.1177/0261927X09351676", "domain": "Psychology"}]
+
+    skill = ss.synthesize_mapping_skill("Alice", features, topics, lit)
+
+    assert skill["target_name"] == "Alice"
+    assert "behavioral_profile" in skill
+    assert len(skill["generation_rules"]) > 0
+    assert (tmp_path / "generated_mapping_skill.json").exists()
+
+
+def test_prompt_optimizer(tmp_path: Path):
+    po = PromptOptimizer(output_dir=tmp_path)
+    skill = {
+        "generation_rules": ["Ground claims in observed evidence."],
+        "forbidden_phrasings": ["Determine exactly how the target thinks"],
+        "behavioral_profile": {"cognitive_style": "Calibrated"},
+    }
+    opt = po.optimize_prompts("Alice", skill)
+
+    assert "compiled_templates" in opt
+    assert "oracle_system_prompt" in opt["compiled_templates"]
+    assert (tmp_path / "optimized_prompts.json").exists()
+
+
+def test_temporal_drift_detector(tmp_path: Path):
+    from who.config import settings
+    from who.learn.drift_detector import TemporalDriftDetector
+
+    dirs = settings.get_target_dirs("Alice")
+    (dirs.learned_skills_dir / "features.json").write_text(
+        '{"epistemic_markers": {"epistemic_calibration_ratio": 1.4}, "epistemic_manipulation_index": {"dogmatic_density": 0.3}, "lexical_diversity": {"type_token_ratio": 0.65}, "top_characteristic_terms": [["consensus", 5], ["proof", 4]]}',
+        encoding="utf-8"
+    )
+    (dirs.vault_dir / "knowledge_graph.json").write_text(
+        '{"nodes": [{"id": "consensus", "label": "consensus"}, {"id": "proof", "label": "proof"}], "edges": []}',
+        encoding="utf-8"
+    )
+
+    detector = TemporalDriftDetector("Alice", dirs)
+
+    dogmatic_texts = [
+        "Kesinlikle herkes bilmelidir ki bu sistem asla tartışılamaz. Şüphesiz mutlak gerçek budur, asla başka alternatif olamaz."
+    ]
+    res_dogma = detector.detect_drift(new_texts=dogmatic_texts)
+
+    assert "verdict" in res_dogma
+    assert res_dogma["verdict"] in ["DOGMATIC_HARDENING", "STABLE_EQUILIBRIUM", "EPISTEMIC_DIFFUSION", "CONCEPTUAL_PIVOT"]
+    assert "metrics_delta" in res_dogma
+    assert "epistemic_calibration" in res_dogma["metrics_delta"]
+    assert "dogmatic_density" in res_dogma["metrics_delta"]
+    assert "stochastic_drift_physics" in res_dogma
+    ou = res_dogma["stochastic_drift_physics"]
+    assert "phase_space_displacement_l2" in ou
+    assert "peclet_escape_ratio" in ou
+    assert "state_distribution_jsd" in ou
+    assert "dynamical_regime" in ou
+    assert "drift_synthesis" in res_dogma
+
+    tentative_texts = [
+        "Perhaps the model seems plausible, although it might suggest several possible alternative interpretations."
+    ]
+    res_tentative = detector.detect_drift(new_texts=tentative_texts)
+    assert "verdict" in res_tentative
+    assert "concept_stability_pct" in res_tentative

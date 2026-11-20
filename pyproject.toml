@@ -1,0 +1,106 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "the-project-who"
+version = "1.0.0"
+description = "Evidence-grounded cognitive digital twin and behavioral modeling toolkit for AI agents"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+authors = [
+    {name = "Mucteba Özdemir", email = "ozdemirmucteba@outlook.com"}
+]
+keywords = [
+    "digital-twin",
+    "cognitive-modeling",
+    "osint",
+    "ai-agents",
+    "game-theory",
+    "monte-carlo",
+    "mcp",
+    "knowledge-graph",
+    "behavioral-simulation",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+    "typer>=0.12.0",
+    "rich>=13.0.0",
+    "pydantic>=2.6.0",
+    "python-dotenv>=1.0.0",
+    "httpx>=0.27.0",
+    "requests>=2.31.0",
+    "networkx>=3.2.0",
+    "feedparser>=6.0.10",
+    "beautifulsoup4>=4.12.0",
+    "google-genai>=1.0.0",
+]
+
+[project.optional-dependencies]
+full = [
+    "chromadb>=0.4.24",
+    "neo4j>=5.18.0",
+    "litellm>=1.35.0",
+    "scikit-learn>=1.4.0",
+    "scholarly>=1.7.0",
+    "yt-dlp>=2024.3.10",
+]
+ml = [
+    "docling>=2.0.0",
+    "paddleocr>=2.7.0",
+    "whisperx>=3.1.0",
+    "bertopic>=0.16.0",
+    "dspy-ai>=2.4.0",
+    "sentence-transformers>=2.5.0",
+    "crawl4ai>=0.3.0",
+]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.23.0",
+    "ruff>=0.3.0",
+    "mypy>=1.9.0",
+    "pre-commit>=3.6.0",
+    "build>=1.0.0",
+    "twine>=5.0.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/tilkiii/the-project-who"
+Documentation = "https://github.com/tilkiii/the-project-who#readme"
+Repository = "https://github.com/tilkiii/the-project-who"
+"Bug Tracker" = "https://github.com/tilkiii/the-project-who/issues"
+
+[project.scripts]
+who = "who.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["who*"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]
+ignore = ["E501"]
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = false
+warn_unused_configs = true
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]

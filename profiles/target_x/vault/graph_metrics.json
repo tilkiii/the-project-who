@@ -1,0 +1,10 @@
+{
+  "total_nodes": 5,
+  "total_relationships": 4,
+  "density": 0.4,
+  "top_influencers": [
+    {"name": "Mechanism Design", "score": 0.94},
+    {"name": "Equilibrium Analysis", "score": 0.89},
+    {"name": "Bayesian Updating", "score": 0.85}
+  ]
+}
