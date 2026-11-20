@@ -124,10 +124,19 @@ def test_profile_evaluator_and_temporal_backtest(target_dirs):
     bt = evaluator.run_temporal_backtest(holdout_ratio=0.25)
     assert "brier_score" in bt
     assert 0.0 <= bt["brier_score"] <= 1.0
+    assert "brier_ci_95" in bt
+    assert len(bt["brier_ci_95"]) == 2
     assert "brier_skill_score_bss" in bt
+    assert "bss_ci_95" in bt
     assert "log_loss_score" in bt
+    assert "log_loss_skill_score_llss" in bt
     assert "empirical_confidence_score" in bt
     assert bt["empirical_confidence_score"] == pytest.approx(max(0.50, min(0.98, 1.0 - bt["brier_score"])), abs=0.01)
+
+    rec = ProfileEvaluator.run_synthetic_parameter_recovery(n_samples=200, random_seed=42)
+    assert rec["is_identifiable"] is True
+    assert rec["recovery_rmse"] < 0.35
+    assert rec["sloppiness_condition_number_kappa"] < 100.0
 
 
 def test_stylometric_jsd_and_referee_gate(target_dirs):

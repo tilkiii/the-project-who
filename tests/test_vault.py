@@ -109,11 +109,60 @@ def test_ising_spin_glass_frustration_triangle(tmp_path: Path):
 
     assert ising["frustrated_bonds_count"] >= 1
     assert ising["structural_frustration_index"] > 0.20
-    assert ising["annealing_restarts"] == 8
-    assert "replica_overlap_stability" in ising
-    # Harary's Structural Balance Theorem: frustrated triangle must have strictly positive signed Laplacian lambda_min > 0
+    assert ising["annealing_restarts"] == 12
+    assert ising["sa_exact_ground_state_recovery_rate"] == 1.0
+    assert "replica_overlap_histogram_P_q" in ising
+    assert "distinct_ground_states_count" in ising
+    # Harary's Structural Balance Theorem & Rayleigh Quotient Bound: F >= n * lambda_min / 4
     assert spec["signed_laplacian_frustration_lambda_min"] > 0.10
+    assert spec["rayleigh_bound_satisfied"] is True
+    assert ising["frustrated_bond_weight_F"] + 1e-4 >= (3 * spec["signed_laplacian_frustration_lambda_min"]) / 4.0
     assert spec["is_structurally_balanced"] is False
+    store.close()
+
+
+def test_random_gauge_switched_harary_balance(tmp_path: Path):
+    """
+    Verify Harary's Structural Balance Theorem under random Z2 gauge switching:
+    Take a 6-node graph, assign random node gauge signs sigma_i in {-1, +1},
+    and set edge sign J_ij = sigma_i * sigma_j (SUPPORTS if +1, CONTRADICTS if -1).
+    Even though the graph contains negative (CONTRADICTS) edges, every cycle has an even
+    number of negative edges, so lambda_min(L_signed) must vanish (< 1e-5) and F == 0.
+    """
+    import random
+    rng = random.Random(123)
+    node_names = [f"N{i}" for i in range(6)]
+    sigmas = {n: rng.choice([-1, 1]) for n in node_names}
+
+    entities = [{"name": n, "type": "Concept"} for n in node_names]
+    relationships = []
+    for i in range(len(node_names)):
+        for j in range(i + 1, len(node_names)):
+            if rng.random() < 0.7:
+                u, v = node_names[i], node_names[j]
+                sign = sigmas[u] * sigmas[v]
+                rel = "SUPPORTS" if sign > 0 else "CONTRADICTS"
+                d_score = 0.0 if sign > 0 else 0.85
+                relationships.append({
+                    "source": u,
+                    "target": v,
+                    "relation": rel,
+                    "weight": 0.85,
+                    "dissonance_score": d_score,
+                })
+
+    store = GraphStore("Target_Harary_Gauge", vault_dir=tmp_path)
+    store.store_graph(entities, relationships)
+    ga = GraphAnalytics(store, vault_dir=tmp_path)
+    metrics = ga.run_analytics()
+
+    ising = metrics["network_physics"]["ising_spin_glass"]
+    spec = metrics["network_physics"]["spectral_laplacian"]
+
+    assert ising["frustrated_bonds_count"] == 0
+    assert ising["frustrated_bond_weight_F"] == pytest.approx(0.0, abs=1e-6)
+    assert spec["signed_laplacian_frustration_lambda_min"] == pytest.approx(0.0, abs=1e-5)
+    assert spec["is_structurally_balanced"] is True
     store.close()
 
 

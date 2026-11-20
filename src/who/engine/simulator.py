@@ -586,7 +586,7 @@ class Simulator:
         if norm_entropy <= 0.65:
             phase_regime = "ORDERED_LOW_ENTROPY_REGIME"
         elif norm_entropy <= 0.85:
-            phase_regime = "CRITICAL_PHASE_TRANSITION_REGIME"
+            phase_regime = "SCHOTTKY_CROSSOVER_REGIME"
         else:
             phase_regime = "HIGH_ENTROPY_STOCHASTIC_REGIME"
 
@@ -606,7 +606,7 @@ class Simulator:
             avg_normal_asym = sum(normal_asym_vals) / len(normal_asym_vals)
             critical_tipping_metric = "Information Asymmetry (α)"
             tipping_statement = (
-                f"Information Asymmetry (α) is the critical phase-transition parameter: "
+                f"Information Asymmetry (α) is the critical Schottky crossover parameter: "
                 f"avg α was {avg_deadlock_asym:.2f} under Deadlock vs {avg_normal_asym:.2f} in constructive branches. "
                 f"High opacity triggers the target's loss-aversion threshold (β_loss={loss_aversion:.2f}), causing immediate walkaways."
             )
@@ -668,6 +668,7 @@ class Simulator:
                 "specific_heat_capacity_C": mean_specific_heat_c,
                 "shannon_decision_entropy_S": mean_entropy_s,
                 "normalized_entropy": norm_entropy,
+                "crossover_regime": phase_regime,
                 "phase_regime": phase_regime,
                 "ising_frustration_index_phi": frustration_phi,
                 "joint_gibbs_frustrated_mode_weight": round(p_frustrated_mode, 4),
