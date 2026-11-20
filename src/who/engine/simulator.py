@@ -377,7 +377,7 @@ class Simulator:
         random_seed: Optional[int] = 42,
     ) -> Dict[str, Any]:
         """
-        Multi-iteration Monte Carlo negotiation & scenario simulator (Game Theory 2.0 + Statistical Mechanics).
+        Multi-iteration Monte Carlo negotiation & scenario simulator (Boltzmann-Gibbs Quantal Response Equilibrium).
         Stochastically perturbs counterparty leverage, deadline pressure, information asymmetry,
         and reputation risk, mapping utility vectors through the Boltzmann-Gibbs partition function Z(beta)
         (Quantal Response Equilibrium) and computing Shannon Decision Entropy (S) and Helmholtz Free Energy (F).

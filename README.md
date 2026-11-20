@@ -6,13 +6,11 @@
 ### Evidence-Grounded Cognitive Digital Twin & Behavioral Modeling Toolkit for AI Agents
 
 [![CI](https://github.com/tilkiii/the-project-who/actions/workflows/ci.yml/badge.svg)](https://github.com/tilkiii/the-project-who/actions/workflows/ci.yml)
-[![PyPI version](https://img.shields.io/badge/pypi-v1.0.0-blue.svg)](https://pypi.org/project/the-project-who/)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12%20%7C%203.13+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![MCP Server](https://img.shields.io/badge/MCP-Server%20Ready-purple.svg)](https://modelcontextprotocol.io)
 [![M8ven Score](https://m8ven.ai/badge/mcp/tilkiii/the-project-who?variant=verified)](https://m8ven.ai/mcp/tilkiii/the-project-who?s=readme)
 [![Code Style: Ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://github.com/astral-sh/ruff)
-[![Architecture: Clean Spec](https://img.shields.io/badge/architecture-clean%20spec-green.svg)](docs/)
 
 <p align="center">
   <b>Transform fragmented OSINT footprints, speeches, transcripts, and academic publications into mathematically calibrated cognitive digital twins, probabilistic scenario simulators, and MCP agent tools.</b>
@@ -26,7 +24,7 @@
 
 **`who??`** is an open-source, evidence-grounded framework designed to reconstruct psychological profiles, empirical decision boundaries, and interactive digital twins from open-source intelligence (OSINT).
 
-Unlike generic character chatbots that hallucinate personalities from loose vibes, `who??` operates under strict **epistemic and mathematical grounding**: every behavioral rule, simulated negotiation counter-move, and psychometric metric is linked to primary corpus citations, peer-reviewed behavioral science papers (arXiv, PubMed, Semantic Scholar, Crossref), and out-of-sample **Brier Score** backtesting.
+Unlike generic character chatbots that hallucinate personalities from loose vibes, `who??` separates **deterministic quantitative modeling** from LLM text synthesis: all psychometric indices, Bayesian 95% credible intervals, Boltzmann-Gibbs (QRE) decision distributions, Ising frustration energies, Jensen-Shannon Divergences (JSD), and out-of-sample **Brier Score** backtests are computed reproducibly in pure Python (`random_seed`-controlled), while LLMs are used only for grounded natural-language synthesis.
 
 ```
    Public Footprint             Knowledge & Graph                Cognitive Twin
@@ -210,7 +208,7 @@ Connect `who??` as a native tool server in Claude Desktop, Cursor, or any MCP cl
 - `who_get_profile(target)`: Retrieve Bayesian psychometrics, CAPS matrix, stated vs. revealed preferences, and operational rules.
 - `who_explain(target, claim)`: Verify claim against primary corpus and knowledge graph paths.
 - `who_academic_research(topic, target, limit, ingest)`: Search peer-reviewed literature with Inverse-Variance Fisher Information scoring.
-- `who_compose_outreach(target, goal, context)`: Draft calibrated outreach with rejection stress-testing.
+- `who_compose_outreach(target, goal, context)`: Draft communication aligned with the profiled subject's epistemic framing and evaluate potential conceptual friction points.
 - `who_list_targets()`: List all profiled targets in the local vault.
 
 ---
@@ -243,6 +241,17 @@ who arena --targets "Target X, Test Target" --topic "Decentralized vs centralize
 # Ornstein-Uhlenbeck temporal cognitive drift analysis
 who monitor --target "Target X" --drift
 ```
+
+---
+
+## Methodological Limitations & Ethical Scope
+
+To maintain strict scientific transparency, users and researchers should account for the following boundaries:
+
+1. **Non-Clinical Scope (Goldwater Rule Alignment):** `who??` models observable linguistic, rhetorical, and decision-theoretic patterns from text corpora. It does **not** perform clinical psychological diagnosis, mental health assessment, or deterministic mind-reading.
+2. **Population Priors vs. Ecological Inference:** Effect sizes (`r`) retrieved from peer-reviewed literature serve strictly as **Bayesian population priors** (weighted via Inverse-Variance Fisher Information) to initialize baseline thresholds; they do not prove individual-level causality and are updated as subject-specific corpus evidence grows.
+3. **Curated Corpus & Ghostwriter Bias:** Public speeches, interviews, and published articles reflect public personas rather than unguarded private states. The *Stated vs. Revealed Preference* module explicitly flags rhetoric–action divergence, yet all outputs remain bounded by corpus quality and selection bias.
+4. **Ethical & Consented Use:** This toolkit is designed for academic research, computational social science, public-domain historical modeling, and consented self-twinning. It must not be used for unauthorized surveillance, covert manipulation, or profiling private individuals without consent (see [SECURITY.md](SECURITY.md) and [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)).
 
 ---
 

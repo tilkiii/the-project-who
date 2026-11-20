@@ -1,5 +1,5 @@
 """
-05_monte_carlo_negotiation.py - Monte Carlo Negotiation Simulator (Game Theory 2.0)
+05_monte_carlo_negotiation.py - Monte Carlo Negotiation Simulator (Boltzmann-Gibbs QRE)
 ===================================================================================
 Executes a multi-iteration stochastic simulation perturbing counterparty leverage,
 deadline pressure, information asymmetry, and reputation risk against Target X's

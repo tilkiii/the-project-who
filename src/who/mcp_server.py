@@ -164,7 +164,7 @@ TOOLS_SCHEMA: List[Dict[str, Any]] = [
     },
     {
         "name": "who_compose_outreach",
-        "description": "Generate hyper-tailored communication drafts optimized for the target individual with adversarial rejection stress-testing.",
+        "description": "Draft communication aligned with the profiled subject's epistemic framing and evaluate potential conceptual friction points.",
         "annotations": {
             "readOnlyHint": True,
             "destructiveHint": False,
