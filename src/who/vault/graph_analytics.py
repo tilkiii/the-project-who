@@ -1,7 +1,9 @@
 """
 Graph Data Science (GDS), Complex Network Physics, and Ising Spin-Glass Frustration analytics for who??.
-Computes centrality, PageRank, community detection, shortest paths, Spectral Laplacian
-Algebraic Connectivity (Fiedler Value), and Ising Hamiltonian Cognitive Dissonance Frustration.
+Computes centrality, PageRank, community detection, shortest paths,
+Unsigned Spectral Laplacian Algebraic Connectivity (Fiedler Value lambda_2),
+Signed Graph Laplacian Spectral Frustration (Harary lambda_min),
+and Multi-Restart Simulated Annealing Ising Spin-Glass Ground Energy.
 """
 
 from __future__ import annotations
@@ -9,6 +11,7 @@ from __future__ import annotations
 import json
 import math
 from pathlib import Path
+import random
 from typing import Any, Dict, List, Optional, Tuple
 import networkx as nx
 
@@ -20,14 +23,14 @@ logger = get_logger("who.vault.analytics")
 
 
 class GraphAnalytics:
-    """Executes Neo4j GDS, NetworkX graph analytics, and Complex Network Physics (Ising / Spectral) algorithms."""
+    """Executes Neo4j GDS, NetworkX graph analytics, and Complex Network Physics (Ising / Signed Spectral) algorithms."""
 
     def __init__(self, graph_store: GraphStore, vault_dir: Optional[Path] = None):
         self.store = graph_store
         self.vault_dir = vault_dir
 
     def run_analytics(self) -> Dict[str, Any]:
-        """Compute full graph metrics suite (PageRank, Centrality, Communities, Cognitive Dissonance, Ising & Spectral Physics)."""
+        """Compute full graph metrics suite (PageRank, Centrality, Communities, Cognitive Dissonance, Ising & Signed Spectral Physics)."""
         logger.info(f"Computing graph metrics and GDS analytics for target '{self.store.target_name}'.")
 
         g = self.store.nx_graph
@@ -56,12 +59,12 @@ class GraphAnalytics:
         except Exception:
             closeness = {n: 0.0 for n in g.nodes}
 
-        # 5. Cognitive Dissonance & Ising Spin-Glass Frustration Subgraph Analysis
+        # 5. Cognitive Dissonance & Multi-Restart Simulated Annealing Ising Spin-Glass Analysis
         dissonance_analysis = self._analyze_cognitive_dissonance(g, betweenness)
 
-        # 6. Spectral Graph Physics (Laplacian Algebraic Connectivity / Fiedler Value)
+        # 6. Spectral Graph Physics (Unsigned Fiedler lambda_2 + Signed Laplacian Harary Frustration lambda_min)
         undirected_g = g.to_undirected()
-        spectral_physics = self._compute_spectral_laplacian_metrics(undirected_g)
+        spectral_physics = self._compute_spectral_laplacian_metrics(g, undirected_g)
 
         # 7. Community Structure / Concept Clustering (Modularity)
         communities: List[List[str]] = []
@@ -142,18 +145,20 @@ class GraphAnalytics:
             with open(self.vault_dir / "relationship_strengths.json", "w", encoding="utf-8") as f:
                 json.dump(relationship_strengths, f, indent=2)
 
-            logger.info("Saved graph_metrics.json (with Ising Spin-Glass & Spectral Physics) successfully.")
+            logger.info("Saved graph_metrics.json (with Multi-Restart Ising & Signed Spectral Physics) successfully.")
 
         return analytics_payload
 
-    def _compute_ising_spin_glass_energy(self, g: nx.DiGraph) -> Dict[str, Any]:
+    def _compute_ising_spin_glass_energy(self, g: nx.DiGraph, n_restarts: int = 8) -> Dict[str, Any]:
         """
         Model the concept graph as a signed Ising Spin-Glass system (Toulouse, 1977; Heider Structural Balance):
         - Hamiltonian: H(s) = - sum_{(i,j)} J_{ij} * s_i * s_j, where s_i in {-1, +1}
         - J_{ij} > 0 for associative/supportive edges (ferromagnetic alignment)
         - J_{ij} < 0 for [CONTRADICTS] edges (antiferromagnetic conflict)
-        Uses greedy coordinate descent (zero-temperature Glauber relaxation) to find the ground-state
-        spin configuration s* and computes the Structural Frustration Index Phi in [0, 1].
+        Uses Multi-Restart Simulated Annealing (Metropolis cooling schedule followed by T=0 greedy refinement)
+        to avoid local minima traps, find the true ground-state configuration s*, and compute:
+        - Structural Frustration Index Phi = (violated bond weight) / sum(|J_ij|) in [0, 1]
+        - Replica Ground-State Overlap Stability <q_rep> across annealing restarts.
         """
         nodes = list(g.nodes)
         if not nodes:
@@ -161,12 +166,15 @@ class GraphAnalytics:
                 "hamiltonian_ground_energy_H": 0.0,
                 "frustrated_bonds_count": 0,
                 "structural_frustration_index": 0.0,
+                "replica_overlap_stability": 1.0,
+                "annealing_restarts": n_restarts,
                 "spin_configuration": {},
             }
 
-        # Build signed coupling dictionary J_{(u, v)}
         couplings: List[Tuple[str, str, float]] = []
         total_abs_coupling = 0.0
+        adj_map: Dict[str, List[Tuple[str, float]]] = {n: [] for n in nodes}
+
         for u, v, data in g.edges(data=True):
             if u == v:
                 continue
@@ -175,36 +183,54 @@ class GraphAnalytics:
             j_val = -abs(weight) if is_contra else abs(weight)
             couplings.append((u, v, j_val))
             total_abs_coupling += abs(j_val)
+            adj_map[u].append((v, j_val))
+            adj_map[v].append((u, j_val))
 
-        # Initialize spins s_i = +1
-        spins: Dict[str, int] = {n: 1 for n in nodes}
+        def _eval_energy(s_cfg: Dict[str, int]) -> float:
+            return sum(-j_val * s_cfg[u] * s_cfg[v] for u, v, j_val in couplings)
 
-        # Coordinate descent (Glauber zero-T spin relaxation) to minimize H = -sum J_ij s_i s_j
-        for _ in range(12):
-            flipped_any = False
-            for n in nodes:
-                local_field = 0.0
-                for u, v, j_val in couplings:
-                    if u == n:
-                        local_field += j_val * spins[v]
-                    elif v == n:
-                        local_field += j_val * spins[u]
-                # Energy contribution of node n is -s_n * local_field
-                if local_field < -1e-6 and spins[n] == 1:
-                    spins[n] = -1
-                    flipped_any = True
-                elif local_field > 1e-6 and spins[n] == -1:
-                    spins[n] = 1
-                    flipped_any = True
-            if not flipped_any:
-                break
+        rng = random.Random(42)
+        cooling_temps = [1.5, 0.8, 0.4, 0.15, 0.05, 0.0]
+        annealed_minima: List[Dict[str, int]] = []
+        best_spins: Dict[str, int] = {n: 1 for n in nodes}
+        best_energy = _eval_energy(best_spins)
 
-        hamiltonian_h = 0.0
+        for r_idx in range(max(1, n_restarts)):
+            if r_idx == 0:
+                spins = {n: 1 for n in nodes}
+            else:
+                spins = {n: rng.choice([-1, 1]) for n in nodes}
+
+            for temp in cooling_temps:
+                for n in nodes:
+                    local_field = sum(j_val * spins[nbr] for nbr, j_val in adj_map[n])
+                    # Flipping s_n -> -s_n changes energy by delta_E = 2 * s_n * local_field
+                    delta_e = 2.0 * spins[n] * local_field
+                    if delta_e < -1e-9:
+                        spins[n] = -spins[n]
+                    elif temp > 0.0 and delta_e < 10.0:
+                        if rng.random() < math.exp(-delta_e / temp):
+                            spins[n] = -spins[n]
+
+            e_curr = _eval_energy(spins)
+            annealed_minima.append(dict(spins))
+            if e_curr < best_energy - 1e-9:
+                best_energy = e_curr
+                best_spins = dict(spins)
+
+        # Compute replica overlap stability <|q_{alpha,beta}|> across annealed ground states
+        overlaps: List[float] = []
+        for i in range(len(annealed_minima)):
+            for j in range(i + 1, len(annealed_minima)):
+                s_a, s_b = annealed_minima[i], annealed_minima[j]
+                q_ab = abs(sum(s_a[n] * s_b[n] for n in nodes)) / len(nodes)
+                overlaps.append(q_ab)
+        replica_stability = round(sum(overlaps) / len(overlaps), 4) if overlaps else 1.0
+
         frustrated_bonds = 0
         frustrated_weight = 0.0
         for u, v, j_val in couplings:
-            bond_term = j_val * spins[u] * spins[v]
-            hamiltonian_h += -bond_term
+            bond_term = j_val * best_spins[u] * best_spins[v]
             if bond_term < 0:
                 frustrated_bonds += 1
                 frustrated_weight += abs(j_val)
@@ -212,25 +238,90 @@ class GraphAnalytics:
         frustration_index = round(frustrated_weight / total_abs_coupling, 4) if total_abs_coupling > 0 else 0.0
 
         return {
-            "hamiltonian_ground_energy_H": round(hamiltonian_h, 4),
+            "hamiltonian_ground_energy_H": round(best_energy, 4),
             "frustrated_bonds_count": frustrated_bonds,
             "total_couplings": len(couplings),
             "structural_frustration_index": frustration_index,
-            "spin_configuration": spins,
+            "replica_overlap_stability": replica_stability,
+            "annealing_restarts": n_restarts,
+            "spin_configuration": best_spins,
         }
 
-    def _compute_spectral_laplacian_metrics(self, ug: nx.Graph) -> Dict[str, Any]:
+    @staticmethod
+    def _symmetric_eigenvalues(matrix: List[List[float]]) -> List[float]:
         """
-        Compute Spectral Graph Theory metrics on the concept network:
-        - Algebraic Connectivity (Fiedler Value lambda_2 of the Graph Laplacian L = D - A)
-        - Spectral Radius (lambda_max)
-        - Assortativity / Average Clustering Coefficient
+        Compute sorted real eigenvalues of a real symmetric matrix.
+        Uses NumPy if available, otherwise executes pure-Python cyclic Jacobi rotations.
+        """
+        n = len(matrix)
+        if n == 0:
+            return []
+        if n == 1:
+            return [float(matrix[0][0])]
+
+        try:
+            import numpy as np
+            arr = np.array(matrix, dtype=float)
+            eigs = np.sort(np.real(np.linalg.eigvalsh(arr)))
+            return [float(x) for x in eigs]
+        except Exception:
+            pass
+
+        # Pure-Python cyclic Jacobi eigenvalue solver for real symmetric matrices
+        a = [[float(matrix[i][j]) for j in range(n)] for i in range(n)]
+        for _ in range(35):
+            max_off = 0.0
+            for p in range(n):
+                for q in range(p + 1, n):
+                    apq = abs(a[p][q])
+                    if apq > max_off:
+                        max_off = apq
+                    if apq < 1e-10:
+                        continue
+                    diff = a[q][q] - a[p][p]
+                    if abs(diff) < 1e-12:
+                        t = 1.0 if a[p][q] >= 0 else -1.0
+                    else:
+                        theta = diff / (2.0 * a[p][q])
+                        t = (1.0 if theta >= 0 else -1.0) / (abs(theta) + math.sqrt(1.0 + theta * theta))
+                    c = 1.0 / math.sqrt(1.0 + t * t)
+                    s = t * c
+                    tau = s / (1.0 + c)
+                    temp = a[p][q]
+                    a[p][q] = 0.0
+                    a[q][p] = 0.0
+                    a[p][p] -= t * temp
+                    a[q][q] += t * temp
+                    for r in range(n):
+                        if r != p and r != q:
+                            arp = a[r][p]
+                            arq = a[r][q]
+                            a[r][p] = arp - s * (arq + tau * arp)
+                            a[p][r] = a[r][p]
+                            a[r][q] = arq + s * (arp - tau * arq)
+                            a[q][r] = a[r][q]
+            if max_off < 1e-9:
+                break
+        return sorted(a[i][i] for i in range(n))
+
+    def _compute_spectral_laplacian_metrics(self, dg: nx.DiGraph, ug: nx.Graph) -> Dict[str, Any]:
+        """
+        Compute both Unsigned and Signed Spectral Graph Theory metrics:
+        1. Unsigned Graph Laplacian (L = D - A):
+           - Algebraic Connectivity (Fiedler Value lambda_2)
+           - Spectral Radius (lambda_max)
+        2. Signed Graph Laplacian (L_signed = D_{|A|} - A_signed, Kunegis et al. 2010 / Harary Theorem):
+           - Smallest Eigenvalue lambda_min(L_signed):
+             lambda_min == 0 iff the signed network is structurally balanced (zero spectral frustration);
+             lambda_min > 0 quantifies continuous Spectral Cognitive Frustration.
         """
         n_nodes = len(ug.nodes)
         if n_nodes < 2:
             return {
                 "algebraic_connectivity_lambda2": 0.0,
                 "spectral_radius_lambda_max": 0.0,
+                "signed_laplacian_frustration_lambda_min": 0.0,
+                "is_structurally_balanced": True,
                 "average_clustering_coefficient": 0.0,
                 "topology_regime": "SPARSE_SINGLETON",
             }
@@ -240,24 +331,54 @@ class GraphAnalytics:
         except Exception:
             avg_clustering = 0.0
 
-        # Extract largest connected component for Fiedler value
-        largest_cc_nodes = max(nx.connected_components(ug), key=len)
+        largest_cc_nodes = list(max(nx.connected_components(ug), key=len))
         sub_g = ug.subgraph(largest_cc_nodes).copy()
 
         lambda_2 = 0.0
         lambda_max = 0.0
+        signed_lambda_min = 0.0
+
         if len(sub_g.nodes) >= 2:
-            try:
-                import numpy as np
-                lap_matrix = nx.laplacian_matrix(sub_g).toarray().astype(float)
-                eigvals = np.sort(np.real(np.linalg.eigvalsh(lap_matrix)))
-                lambda_2 = round(float(max(0.0, eigvals[1])), 4)
-                lambda_max = round(float(max(0.0, eigvals[-1])), 4)
-            except Exception:
-                # Degree-based analytical bound fallback if numpy/scipy not invoked
-                degrees = sorted(d for _, d in sub_g.degree())
-                lambda_2 = round(float(degrees[0]) * 0.5, 4)
-                lambda_max = round(float(degrees[-1]) * 1.5, 4)
+            node_list = list(sub_g.nodes)
+            node_idx = {n: i for i, n in enumerate(node_list)}
+            m = len(node_list)
+
+            # Build Unsigned Adjacency A_unsigned and Signed Adjacency A_signed directly (no scipy required)
+            a_unsigned = [[0.0] * m for _ in range(m)]
+            a_signed = [[0.0] * m for _ in range(m)]
+
+            for u, v, data in dg.edges(data=True):
+                if u in node_idx and v in node_idx and u != v:
+                    i, j = node_idx[u], node_idx[v]
+                    is_contra = data.get("relation") == "CONTRADICTS" or float(data.get("dissonance_score", 0.0)) > 0.0
+                    w = abs(float(data.get("dissonance_score") or data.get("weight", 0.8)))
+                    a_unsigned[i][j] = w
+                    a_unsigned[j][i] = w
+                    signed_w = -w if is_contra else w
+                    a_signed[i][j] = signed_w
+                    a_signed[j][i] = signed_w
+
+            # Construct L_unsigned = D - A_unsigned and L_signed = D_{|A|} - A_signed
+            l_unsigned = [[0.0] * m for _ in range(m)]
+            l_signed = [[0.0] * m for _ in range(m)]
+            for i in range(m):
+                deg_i = sum(a_unsigned[i])
+                for j in range(m):
+                    if i == j:
+                        l_unsigned[i][j] = deg_i
+                        l_signed[i][j] = deg_i
+                    else:
+                        l_unsigned[i][j] = -a_unsigned[i][j]
+                        l_signed[i][j] = -a_signed[i][j]
+
+            eig_unsigned = self._symmetric_eigenvalues(l_unsigned)
+            eig_signed = self._symmetric_eigenvalues(l_signed)
+
+            lambda_2 = round(float(max(0.0, eig_unsigned[1])), 4) if len(eig_unsigned) >= 2 else 0.0
+            lambda_max = round(float(max(0.0, eig_unsigned[-1])), 4) if eig_unsigned else 0.0
+            signed_lambda_min = round(float(max(0.0, eig_signed[0])), 4) if eig_signed else 0.0
+
+        is_balanced = signed_lambda_min < 1e-3
 
         if lambda_2 >= 1.0:
             regime = "COHESIVE_STRONGLY_COUPLED_MANIFOLD"
@@ -269,6 +390,8 @@ class GraphAnalytics:
         return {
             "algebraic_connectivity_lambda2": lambda_2,
             "spectral_radius_lambda_max": lambda_max,
+            "signed_laplacian_frustration_lambda_min": signed_lambda_min,
+            "is_structurally_balanced": is_balanced,
             "average_clustering_coefficient": avg_clustering,
             "largest_component_size": len(sub_g.nodes),
             "topology_regime": regime,
@@ -282,7 +405,7 @@ class GraphAnalytics:
         """
         Analyze [CONTRADICTS] relationships in the graph.
         Identifies contradiction subgraphs, calculates node cognitive dissonance scores,
-        computes Ising Spin-Glass frustration energy, and constructs cognitive dissonance clusters.
+        computes Multi-Restart Ising Spin-Glass frustration energy, and constructs cognitive dissonance clusters.
         """
         contradiction_edges = []
         node_dissonance: Dict[str, float] = {}
@@ -387,6 +510,7 @@ class GraphAnalytics:
                     "hamiltonian_ground_energy_H": 0.0,
                     "frustrated_bonds_count": 0,
                     "structural_frustration_index": 0.0,
+                    "replica_overlap_stability": 1.0,
                     "spin_configuration": {},
                 },
                 "probabilistic_statement": "Grafik verisi bulunamadı.",
@@ -396,10 +520,13 @@ class GraphAnalytics:
                     "hamiltonian_ground_energy_H": 0.0,
                     "frustrated_bonds_count": 0,
                     "structural_frustration_index": 0.0,
+                    "replica_overlap_stability": 1.0,
                 },
                 "spectral_laplacian": {
                     "algebraic_connectivity_lambda2": 0.0,
                     "spectral_radius_lambda_max": 0.0,
+                    "signed_laplacian_frustration_lambda_min": 0.0,
+                    "is_structurally_balanced": True,
                 },
             },
             "density": 0.0,

@@ -69,7 +69,10 @@ def test_graph_analytics(tmp_path: Path):
     assert len(metrics["top_influential_concepts"]) == 3
     assert "network_physics" in metrics
     assert "spectral_laplacian" in metrics["network_physics"]
-    assert metrics["network_physics"]["spectral_laplacian"]["algebraic_connectivity_lambda2"] > 0.0
+    spec = metrics["network_physics"]["spectral_laplacian"]
+    assert spec["algebraic_connectivity_lambda2"] > 0.0
+    assert spec["signed_laplacian_frustration_lambda_min"] == pytest.approx(0.0, abs=1e-3)
+    assert spec["is_structurally_balanced"] is True
     assert (tmp_path / "graph_metrics.json").exists()
     assert (tmp_path / "relationship_strengths.json").exists()
 
@@ -102,9 +105,15 @@ def test_ising_spin_glass_frustration_triangle(tmp_path: Path):
     ga = GraphAnalytics(store, vault_dir=tmp_path)
     metrics = ga.run_analytics()
     ising = metrics["network_physics"]["ising_spin_glass"]
+    spec = metrics["network_physics"]["spectral_laplacian"]
 
     assert ising["frustrated_bonds_count"] >= 1
     assert ising["structural_frustration_index"] > 0.20
+    assert ising["annealing_restarts"] == 8
+    assert "replica_overlap_stability" in ising
+    # Harary's Structural Balance Theorem: frustrated triangle must have strictly positive signed Laplacian lambda_min > 0
+    assert spec["signed_laplacian_frustration_lambda_min"] > 0.10
+    assert spec["is_structurally_balanced"] is False
     store.close()
 
 

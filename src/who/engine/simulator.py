@@ -33,6 +33,7 @@ def compute_boltzmann_gibbs_distribution(
     - Partition Function: Z(beta) = sum_i exp(beta * U_i)
     - Action Probability: P(a_i) = exp(beta * U_i) / Z(beta)
     - Shannon Entropy: S = - sum_i P(a_i) * ln(P(a_i))
+    - Specific Heat Capacity (Policy Susceptibility): C(beta) = beta^2 * Var_P(U)
     - Helmholtz Free Energy: F = -(1 / beta) * ln(Z) = <U> - T * S, where T = 1 / beta.
     """
     if not utilities:
@@ -40,6 +41,8 @@ def compute_boltzmann_gibbs_distribution(
             "probabilities": {},
             "partition_function_Z": 1.0,
             "expected_utility_U": 0.0,
+            "utility_variance_VarU": 0.0,
+            "specific_heat_capacity_C": 0.0,
             "shannon_entropy_S": 0.0,
             "normalized_entropy": 0.0,
             "helmholtz_free_energy_F": 0.0,
@@ -50,28 +53,31 @@ def compute_boltzmann_gibbs_distribution(
     eff_beta = max(0.1, min(25.0, float(beta)))
     temp_t = 1.0 / eff_beta
 
-    # For numerical stability in softmax while preserving exact log-sum-exp for Z:
     max_u = max(utilities.values())
     shifted_exps = {k: math.exp(eff_beta * (u - max_u)) for k, u in utilities.items()}
     sum_shifted = sum(shifted_exps.values()) or 1.0
 
     probs = {k: val / sum_shifted for k, val in shifted_exps.items()}
     log_z = (eff_beta * max_u) + math.log(sum_shifted)
-    # Clamp Z display value to prevent float overflow on huge utilities
     partition_z = round(math.exp(min(50.0, max(-50.0, log_z))), 4)
 
     expected_u = sum(probs[k] * utilities[k] for k in utilities)
+    expected_u2 = sum(probs[k] * (utilities[k] ** 2) for k in utilities)
+    var_u = max(0.0, expected_u2 - (expected_u ** 2))
+    specific_heat_c = (eff_beta ** 2) * var_u
+
     entropy_s = -sum(p * math.log(max(p, 1e-12)) for p in probs.values())
     max_entropy = math.log(len(utilities)) if len(utilities) > 1 else 1.0
     norm_entropy = entropy_s / max_entropy
 
-    # Helmholtz free energy F = <U> - T * S (or +(1/beta)*ln(Z) in utility-maximization sign convention)
     free_energy_f = expected_u + (temp_t * entropy_s)
 
     return {
         "probabilities": {k: round(p, 4) for k, p in probs.items()},
         "partition_function_Z": partition_z,
         "expected_utility_U": round(expected_u, 4),
+        "utility_variance_VarU": round(var_u, 5),
+        "specific_heat_capacity_C": round(specific_heat_c, 4),
         "shannon_entropy_S": round(entropy_s, 4),
         "normalized_entropy": round(norm_entropy, 4),
         "helmholtz_free_energy_F": round(free_energy_f, 4),
@@ -488,7 +494,13 @@ class Simulator:
         payoffs: List[float] = []
         entropies: List[float] = []
         free_energies: List[float] = []
+        specific_heats: List[float] = []
         partition_zs: List[float] = []
+
+        # Joint Two-Temperature Gibbs Marginalization weight P(s) over belief states:
+        # P(s_primary) = 1 - 0.5 * Phi, P(s_frustrated) = 0.5 * Phi
+        p_frustrated_mode = min(0.45, max(0.0, 0.5 * frustration_phi))
+        p_primary_mode = 1.0 - p_frustrated_mode
 
         for i in range(iterations):
             lev = rng.uniform(*ranges["counterparty_leverage"])
@@ -496,29 +508,52 @@ class Simulator:
             asym = rng.uniform(*ranges["information_asymmetry"])
             rep = rng.uniform(*ranges["reputation_risk"])
 
+            # Reference-anchored utility differences (U_deadlock normalized as baseline reference + structural shifts)
             u_accept = (1.0 - lev) * (1.0 - rep) - (loss_aversion * asym) + (machiavellianism * 0.20)
             u_counter = (0.60 * (1.0 - lev)) + (0.35 * (1.0 - asym)) + (0.25 * machiavellianism) - (0.15 / max(deadline, 1.0))
             u_concession = (0.45 * lev * machiavellianism) + (0.30 * (1.0 / max(deadline, 1.0)) * need_for_closure) - (0.25 * loss_aversion * rep)
             u_deadlock = 0.20 + (0.45 * loss_aversion * asym) + (0.40 * rep) - (0.35 * need_for_closure)
 
-            utilities = {
+            utilities_primary = {
                 BRANCH_COUNTER: u_counter,
                 BRANCH_CONCESSION: u_concession,
                 BRANCH_ACCEPT: u_accept,
                 BRANCH_DEADLOCK: u_deadlock,
             }
 
-            # Compute Boltzmann-Gibbs / Quantal Response Equilibrium (QRE) distribution
-            bg_state = compute_boltzmann_gibbs_distribution(utilities, beta=beta)
+            # Compute primary Boltzmann-Gibbs / Quantal Response Equilibrium (QRE) distribution pi(a | s_primary)
+            bg_primary = compute_boltzmann_gibbs_distribution(utilities_primary, beta=beta)
+
+            if p_frustrated_mode > 1e-4:
+                # Secondary frustrated belief mode s_frustrated swaps defensive/cooperative utility emphasis
+                utilities_frust = {
+                    BRANCH_COUNTER: u_concession,
+                    BRANCH_CONCESSION: u_counter,
+                    BRANCH_ACCEPT: u_deadlock,
+                    BRANCH_DEADLOCK: u_accept,
+                }
+                bg_frust = compute_boltzmann_gibbs_distribution(utilities_frust, beta=beta)
+                marginal_probs = {
+                    k: round(p_primary_mode * bg_primary["probabilities"][k] + p_frustrated_mode * bg_frust["probabilities"][k], 4)
+                    for k in utilities_primary
+                }
+                marginal_entropy = -sum(p * math.log(max(p, 1e-12)) for p in marginal_probs.values())
+                bg_state = dict(bg_primary)
+                bg_state["probabilities"] = marginal_probs
+                bg_state["shannon_entropy_S"] = round(marginal_entropy, 4)
+            else:
+                bg_state = bg_primary
+
             for b_key, b_prob in bg_state["probabilities"].items():
                 boltzmann_prob_sums[b_key] += b_prob
 
             entropies.append(bg_state["shannon_entropy_S"])
             free_energies.append(bg_state["helmholtz_free_energy_F"])
+            specific_heats.append(bg_state["specific_heat_capacity_C"])
             partition_zs.append(bg_state["partition_function_Z"])
 
-            chosen_branch = max(utilities, key=utilities.get)
-            chosen_payoff = round(utilities[chosen_branch], 4)
+            chosen_branch = max(utilities_primary, key=utilities_primary.get)
+            chosen_payoff = round(utilities_primary[chosen_branch], 4)
 
             branch_counts[chosen_branch] += 1
             payoffs.append(chosen_payoff)
@@ -545,6 +580,7 @@ class Simulator:
         mean_entropy_s = round(sum(entropies) / len(entropies), 4) if entropies else 0.0
         norm_entropy = round(mean_entropy_s / math.log(4), 4)
         mean_free_energy_f = round(sum(free_energies) / len(free_energies), 4) if free_energies else 0.0
+        mean_specific_heat_c = round(sum(specific_heats) / len(specific_heats), 4) if specific_heats else 0.0
         mean_partition_z = round(sum(partition_zs) / len(partition_zs), 4) if partition_zs else 1.0
 
         if norm_entropy <= 0.65:
@@ -621,6 +657,7 @@ class Simulator:
             "dominant_branch": dominant_branch,
             "branch_probabilities": distribution,
             "boltzmann_branch_probabilities": boltzmann_distribution,
+            "expected_qre_payoff": expected_nash_payoff,
             "expected_nash_payoff": expected_nash_payoff,
             "payoff_bounds": {"p10": p10, "median": p50, "p90": p90},
             "statistical_mechanics": {
@@ -628,10 +665,12 @@ class Simulator:
                 "cognitive_temperature_T": round(1.0 / beta, 4),
                 "mean_partition_function_Z": mean_partition_z,
                 "helmholtz_free_energy_F": mean_free_energy_f,
+                "specific_heat_capacity_C": mean_specific_heat_c,
                 "shannon_decision_entropy_S": mean_entropy_s,
                 "normalized_entropy": norm_entropy,
                 "phase_regime": phase_regime,
                 "ising_frustration_index_phi": frustration_phi,
+                "joint_gibbs_frustrated_mode_weight": round(p_frustrated_mode, 4),
             },
             "critical_sensitivity": {
                 "key_variable": critical_tipping_metric,

@@ -61,6 +61,8 @@ def test_boltzmann_gibbs_statistical_mechanics():
     assert high_beta["probabilities"]["REJECT_AND_COUNTER"] > low_beta["probabilities"]["REJECT_AND_COUNTER"]
     # And lowers Shannon decision entropy S
     assert high_beta["shannon_entropy_S"] < low_beta["shannon_entropy_S"]
+    assert "specific_heat_capacity_C" in low_beta
+    assert low_beta["specific_heat_capacity_C"] > 0.0
 
 
 def test_simulator(target_dirs):
@@ -122,6 +124,8 @@ def test_profile_evaluator_and_temporal_backtest(target_dirs):
     bt = evaluator.run_temporal_backtest(holdout_ratio=0.25)
     assert "brier_score" in bt
     assert 0.0 <= bt["brier_score"] <= 1.0
+    assert "brier_skill_score_bss" in bt
+    assert "log_loss_score" in bt
     assert "empirical_confidence_score" in bt
     assert bt["empirical_confidence_score"] == pytest.approx(max(0.50, min(0.98, 1.0 - bt["brier_score"])), abs=0.01)
 

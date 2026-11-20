@@ -282,6 +282,7 @@ class SwarmArena:
             "initial_hamiltonian_H_AB": initial_state["interaction_hamiltonian_H_AB"],
             "final_hamiltonian_H_AB": final_state["interaction_hamiltonian_H_AB"],
             "hamiltonian_energy_shift_delta_H": delta_h,
+            "cross_agent_spin_correlation_q_AB": final_q,
             "edwards_anderson_overlap_q_AB": final_q,
             "inter_agent_discourse_jsd": final_jsd,
             "discourse_jsd_shift_delta_jsd": delta_jsd,
