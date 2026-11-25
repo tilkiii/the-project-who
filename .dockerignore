@@ -1,0 +1,16 @@
+.git
+.env
+.env.*
+.pytest_cache
+.gemini
+AGENTS.md
+scratch/
+dist/
+build/
+*.egg-info
+__pycache__/
+*.pyc
+profiles/*
+!profiles/.gitkeep
+!profiles/target_x/
+!profiles/target_x/**

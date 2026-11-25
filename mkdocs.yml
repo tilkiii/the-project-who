@@ -1,0 +1,53 @@
+site_name: who?? — Cognitive Digital Twin & OSINT Framework
+site_description: Enterprise-grade cognitive modeling, behavioral psychometrics, and Model Context Protocol framework.
+site_author: Mucteba Özdemir
+site_url: https://tilkiii.github.io/the-project-who/
+repo_url: https://github.com/tilkiii/the-project-who
+repo_name: tilkiii/the-project-who
+
+theme:
+  name: material
+  palette:
+    - scheme: slate
+      primary: teal
+      accent: deep purple
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+    - scheme: default
+      primary: teal
+      accent: deep purple
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - content.code.copy
+    - content.code.annotate
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.tabbed:
+      alternate_style: true
+  - tables
+  - attr_list
+  - md_in_html
+
+nav:
+  - Overview: index.md
+  - Getting Started: getting-started.md
+  - Architecture: architecture.md
+  - Agent SDK: sdk-reference.md
+  - MCP Protocol: mcp-protocol.md
+  - Academic Grounding: academic-agent.md
