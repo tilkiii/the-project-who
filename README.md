@@ -84,7 +84,7 @@ pip install -e .
 # Persistent ChromaDB HNSW, Neo4j driver, LiteLLM gateway, scikit-learn, scholarly, yt-dlp:
 pip install -e ".[full]"
 
-# Heavy local multimodal ML (Docling, PaddleOCR, WhisperX, BERTopic, DSPy, Crawl4AI):
+# Heavy local multimodal ML (Docling, PaddleOCR, BERTopic, Crawl4AI):
 pip install -e ".[ml]"
 
 # Development & testing tools (pytest, ruff, mypy):

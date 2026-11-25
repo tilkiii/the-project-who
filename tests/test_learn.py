@@ -118,6 +118,8 @@ def test_prompt_optimizer(tmp_path: Path):
     }
     opt = po.optimize_prompts("Alice", skill)
 
+    assert opt["compiler_mode"] == "deterministic_template"
+    assert "dspy_active" not in opt
     assert "compiled_templates" in opt
     assert "oracle_system_prompt" in opt["compiled_templates"]
     assert (tmp_path / "optimized_prompts.json").exists()

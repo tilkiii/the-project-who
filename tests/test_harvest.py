@@ -104,8 +104,19 @@ def test_document_ingestor_fallback(tmp_path: Path):
     assert res["source_type"] == "document_md"
 
 
-def test_ocr_processor_fallback(tmp_path: Path):
-    # Dummy image file
+def test_ocr_processor_fallback(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    """When no OCR engine is installed, OCRProcessor must skip cleanly without writing placeholder text."""
+    import builtins
+
+    real_import = builtins.__import__
+
+    def block_ocr_engines(name, *args, **kwargs):
+        if name in ("paddleocr", "pytesseract"):
+            raise ImportError(f"blocked {name} in test")
+        return real_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", block_ocr_engines)
+
     img_file = tmp_path / "scan.png"
     img_file.write_bytes(b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15c4\x00\x00\x00\nIDATx\x9cc\x00\x01\x00\x00\x05\x00\x01\r\n-\xb4\x00\x00\x00\x00IEND\xaeB`\x82")
 
@@ -114,8 +125,11 @@ def test_ocr_processor_fallback(tmp_path: Path):
     res = ocr.extract_text_from_image(img_file)
 
     assert res["image_name"] == "scan.png"
-    assert res["mean_confidence"] > 0.0
-    assert "OCR Transcription" in res["content"]
+    assert res["ocr_available"] is False
+    assert res["status"] == "OCR_ENGINE_UNAVAILABLE"
+    assert res["mean_confidence"] == 0.0
+    assert res["content"] == ""
+    assert list(out_dir.glob("*.md")) == []
 
 
 def test_redact_pii():

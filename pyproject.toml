@@ -58,9 +58,7 @@ full = [
 ml = [
     "docling>=2.0.0",
     "paddleocr>=2.7.0",
-    "whisperx>=3.1.0",
     "bertopic>=0.16.0",
-    "dspy-ai>=2.4.0",
     "sentence-transformers>=2.5.0",
     "crawl4ai>=0.3.0",
 ]

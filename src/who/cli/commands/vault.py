@@ -70,8 +70,8 @@ def learn(
     ss = SkillSynthesizer(output_dir=dirs.learned_skills_dir)
     skill = ss.synthesize_mapping_skill(target, features, topics, lit)
 
-    # 5. DSPy Prompt Optimization
-    console.print("[*] Optimizing DSPy programmatic prompts and evaluation parameters...")
+    # 5. Prompt Template Compilation
+    console.print("[*] Compiling target prompt templates and evaluation thresholds...")
     po = PromptOptimizer(output_dir=dirs.learned_skills_dir)
     po.optimize_prompts(target, skill)
 

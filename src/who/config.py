@@ -103,8 +103,8 @@ class Settings(BaseModel):
     ollama_api_base: str = Field(default_factory=lambda: os.getenv("OLLAMA_API_BASE", "http://localhost:11434"))
     vllm_api_base: str = Field(default_factory=lambda: os.getenv("VLLM_API_BASE", "http://localhost:8000/v1"))
 
-    # Neo4j Settings
-    neo4j_uri: str = Field(default_factory=lambda: os.getenv("NEO4J_URI", "bolt://localhost:7687"))
+    # Neo4j Settings (opt-in: leave NEO4J_URI unset to run instantaneously in local NetworkX mode)
+    neo4j_uri: str = Field(default_factory=lambda: os.getenv("NEO4J_URI", "").strip())
     neo4j_user: str = Field(default_factory=lambda: os.getenv("NEO4J_USER", "neo4j"))
     neo4j_password: str = Field(default_factory=lambda: os.getenv("NEO4J_PASSWORD", "password"))
     neo4j_database: str = Field(default_factory=lambda: os.getenv("NEO4J_DATABASE", "neo4j"))

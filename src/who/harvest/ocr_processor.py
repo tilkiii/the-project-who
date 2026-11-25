@@ -1,6 +1,6 @@
 """
-OCR processor for who?? using PaddleOCR.
-Extracts structured text from screenshots, presentation slides, diagrams, and scans.
+OCR processor for who?? using PaddleOCR or pytesseract.
+Extracts real text from screenshots, presentation slides, and scans without fabricating placeholders.
 """
 
 from __future__ import annotations
@@ -16,7 +16,7 @@ logger = get_logger("who.harvest.ocr")
 
 
 class OCRProcessor:
-    """Extracts text from visual documents, infographics, and slides using PaddleOCR."""
+    """Extracts text from visual documents, infographics, and slides using PaddleOCR or pytesseract."""
 
     def __init__(self, output_dir: Optional[Path] = None, lang: str = "en"):
         self.output_dir = output_dir
@@ -41,10 +41,12 @@ class OCRProcessor:
         logger.info(f"Processing OCR for visual asset: {path.name}")
         extracted_lines: List[str] = []
         confidences: List[float] = []
+        engine_used = False
 
         # 1. Attempt PaddleOCR
         engine = self._get_engine()
         if engine is not None:
+            engine_used = True
             try:
                 result = engine.ocr(str(path), cls=True)
                 if result and result[0]:
@@ -55,19 +57,48 @@ class OCRProcessor:
             except Exception as e:
                 logger.debug(f"PaddleOCR processing error on {path.name}: {e}")
 
-        # 2. Fallback to pytesseract or basic layout placeholder
+        # 2. Fallback to pytesseract only if available (never fabricate placeholder text)
         if not extracted_lines:
             try:
                 import pytesseract
                 from PIL import Image
+                engine_used = True
                 img = Image.open(path)
                 text = pytesseract.image_to_string(img)
                 if text.strip():
                     extracted_lines = [t.strip() for t in text.split("\n") if t.strip()]
                     confidences = [0.85] * len(extracted_lines)
-            except Exception:
-                extracted_lines = [f"[Visual Text extracted from {path.name}]"]
-                confidences = [0.70]
+            except Exception as e:
+                logger.debug(f"pytesseract OCR unavailable or skipped for {path.name}: {e}")
+
+        if not engine_used:
+            logger.warning(
+                f"No OCR engine available (install paddleocr or pytesseract); skipping '{path.name}' without writing placeholder text."
+            )
+            return {
+                "image_name": path.name,
+                "source_path": str(path.absolute()),
+                "content": "",
+                "mean_confidence": 0.0,
+                "line_count": 0,
+                "ocr_available": False,
+                "status": "OCR_ENGINE_UNAVAILABLE",
+                "source_type": "ocr_extraction",
+                "speaker": "TARGET_PRIMARY",
+            }
+
+        if not extracted_lines:
+            return {
+                "image_name": path.name,
+                "source_path": str(path.absolute()),
+                "content": "",
+                "mean_confidence": 0.0,
+                "line_count": 0,
+                "ocr_available": True,
+                "status": "NO_TEXT_DETECTED",
+                "source_type": "ocr_extraction",
+                "speaker": "TARGET_PRIMARY",
+            }
 
         mean_confidence = sum(confidences) / len(confidences) if confidences else 0.0
         content_md = f"# OCR Transcription: {path.name}\n\n" + "\n\n".join(extracted_lines)
@@ -78,6 +109,8 @@ class OCRProcessor:
             "content": clean_text(content_md),
             "mean_confidence": round(mean_confidence, 3),
             "line_count": len(extracted_lines),
+            "ocr_available": True,
+            "status": "COMPLETED",
             "source_type": "ocr_extraction",
             "speaker": "TARGET_PRIMARY",
         }

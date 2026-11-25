@@ -23,8 +23,12 @@ def test_graph_builder():
     assert len(elements["relationships"]) > 0
 
 
-def test_graph_store_and_export(tmp_path: Path):
+def test_graph_store_and_export(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    from who.config import settings
+    monkeypatch.delenv("NEO4J_URI", raising=False)
+    monkeypatch.setattr(settings, "neo4j_uri", "")
     store = GraphStore("Alice", vault_dir=tmp_path)
+    assert store.connected_to_neo4j is False
     entities = [
         {"name": "Alice", "type": "Person", "description": "Target individual"},
         {"name": "Decentralized Protocols", "type": "Concept", "description": "Resilient systems"},

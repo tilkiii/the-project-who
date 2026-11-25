@@ -1,7 +1,7 @@
 """
 Learning and optimization module for who??.
 Handles linguistic feature extraction, BERTopic temporal modeling,
-temporal cognitive drift tracking, autonomous academic research, skill synthesis, and DSPy prompt tuning.
+temporal cognitive drift tracking, autonomous academic research, skill synthesis, and prompt template compilation.
 """
 
 from who.learn.chronomics import CognitiveChronomics

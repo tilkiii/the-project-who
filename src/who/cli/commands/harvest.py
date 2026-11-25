@@ -72,7 +72,10 @@ def harvest(
 
         ocr_res = ocr_processor.process_directory(d_path)
         for orc in ocr_res:
-            harvested_records.append(f"OCR Scan: {orc.get('image_name')}")
+            if orc.get("ocr_available") and orc.get("content"):
+                harvested_records.append(f"OCR Scan: {orc.get('image_name')}")
+            elif orc.get("status") == "OCR_ENGINE_UNAVAILABLE":
+                console.print(f"[dim]Skipped image OCR for '{orc.get('image_name')}' (no OCR engine installed).[/dim]")
 
     # 3. Harvest Dialogue Logs
     if chat_logs:

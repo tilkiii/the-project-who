@@ -1,6 +1,6 @@
 """
-DSPy prompt optimizer for who??.
-Programmatically tunes prompts and optimizes retrieval, profiling, and simulation pipelines.
+Prompt template compiler for who??.
+Generates structured target-grounded prompt templates for Oracle Q&A, scenario simulation, and chat.
 """
 
 from __future__ import annotations
@@ -15,7 +15,7 @@ logger = get_logger("who.learn.prompt_optimizer")
 
 
 class PromptOptimizer:
-    """Uses DSPy programmatic prompt tuning to optimize behavioral simulation and retrieval pipelines."""
+    """Compiles evidence-grounded prompt templates from target behavioral skills and guardrails."""
 
     def __init__(self, output_dir: Optional[Path] = None):
         self.output_dir = output_dir
@@ -26,36 +26,9 @@ class PromptOptimizer:
         mapping_skill: Dict[str, Any],
         training_examples: Optional[List[Dict[str, str]]] = None,
     ) -> Dict[str, Any]:
-        """
-        Run programmatic prompt optimization for profiling, oracle Q&A, and twin simulation.
-        """
-        logger.info(f"Optimizing DSPy programmatic prompts for: {target_name}")
-        dspy_active = False
+        """Compile deterministic prompt templates for profiling, Oracle Q&A, and twin simulation."""
+        logger.info(f"Compiling target prompt templates for: {target_name}")
 
-        # 1. Attempt DSPy Pipeline Setup
-        try:
-            import dspy
-            # Attempt to configure DSPy signatures
-            class BehavioralProfileSignature(dspy.Signature):
-                """Infer likely reasoning patterns with explicit confidence scoring."""
-                corpus_evidence = dspy.InputField(desc="Verified primary quotes and behavioral markers")
-                academic_grounding = dspy.InputField(desc="Peer-reviewed behavioral correlation models")
-                probabilistic_assessment = dspy.OutputField(desc="Probabilistic inference with confidence score")
-
-            class TwinSimulationSignature(dspy.Signature):
-                """Simulate plausible reaction under explicit scenario assumptions."""
-                scenario = dspy.InputField(desc="Hypothetical event or proposition")
-                target_mindset = dspy.InputField(desc="Cognitive summary and decision heuristics")
-                tone_mode = dspy.InputField(desc="formal or informal")
-                simulated_reaction = dspy.OutputField(desc="Plausible reaction reflecting target style")
-                confidence_rating = dspy.OutputField(desc="Confidence score (0.0 - 1.0)")
-
-            dspy_active = True
-            logger.info("Configured native DSPy Signatures successfully.")
-        except Exception as e:
-            logger.debug(f"DSPy library not initialized ({e}). Using programmatic compiler fallback.")
-
-        # 2. Build Programmatically Optimized Prompt System
         rules = mapping_skill.get("generation_rules", [])
         rules_text = "\n".join(f"- {r}" for r in rules)
         forbidden = "\n".join(f"- {f}" for f in mapping_skill.get("forbidden_phrasings", []))
@@ -82,7 +55,7 @@ class PromptOptimizer:
 
         optimized_package = {
             "target_name": target_name,
-            "dspy_active": dspy_active,
+            "compiler_mode": "deterministic_template",
             "optimization_metric": "epistemic_calibration_and_hallucination_minimization",
             "compiled_templates": {
                 "oracle_system_prompt": oracle_prompt_template,

@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 import json
+import os
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 import networkx as nx
@@ -31,20 +32,33 @@ class GraphStore:
         self._load_local_graph()
 
     def _init_neo4j(self) -> None:
-        """Attempt to connect to Neo4j server."""
+        """Attempt to connect to Neo4j only when NEO4J_URI is explicitly configured."""
+        uri = (os.getenv("NEO4J_URI") or settings.neo4j_uri or "").strip()
+        if not uri:
+            logger.debug("NEO4J_URI not configured; using local NetworkX graph store.")
+            self.connected_to_neo4j = False
+            return
+
         try:
             from neo4j import GraphDatabase
-            self.driver = GraphDatabase.driver(
-                settings.neo4j_uri,
-                auth=(settings.neo4j_user, settings.neo4j_password),
-            )
+            try:
+                self.driver = GraphDatabase.driver(
+                    uri,
+                    auth=(settings.neo4j_user, settings.neo4j_password),
+                    connection_timeout=1.5,
+                )
+            except TypeError:
+                self.driver = GraphDatabase.driver(
+                    uri,
+                    auth=(settings.neo4j_user, settings.neo4j_password),
+                )
             # Verify connectivity
             self.driver.verify_connectivity()
             self.connected_to_neo4j = True
-            logger.info(f"Connected to Neo4j at {settings.neo4j_uri}")
+            logger.info(f"Connected to Neo4j at {uri}")
             self._setup_schema()
         except Exception as e:
-            logger.info("Neo4j instance offline. Operating seamlessly in resilient local NetworkX graph mode.")
+            logger.info("Neo4j instance unreachable. Operating seamlessly in local NetworkX graph mode.")
             logger.debug(f"Neo4j connection detail: {e}")
             self.connected_to_neo4j = False
 
