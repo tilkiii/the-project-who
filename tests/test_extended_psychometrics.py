@@ -36,7 +36,7 @@ def test_feature_extractor_extended_psychometrics(tmp_path: Path):
     assert "credible_interval_95" in mach
     assert len(mach["credible_interval_95"]) == 2
     assert mach["machiavellian_hits"] > 0
-    assert "Makyavelizm" in mach["probabilistic_statement"]
+    assert "Machiavellianism" in mach["probabilistic_statement"]
 
     # 2. Need for Closure
     assert "need_for_closure_index" in features
@@ -44,7 +44,7 @@ def test_feature_extractor_extended_psychometrics(tmp_path: Path):
     assert "score" in closure
     assert "credible_interval_95" in closure
     assert closure["closure_hits"] > 0
-    assert "Bilişsel Kapanma" in closure["probabilistic_statement"]
+    assert "Need for Cognitive Closure" in closure["probabilistic_statement"]
 
     # 3. Loss Aversion
     assert "loss_aversion_index" in features
@@ -52,7 +52,7 @@ def test_feature_extractor_extended_psychometrics(tmp_path: Path):
     assert "loss_to_gain_ratio" in loss
     assert "credible_interval_95" in loss
     assert loss["loss_hits"] > 0
-    assert "Prospekt Risk Yönelimi" in loss["probabilistic_statement"]
+    assert "Prospect Risk Orientation" in loss["probabilistic_statement"]
 
     # 4. Affective Volatility
     assert "affective_volatility_index" in features
@@ -60,7 +60,7 @@ def test_feature_extractor_extended_psychometrics(tmp_path: Path):
     assert "volatility_score" in volatility
     assert "composure_score" in volatility
     assert "credible_interval_95" in volatility
-    assert "Duygusal Denge" in volatility["probabilistic_statement"]
+    assert "Affective Balance" in volatility["probabilistic_statement"]
 
     # 5. Moral Foundations
     assert "moral_foundations_profile" in features

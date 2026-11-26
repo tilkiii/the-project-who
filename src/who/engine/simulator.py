@@ -1083,6 +1083,7 @@ class Simulator:
             "- Use probabilistic phrasing: 'Under the assumption that [X], the data suggests a plausible alignment with [Y]...'\n"
             "- Explicitly separate (A) Stated Public/Diplomatic Reaction vs. (B) Revealed Strategic Action.\n"
             f"- Apply Active CAPS Rule: {caps_context['if_then_signature']}\n"
+            "- Respond in the same language as the SCENARIO PROPOSITION.\n"
         )
 
         user_prompt = (
@@ -1444,7 +1445,8 @@ class Simulator:
         system_prompt = (
             f"You are the Game Theory and Behavioral Strategy Analyst for {self.target_name}.\n"
             "Summarize the Monte Carlo simulation results using game-theoretic and statistical decision reasoning, "
-            "explicitly distinguishing Stated Public Reaction from Revealed Strategic Action."
+            "explicitly distinguishing Stated Public Reaction from Revealed Strategic Action.\n"
+            "Respond in the same language as the SCENARIO."
         )
         user_prompt = (
             f"SCENARIO: \"{scenario}\"\n\n"

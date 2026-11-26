@@ -91,7 +91,7 @@ class TwinChat:
                 if not text:
                     continue
                 speaker = str(turn.get("user", "")).strip()
-                label = "Muhatap" if not speaker or speaker == "{{user1}}" or speaker != self.target_name else self.target_name
+                label = "Interlocutor" if not speaker or speaker == "{{user1}}" or speaker != self.target_name else self.target_name
                 lines.append(f"{label}: {text}")
             if lines:
                 formatted_blocks.append("\n".join(lines))
@@ -122,40 +122,39 @@ class TwinChat:
 
         style_parts: List[str] = []
         if style_all:
-            style_parts.append(f"Genel Üslup: {', '.join(str(s) for s in style_all)}")
+            style_parts.append(f"General Style: {', '.join(str(s) for s in style_all)}")
         if style_chat:
-            style_parts.append(f"Sohbet Tarzı: {', '.join(str(s) for s in style_chat)}")
+            style_parts.append(f"Chat Style: {', '.join(str(s) for s in style_chat)}")
         if adjectives:
-            style_parts.append(f"Nitelikler: {', '.join(str(a) for a in adjectives)}")
-        style_summary = " | ".join(style_parts) or "doğal, tutarlı ve kendi karakter özelliklerine sadık"
+            style_parts.append(f"Traits: {', '.join(str(a) for a in adjectives)}")
+        style_summary = " | ".join(style_parts) or "natural, consistent, and faithful to the subject's authentic voice"
 
         tone_instruction = (
-            "TON: Yapılandırılmış ve analitik sohbet üslubu; ancak hedefin kendi stil profilinden ve örnek diyaloglarından kopma."
+            "TONE: Structured and analytical conversational tone, while remaining faithful to the subject's style profile and sample dialogues."
             if resolved_tone == "formal"
-            else "TON: 1'e 1 doğal ve gerçekçi sohbet üslubu. Hedefin gerçek mesajlaşma ritmini, kısalığını, büyük/küçük harf ve noktalama alışkanlığını koru; gereksiz resmiyet veya yapay kurumsal kalıplar kullanma."
+            else "TONE: Natural 1-on-1 conversational rhythm. Preserve the subject's authentic pacing, brevity, capitalization, and punctuation habits; avoid stiff formality or generic corporate phrasing."
         )
 
         sections = [
-            f"Sen {self.target_name}'in bilişsel dijital ikizisin (cognitive digital twin).",
-            "Kullanıcı seninle doğrudan canlı bir sohbet yürütüyor.",
-            f"AKTİF BAĞLAMSAL DURUM (CAPS): {resolved_caps} | {tone_instruction}",
+            f"You are the cognitive digital twin of {self.target_name}.",
+            "The user is conducting a live interactive conversation with you.",
+            f"ACTIVE SITUATIONAL CONTEXT (CAPS): {resolved_caps} | {tone_instruction}",
             "",
-            "DİYALOG KURALLARI:",
+            "DIALOGUE RULES:",
             (
-                f"1. KESİNLİKLE bir istihbarat raporu, analiz metni veya üçüncü şahıs formatında "
-                f"('Corpus kanıt analizi', 'Hedef profil şöyledir') konuşma! "
-                f"Bizzat {self.target_name} olarak birinci tekil şahıs ('Ben') dilinde yanıt ver."
+                f"1. NEVER respond as a third-person intelligence report or meta-analysis "
+                f"('Corpus Evidence Analysis', 'Target profile indicates')! "
+                f"Speak directly in first person ('I') as {self.target_name}."
             ),
             (
-                f"2. Stil ve Ses Sadakati ({style_summary}): "
-                "Aşağıdaki gerçek ifade örneklerinin ve diyalogların ritmini, büyük/küçük harf kullanımını, "
-                "noktalama tercihlerini, cümle uzunluğunu ve duygusal tonunu birebir yakala. "
-                "Hedefin kendi örneklerinde yer almayan yapay resmi hitap kalıpları, aşırı ağdalı nezaket "
-                "ifadeleri veya robotik kurumsal cümleler kurma."
+                f"2. Style & Voice Fidelity ({style_summary}): "
+                "Mirror the rhythm, casing, punctuation preferences, sentence length, and emotional tone "
+                "from the authentic expression samples and dialogues below. Avoid artificial formal greetings, "
+                "stilted politeness formulas, or robotic corporate phrasing not present in the subject's samples."
             ),
             (
-                "3. Dil: Kullanıcı hangi dilde yazıyorsa o dilde (Türkçe hitap edildiyse doğal ve akıcı Türkçe ile) "
-                "yanıt ver; profilde gözlenen doğal kod değiştirme veya yazım alışkanlıklarını koru."
+                "3. Language: Reply in the same language the user writes in (e.g., natural English for English prompts, "
+                "natural Turkish for Turkish prompts), preserving authentic code-switching or casing habits observed in the profile."
             ),
         ]
 
@@ -166,22 +165,22 @@ class TwinChat:
 
         profile_lines: List[str] = []
         if bio_items:
-            profile_lines.append(f"- Biyografi: {' '.join(str(b) for b in bio_items)}")
+            profile_lines.append(f"- Bio: {' '.join(str(b) for b in bio_items)}")
         if lore_items:
-            profile_lines.append("- Arka Plan & Kimlik Çapaları:\n" + "\n".join(f"  * {l}" for l in lore_items))
+            profile_lines.append("- Background & Identity Anchors:\n" + "\n".join(f"  * {l}" for l in lore_items))
         if post_block:
-            profile_lines.append(f"- Gerçek İfade Örnekleri (postExamples):\n{post_block}")
+            profile_lines.append(f"- Authentic Expression Samples (postExamples):\n{post_block}")
         if dialogue_block:
-            profile_lines.append(f"- Örnek Diyaloglar (messageExamples):\n{dialogue_block}")
+            profile_lines.append(f"- Sample Dialogues (messageExamples):\n{dialogue_block}")
 
         if profile_lines:
-            sections.append("4. Kimlik ve Gerçek Ses Profili (character.json):\n" + "\n".join(profile_lines))
+            sections.append("4. Identity & Authentic Voice Profile (character.json):\n" + "\n".join(profile_lines))
 
         if self.operational_rules:
             rules_text = "\n".join(f"- {r}" for r in self.operational_rules[:4])
             sections.append(
-                "5. Davranışsal Karar Sınırları (Üslup, hitap ve kelime seçiminde hedefin kendi character.json "
-                f"stili ve gerçek ses örnekleri jenerik kurumsal ifadelere göre önceliklidir):\n{rules_text}"
+                "5. Behavioral Decision Boundaries (the subject's character.json style and real voice samples "
+                f"take precedence over generic corporate phrasing for tone, address, and diction):\n{rules_text}"
             )
 
         return "\n".join(sections)
@@ -210,7 +209,7 @@ class TwinChat:
                 if text and len(text) > 35 and not is_boilerplate_or_junk(text):
                     valid_quotes.append(text)
             if valid_quotes:
-                quotes_ctx = "\n".join(f"- Alıntı: \"{q[:250]}\"" for q in valid_quotes[:2])
+                quotes_ctx = "\n".join(f'- Quotation: "{q[:250]}"' for q in valid_quotes[:2])
 
         # 3. Assemble Dynamic Persona-Grounded System Prompt
         system_prompt = self.build_system_prompt(
@@ -224,10 +223,10 @@ class TwinChat:
 
         user_prompt_parts = []
         if quotes_ctx:
-            user_prompt_parts.append(f"Hafızandaki Birincil Kaynak/Düşünce Alıntıları:\n{quotes_ctx}\n")
+            user_prompt_parts.append(f"Primary Source Quotes from Memory:\n{quotes_ctx}\n")
         if conv_memory:
-            user_prompt_parts.append(f"Önceki Sohbet Geçmişi:\n{conv_memory}\n")
-        user_prompt_parts.append(f"Kullanıcı: {user_message}\n\n{self.target_name} Yanıtı:")
+            user_prompt_parts.append(f"Previous Conversation History:\n{conv_memory}\n")
+        user_prompt_parts.append(f"USER: {user_message}\n\n{self.target_name} Reply:")
 
         user_prompt = "\n".join(user_prompt_parts)
 
@@ -235,10 +234,14 @@ class TwinChat:
         response_text = call_llm(user_prompt, system_prompt=system_prompt, temperature=0.4)
 
         # Clean any accidental offline note leak if offline was used
-        if "> [!NOTE]" in response_text and "offline modda" in response_text:
+        if "> [!NOTE]" in response_text and ("offline mode" in response_text.lower() or "offline modda" in response_text.lower()):
             lines = [
                 l for l in response_text.splitlines()
-                if not l.startswith(">") and "offline modda" not in l and "Corpus Kanıt" not in l
+                if not l.startswith(">")
+                and "offline mode" not in l.lower()
+                and "offline modda" not in l.lower()
+                and "corpus evidence analysis" not in l.lower()
+                and "corpus kanıt" not in l.lower()
             ]
             response_text = "\n".join(lines).strip()
 
@@ -247,7 +250,10 @@ class TwinChat:
         if referee_audit.get("boundary_violations"):
             cleaned_lines = [
                 line for line in response_text.splitlines()
-                if "corpus kanıt analizi" not in line.lower() and "hedef profil" not in line.lower()
+                if "corpus evidence analysis" not in line.lower()
+                and "target profile" not in line.lower()
+                and "corpus kanıt analizi" not in line.lower()
+                and "hedef profil" not in line.lower()
             ]
             response_text = "\n".join(cleaned_lines).strip() or response_text
             referee_audit = self.evaluator.verify_stylometric_and_epistemic_fidelity(response_text)

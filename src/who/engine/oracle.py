@@ -56,6 +56,7 @@ class Oracle:
             "- Never make absolute or deterministic claims about hidden intentions.\n"
             "- Frame your answer using: 'Based on observed evidence from [Sources]...', 'The data suggests a plausible alignment with...'\n"
             "- Compute and explicitly output an estimated Confidence Score: X% based on quote depth.\n"
+            "- Respond in the same language as the user's QUESTION.\n"
         )
 
         user_prompt = (

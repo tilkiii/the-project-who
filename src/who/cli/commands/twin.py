@@ -111,21 +111,21 @@ def psych_insights(
 
     console.print(Panel(report.get("report_markdown", ""), title=f"[bold cyan]Scientific Behavioral Report: {target}[/bold cyan]", border_style="cyan"))
 
-    table = Table(title=f"🔬 İnovatif Psikoinformatik & Epistemik Metrikler: {target}", header_style="bold magenta")
-    table.add_column("Yetenek / Analiz Boyutu", style="bold white", width=34)
-    table.add_column("Olasılıksal Çıkarım & Temellendirilmiş Bulgu", style="cyan")
+    table = Table(title=f"🔬 Psychoinformatic & Epistemic Metrics: {target}", header_style="bold magenta")
+    table.add_column("Capability / Analysis Dimension", style="bold white", width=34)
+    table.add_column("Probabilistic Inference & Grounded Finding", style="cyan")
 
     table.add_row(
-        "Cognitive Chronomics (Sirkadyen)",
-        report.get("chronomics_statement", "Hedefin gece ve gündüz metinleri arasında sirkadyen sapma analizi yapıldı.")
+        "Cognitive Chronomics (Circadian)",
+        report.get("chronomics_statement", "Circadian drift analysis completed across daytime and nocturnal corpus segments.")
     )
     table.add_row(
         "Graph Cognitive Dissonance",
-        report.get("dissonance_statement", "Graf üzerinde karşıt kavram kümelenmeleri ve [CONTRADICTS] kenarları denetlendi.")
+        report.get("dissonance_statement", "Knowledge graph evaluated for opposing concept clusters and [CONTRADICTS] edges.")
     )
     table.add_row(
         "Epistemic Manipulation Index",
-        report.get("manipulation_statement", "Dogmatik ve kanıtsız mutlakiyetçi dil eğilimi ölçüldü.")
+        report.get("manipulation_statement", "Dogmatic and unsubstantiated absolutist framing tendency evaluated.")
     )
 
     console.print(table)
@@ -134,19 +134,19 @@ def psych_insights(
     weights = report.get("scientific_weights", [])
     if weights:
         w_table = Table(title=f"📚 Autonomous Academic Research Agent: Calibrated Scientific Weights ({target})", header_style="bold green")
-        w_table.add_column("Davranışsal Belirti (Marker)", style="bold white", width=25)
-        w_table.add_column("Korele Psikometrik Boyut", style="cyan", width=24)
-        w_table.add_column("Korelasyon (r)", style="green", width=14)
-        w_table.add_column("Güven Skoru", style="yellow", width=12)
-        w_table.add_column("Kanıt Kaynağı (DOI)", style="magenta", width=28)
-        w_table.add_column("Ajanın Bilimsel Muhakeme Notu", style="dim")
+        w_table.add_column("Behavioral Marker", style="bold white", width=25)
+        w_table.add_column("Correlated Psychometric", style="cyan", width=24)
+        w_table.add_column("Correlation (r)", style="green", width=14)
+        w_table.add_column("Confidence", style="yellow", width=12)
+        w_table.add_column("Evidence Source (DOI)", style="magenta", width=28)
+        w_table.add_column("Agent Scientific Reasoning Note", style="dim")
 
         for w in weights[:6]:
             w_table.add_row(
                 w.get("behavioral_marker", ""),
                 w.get("correlated_psychometric", ""),
                 f"r={w.get('correlation_coefficient_r', 0.0)}",
-                f"%{int(w.get('confidence_score', 0.8) * 100)}",
+                f"{int(w.get('confidence_score', 0.8) * 100)}%",
                 w.get("evidence_source", ""),
                 w.get("agent_reasoning_note", ""),
             )
@@ -340,7 +340,7 @@ def arena(
     for turn in debate_res.get("transcript", []):
         console.print(Panel(
             turn["statement"],
-            title=f"[bold cyan]Tur {turn['round']}: {turn['speaker']}[/bold cyan]",
+            title=f"[bold cyan]Round {turn['round']}: {turn['speaker']}[/bold cyan]",
             border_style="cyan"
         ))
 
@@ -350,16 +350,16 @@ def arena(
     friction_pts = "\n".join(f"- {f}" for f in synth.get("irreconcilable_frictions", []))
 
     console.print(Panel(
-        f"[bold]Ortak Konsensüs Oranı:[/bold] [green]%{synth.get('consensus_score_pct', 55)}[/green] | "
-        f"[bold]Fikirsel Ayrışma / Sürtünme:[/bold] [red]%{synth.get('consensus_divergence_pct', 45)}[/red]\n"
-        f"[bold]Çapraz Ising Etkileşim Enerjisi (H_AB):[/bold] [cyan]{ising.get('final_hamiltonian_H_AB', 0.0)}[/cyan] "
+        f"[bold]Consensus Score:[/bold] [green]{synth.get('consensus_score_pct', 55)}%[/green] | "
+        f"[bold]Divergence / Friction:[/bold] [red]{synth.get('consensus_divergence_pct', 45)}%[/red]\n"
+        f"[bold]Coupled Ising Interaction Energy (H_AB):[/bold] [cyan]{ising.get('final_hamiltonian_H_AB', 0.0)}[/cyan] "
         f"(ΔH={ising.get('hamiltonian_energy_shift_delta_H', 0.0)}) • "
-        f"[bold]Spin Örtüşmesi (q_AB):[/bold] {ising.get('edwards_anderson_overlap_q_AB', 0.0)} • "
-        f"[bold]Söylem JSD:[/bold] {ising.get('inter_agent_discourse_jsd', 0.0)} "
+        f"[bold]Spin Overlap (q_AB):[/bold] {ising.get('edwards_anderson_overlap_q_AB', 0.0)} • "
+        f"[bold]Discourse JSD:[/bold] {ising.get('inter_agent_discourse_jsd', 0.0)} "
         f"[dim][{ising.get('phase_equilibrium_verdict', 'METASTABLE')}][/dim]\n\n"
-        f"[bold yellow]Ortak Payda:[/bold yellow]\n{common_pts}\n\n"
-        f"[bold red]Temel Çelişkiler:[/bold red]\n{friction_pts}\n\n"
-        f"[bold green]Sentez Çıkarımı:[/bold green] {synth.get('emergent_synthesis', '')}",
-        title="[bold magenta]📊 Swarm Arena Konsensüs & Eşleşik Ising Etkileşim Raporu[/bold magenta]",
+        f"[bold yellow]Common Ground:[/bold yellow]\n{common_pts}\n\n"
+        f"[bold red]Key Frictions:[/bold red]\n{friction_pts}\n\n"
+        f"[bold green]Emergent Synthesis:[/bold green] {synth.get('emergent_synthesis', '')}",
+        title="[bold magenta]📊 Swarm Arena Consensus & Coupled Ising Interaction Report[/bold magenta]",
         border_style="magenta"
     ))

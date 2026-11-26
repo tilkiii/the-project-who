@@ -357,20 +357,20 @@ class SwarmArena:
 
         history_text = ""
         if transcript:
-            history_text = "ÖNCEKİ TURLAR:\n" + "\n".join(
-                f"- [{t['speaker']} (Tur {t['round']})]: {t['statement']}" for t in transcript[-4:]
+            history_text = "PREVIOUS ROUNDS:\n" + "\n".join(
+                f"- [{t['speaker']} (Round {t['round']})]: {t['statement']}" for t in transcript[-4:]
             )
 
         ising_feedback_block = ""
         if live_ising_state:
-            frust_axes = ", ".join(live_ising_state.get("antiferromagnetic_frustrated_axes", [])) or "yok"
-            aligned_axes = ", ".join(live_ising_state.get("ferromagnetic_aligned_axes", [])) or "yok"
+            frust_axes = ", ".join(live_ising_state.get("antiferromagnetic_frustrated_axes", [])) or "none"
+            aligned_axes = ", ".join(live_ising_state.get("ferromagnetic_aligned_axes", [])) or "none"
             ising_feedback_block = (
-                f"ÖNCEKİ TUR EŞLEŞİK ISING ETKİLEŞİM GERİ BESLEMESİ:\n"
+                f"PREVIOUS ROUND COUPLED ISING INTERACTION FEEDBACK:\n"
                 f"- H_AB(t-1) = {live_ising_state.get('final_hamiltonian_H_AB', 0.0)} | "
                 f"q_AB(t-1) = {live_ising_state.get('edwards_anderson_overlap_q_AB', 0.0)}\n"
-                f"- Antiferromanyetik Çatışma Eksenleri (Bu turda doğrudan yanıtla): [{frust_axes}]\n"
-                f"- Ferromanyetik Uzlaşı Eksenleri: [{aligned_axes}]\n\n"
+                f"- Antiferromagnetic Frustrated Axes (address directly this round): [{frust_axes}]\n"
+                f"- Ferromagnetic Aligned Axes: [{aligned_axes}]\n\n"
             )
 
         system_prompt = (
@@ -381,19 +381,19 @@ class SwarmArena:
             "- Never make absolute psychological assertions about opponents; use probabilistic reasoning.\n"
             "- Directly address the preceding speaker's points, highlighting points of alignment or epistemic friction.\n"
             "- Reflect your characteristic vocabulary and intellectual anchors.\n"
-            "- Length: 2 to 4 concise, impactful paragraphs in Turkish."
+            "- Length: 2 to 4 concise, substantive paragraphs in the same language as the debate topic."
         )
 
         user_prompt = (
-            f"TARTIŞMA KONUSU: {self.topic}\n"
-            f"TUR: {round_num}/{self.rounds}\n"
-            f"SENİN KİMLİK VE BİLİŞSEL ANKRAJLARIN:\n"
-            f"- Temel Konseptler: {topics_str}\n"
-            f"- Birincil Alıntılar: {quotes_json}\n\n"
+            f"DEBATE TOPIC: {self.topic}\n"
+            f"ROUND: {round_num}/{self.rounds}\n"
+            f"YOUR IDENTITY & COGNITIVE ANCHORS:\n"
+            f"- Core Concepts: {topics_str}\n"
+            f"- Primary Quotes: {quotes_json}\n\n"
             f"{ising_feedback_block}"
             f"{history_text}\n\n"
-            f"Konuşma sırası sende ({speaker_name}). Konuyu ve önceki konuşmacıların argümanlarını kendi dünya görüşün ve "
-            f"bilimsel/entelektüel duruşun açısından değerlendir."
+            f"It is your turn to speak ({speaker_name}). Evaluate the proposition and prior speakers' arguments "
+            f"from your intellectual and epistemic stance."
         )
 
         try:
@@ -401,9 +401,9 @@ class SwarmArena:
         except Exception as e:
             logger.warning(f"Arena LLM turn generation failed ({e}), using empirical fallback synthesis.")
             statement = (
-                f"Gözlemlenen veriler ışığında, '{self.topic}' meselesine yaklaşımımız kurumsal ve rasyonel zeminlerde "
-                f"şekillenmelidir. Önceki konuşmacının belirttiği noktalar dikkate değer olmakla birlikte, "
-                f"kendi epistemik çerçevemiz açısından değerlendirildiğinde {topics_str} dinamiklerinin göz ardı edilmemesi gerektiği kanaatindeyim."
+                f"Based on observed evidence, our approach to '{self.topic}' should rest on institutional clarity "
+                f"and verifiable principles. While the preceding speaker raises notable points, evaluating this through "
+                f"my epistemic framework indicates that {topics_str} dynamics cannot be overlooked."
             )
 
         return {
@@ -427,7 +427,7 @@ class SwarmArena:
             f"COUPLED ISING HAMILTONIAN (H_AB): {ising_physics['final_hamiltonian_H_AB']} "
             f"(Overlap q_AB={ising_physics['edwards_anderson_overlap_q_AB']}, Discourse JSD={ising_physics['inter_agent_discourse_jsd']})\n\n"
             f"FULL DEBATE TRANSCRIPT:\n{all_text}\n\n"
-            "Analyze the debate and return ONLY valid JSON with this schema:\n"
+            "Analyze the debate and return ONLY valid JSON with this schema (write string values in the same language as the debate topic while keeping JSON keys in English):\n"
             "{\n"
             '  "consensus_divergence_pct": 0-100,\n'
             '  "consensus_score_pct": 0-100,\n'
@@ -455,18 +455,18 @@ class SwarmArena:
             "consensus_divergence_pct": d_score,
             "consensus_score_pct": c_score,
             "common_ground_points": [
-                "Her iki taraf da sürecin rasyonel ve şeffaf bir zeminde yürütülmesi gerektiğinde hemfikirdir.",
-                "Karar alma mekanizmalarında keyfiyetin önlenmesi ortak bir payda olarak öne çıkmaktadır.",
+                "Both participants converge on the need for rational, verifiable, and transparent institutional processes.",
+                "Preventing arbitrary or unchecked decision-making emerges as a shared baseline priority.",
             ],
             "irreconcilable_frictions": [
-                "Bireysel otonomi ile kurumsal hiyerarşik denetim arasındaki önceliklendirme gerilimi."
+                "Prioritization tension between individual autonomy and centralized institutional oversight."
             ],
             "emergent_synthesis": (
-                f"Tartışma, '{self.topic}' konusunda Eşleşik Ising Etkileşim Enerjisi H_AB={ising_physics['final_hamiltonian_H_AB']} "
-                f"(q_AB={ising_physics['edwards_anderson_overlap_q_AB']}, JSD={ising_physics['inter_agent_discourse_jsd']}) "
-                f"düzeyinde [{ising_physics['phase_equilibrium_verdict']}] dengesine yakınsamıştır."
+                f"Debate on '{self.topic}' converged toward a [{ising_physics['phase_equilibrium_verdict']}] regime "
+                f"with Coupled Ising Interaction Energy H_AB={ising_physics['final_hamiltonian_H_AB']} "
+                f"(q_AB={ising_physics['edwards_anderson_overlap_q_AB']}, JSD={ising_physics['inter_agent_discourse_jsd']})."
             ),
-            "most_persuasive_pivot": "Empirik gözlemlere ve meşruiyet çerçevesine yapılan referanslar.",
+            "most_persuasive_pivot": "Appeals anchored in empirical evidence and institutional legitimacy framing.",
         }
 
     def _build_report_markdown(
@@ -487,35 +487,35 @@ class SwarmArena:
             "> All statements are generated by probabilistic digital twins grounded in observed corpus footprints.",
             "> Coupled Ising Spin-Glass Hamiltonian ($H_{AB}$) and Jensen-Shannon Divergence ($\\text{JSD}$) quantify multi-agent phase alignment.\n",
             "---",
-            "## 1. 📊 Epistemik Konsensüs ve Eşleşik Ising Etkileşim Fiziği",
-            f"- **Ortak Konsensüs Düzeyi:** `%{synthesis.get('consensus_score_pct', 55)}`",
-            f"- **Fikirsel Ayrışma / Sürtünme Oranı:** `%{synthesis.get('consensus_divergence_pct', 45)}`",
-            f"- **Çapraz Ising Etkileşim Enerjisi ($H_{{AB}}$):** `{ising_physics.get('final_hamiltonian_H_AB', 0.0)}` "
+            "## 1. 📊 Epistemic Consensus & Coupled Ising Interaction Physics",
+            f"- **Consensus Level:** `{synthesis.get('consensus_score_pct', 55)}%`",
+            f"- **Divergence / Friction:** `{synthesis.get('consensus_divergence_pct', 45)}%`",
+            f"- **Coupled Ising Interaction Energy ($H_{{AB}}$):** `{ising_physics.get('final_hamiltonian_H_AB', 0.0)}` "
             f"($\\Delta H_{{AB}} = {ising_physics.get('hamiltonian_energy_shift_delta_H', 0.0)}$)",
-            f"- **Edwards-Anderson Spin Örtüşmesi ($q_{{AB}}$):** `{ising_physics.get('edwards_anderson_overlap_q_AB', 0.0)}`",
-            f"- **Söylem Bilgi Uzaklığı (JSD):** `{ising_physics.get('inter_agent_discourse_jsd', 0.0)}`",
-            f"- **Faz Dengesi Rejimi:** `{ising_physics.get('phase_equilibrium_verdict', 'METASTABLE')}`",
-            f"- **En Etkili Kırılma Noktası:** {synthesis.get('most_persuasive_pivot', 'Belirtilmedi')}\n",
-            "### 🤝 Ortak Zemin Noktaları (Common Ground):",
+            f"- **Edwards-Anderson Spin Overlap ($q_{{AB}}$):** `{ising_physics.get('edwards_anderson_overlap_q_AB', 0.0)}`",
+            f"- **Discourse Divergence (JSD):** `{ising_physics.get('inter_agent_discourse_jsd', 0.0)}`",
+            f"- **Phase Equilibrium Regime:** `{ising_physics.get('phase_equilibrium_verdict', 'METASTABLE')}`",
+            f"- **Most Persuasive Pivot:** {synthesis.get('most_persuasive_pivot', 'Not specified')}\n",
+            "### 🤝 Common Ground:",
         ]
 
         for cg in synthesis.get("common_ground_points", []):
             lines.append(f"- ✓ {cg}")
 
-        lines.append("\n### ⚡ Uzlaşılamayan Temel Çelişkiler (Irreconcilable Frictions):")
+        lines.append("\n### ⚡ Irreconcilable Frictions:")
         for f in synthesis.get("irreconcilable_frictions", []):
             lines.append(f"- ⚠️ {f}")
 
         lines.extend([
-            "\n### 💡 Ortaya Çıkan Sentez (Emergent Synthesis):",
+            "\n### 💡 Emergent Synthesis:",
             f"{synthesis.get('emergent_synthesis', '')}\n",
             "---",
-            "## 2. 🎙️ Canlı Tartışma Tutanakları (Debate Protocol)\n",
+            "## 2. 🎙️ Live Debate Protocol\n",
         ])
 
         for t in transcript:
             lines.extend([
-                f"### [Tur {t['round']}] {t['speaker']}",
+                f"### [Round {t['round']}] {t['speaker']}",
                 f"{t['statement']}\n",
             ])
 

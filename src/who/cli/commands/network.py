@@ -36,7 +36,7 @@ def network(
     table.add_row("Total Relationships & Edges", str(net_res["total_edges"]))
     table.add_row("Cross-Target Shared Bridges", f"{len(net_res['shared_bridges'])} shared concept/entity bridge(s)")
 
-    top_brokers = ", ".join(f"{b['node']} ({b['connected_target_count']} bağ)" for b in net_res["broker_nodes_ranking"][:3]) or "None"
+    top_brokers = ", ".join(f"{b['node']} ({b['connected_target_count']} links)" for b in net_res["broker_nodes_ranking"][:3]) or "None"
     table.add_row("Top Betweenness Brokers", top_brokers)
 
     console.print(table)

@@ -222,12 +222,10 @@ class CognitiveChronomics:
                 "has_direct_night_corpus": has_night_data,
             },
             "probabilistic_statement": (
-                f"Sirkadyen Sapma: Gözlemlenen korpus verilerine göre, hedefin gece metinlerinde "
-                f"rasyonel süzgeç (epistemic calibration / temkinlilik) gündüze kıyasla %{abs(epistemic_decay_pct)} "
-                f"{'azalmaktadır' if epistemic_decay_pct >= 0 else 'artmaktadır'}. "
-                f"Kelime dağarcığı çeşitliliğinde (TTR) %{abs(lexical_shift_pct)} oranında sapma ve eleştirel "
-                f"yoğunlukta %{abs(critical_drift_pct)} değişim gözlemlenmiştir. "
-                f"(Olasılık Skoru: %{int(timestamp_confidence * 100)})."
+                f"Circadian Drift: Based on observed corpus timestamps, nocturnal epistemic calibration "
+                f"({'decreases' if epistemic_decay_pct >= 0 else 'increases'} by {abs(epistemic_decay_pct)}% compared to daytime). "
+                f"Lexical diversity (TTR) shifts by {abs(lexical_shift_pct)}% and critical tone density changes by "
+                f"{abs(critical_drift_pct)}% (Confidence: {int(timestamp_confidence * 100)}%)."
             ),
         }
 
@@ -322,5 +320,5 @@ class CognitiveChronomics:
                 "critical_valence_increase_pct": 0.0,
                 "confidence_score": 0.0,
             },
-            "probabilistic_statement": "Yetersiz zaman damgalı veri nedeniyle sirkadyen analiz gerçekleştirilemedi.",
+            "probabilistic_statement": "Insufficient timestamped data to perform circadian drift analysis.",
         }

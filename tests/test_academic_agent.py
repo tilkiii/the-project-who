@@ -50,7 +50,7 @@ def test_anomaly_detection_and_query_generation(tmp_path: Path):
         },
         "epistemic_manipulation_index": {
             "score": 0.65,
-            "risk_tier": "YÜKSEK (HIGH_MANIPULATION_RISK)",
+            "risk_tier": "HIGH (HIGH_MANIPULATION_RISK)",
         },
     }
     topics = [{"name": "Institutional Power", "keywords": ["governance", "hierarchy"]}]
@@ -106,7 +106,7 @@ def test_statistical_information_extraction(tmp_path: Path):
     assert "<" in f["p_value"] or "0.001" in f["p_value"]
     assert f["sample_size_n"] >= 1000
     assert "DOI:" in f["evidence_source"]
-    assert "Ajanın Bilimsel Muhakeme Notu" in f["agent_reasoning_note"]
+    assert "Agent Scientific Reasoning Note" in f["agent_reasoning_note"]
 
 
 def test_bayesian_weight_updating_and_persistence(tmp_path: Path):
@@ -131,7 +131,7 @@ def test_bayesian_weight_updating_and_persistence(tmp_path: Path):
             "evidence_source": "DOI:10.1037/xge0009999",
             "doi_url": "https://doi.org/10.1037/xge0009999",
             "confidence_score": 0.90,
-            "agent_reasoning_note": "Ajanın Bilimsel Muhakeme Notu: N=1500 çalışmada r=0.36 bulunmuştur.",
+            "agent_reasoning_note": "Agent Scientific Reasoning Note: N=1500 study observed r=0.36.",
         }
     ]
 
@@ -144,7 +144,7 @@ def test_bayesian_weight_updating_and_persistence(tmp_path: Path):
     # The updated r should be pooled between 0.36 and 0.42
     assert 0.36 <= calibrated_entry["correlation_coefficient_r"] <= 0.42
     assert "DOI:10.1037/xge0009999" in calibrated_entry["evidence_sources"]
-    assert "Bayesyen Fisher-z" in calibrated_entry["agent_reasoning_note"]
+    assert "Bayesian Fisher-z" in calibrated_entry["agent_reasoning_note"]
 
     # Verify JSON files are persisted
     assert (profiles_dir / "scientific_weights.json").exists()

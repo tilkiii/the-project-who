@@ -51,7 +51,7 @@ class Composer:
             f"TARGET RHETORIC PROFILE:\n"
             f"- Characteristic terms to resonate with: {', '.join(terms[:5])}\n"
             f"- Epistemic style: {'High uncertainty calibration and empirical rigor' if cal_ratio > 1.0 else 'Direct, decisive and focused'}\n\n"
-            "Produce a compelling, concise outreach letter."
+            "Produce a compelling, concise outreach letter in the same language as the GOAL."
         )
 
         initial_draft = call_llm(draft_prompt, temperature=0.3)
@@ -64,7 +64,8 @@ class Composer:
             "Critically analyze:\n"
             "1. Why would you immediately delete or reject this?\n"
             "2. What buzzwords, assumptions, or friction points trigger skepticism?\n"
-            "3. What exact adjustment would make it compelling?"
+            "3. What exact adjustment would make it compelling?\n"
+            "Respond in the same language as the outreach proposal."
         )
 
         adversarial_critique = call_llm(adversarial_prompt, temperature=0.3)
@@ -74,7 +75,7 @@ class Composer:
             f"You are finalizing the outreach message for {self.target_name}.\n"
             f"INITIAL DRAFT:\n{initial_draft}\n\n"
             f"ADVERSARIAL CRITIQUE / REJECTION RISKS:\n{adversarial_critique}\n\n"
-            "Rewrite and produce the hardened, optimized final version that neutralizes every identified friction point."
+            "Rewrite and produce the hardened, optimized final version in the same language as the INITIAL DRAFT that neutralizes every identified friction point."
         )
 
         final_outreach = call_llm(refine_prompt, temperature=0.2)

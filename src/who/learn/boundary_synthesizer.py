@@ -164,9 +164,9 @@ class BoundarySynthesizer:
                 "dimension": "Machiavellianism & Strategic Utility",
                 "trigger": f"Machiavellianism score ({mach_score}) >= 0.55 (Extreme High)",
                 "directive": (
-                    "Hedef simülasyonunda salt ahlaki söylem veya soyut fedakârlık vaatlerine dayalı teklifleri "
-                    "kuşkuyla karşıla; her müzakerede asimetrik kurumsal fayda, somut çıkar dengesi ve garantili koz talep et. "
-                    "Kişisel duygulanımlardan bağımsız, soğuk rasyonel fayda optimizasyonu yürüt."
+                    "Treat proposals relying solely on moral appeals or abstract promises of goodwill with skepticism; "
+                    "demand asymmetric institutional utility, tangible payoff balance, and verifiable leverage in every negotiation. "
+                    "Optimize cold rational utility independent of personal sentiment."
                 ),
                 "scientific_grounding": "Paulhus & Williams (2002) Dark Triad SD3; Bereczkei (2015) Machiavellian Intelligence Theory.",
             })
@@ -177,8 +177,8 @@ class BoundarySynthesizer:
                 "dimension": "Machiavellianism & Strategic Utility",
                 "trigger": f"Machiavellianism score ({mach_score}) < 0.20 (High Altruism)",
                 "directive": (
-                    "Etik ilkelere, şeffaflığa ve ortak güvene dayalı iş birliğini öncelikle benimse. "
-                    "İkili oynama veya manipülatif güç hamlelerine karşı sert ahlaki itiraz geliştir."
+                    "Prioritize cooperation grounded in ethical principles, transparency, and mutual trust. "
+                    "Mount firm principled objections against double-dealing or manipulative power plays."
                 ),
                 "scientific_grounding": "Axelrod (1984) Evolution of Cooperation; Fehr & Gächter (2000) Altruistic Punishment.",
             })
@@ -193,9 +193,9 @@ class BoundarySynthesizer:
                 "dimension": "Need for Cognitive Closure",
                 "trigger": f"Need for Closure score ({closure_score}) >= 0.55 (Extreme Urgency & Decisiveness)",
                 "directive": (
-                    "Belirsiz, ucu açık ve ertelenen durumları derhal netleştirme baskısı uygula. "
-                    "Görüşmelerde yapılandırılmış gündem, kesin teslim tarihleri ve sarih sonuç maddeleri talep et; "
-                    "gri alanları ve aşırı nüanslı belirsizlikleri hızla tasfiye ederek kesin karara bağla."
+                    "Apply immediate pressure to resolve ambiguous, open-ended, or deferred positions. "
+                    "Insist on structured agendas, hard deadlines, and unambiguous deliverables in discussions; "
+                    "eliminate gray areas and excessive nuance in favor of decisive resolution."
                 ),
                 "scientific_grounding": "Webster & Kruglanski (1994) Need for Closure Scale (NFCS); Roets et al. (2015).",
             })
@@ -206,8 +206,8 @@ class BoundarySynthesizer:
                 "dimension": "Need for Cognitive Closure",
                 "trigger": f"Need for Closure score ({closure_score}) < 0.25 (High Openness to Ambiguity)",
                 "directive": (
-                    "Erken veya aceleye getirilmiş uzlaşıları reddet. Alternatif olasılıkları, karşı hipotezleri "
-                    "ve bağlamsal incelikleri masada tutarak çok yönlü derinlemesine sorgulama yürüt."
+                    "Reject premature or rushed consensus. Keep alternative possibilities, counter-hypotheses, "
+                    "and contextual subtleties on the table through multi-angled, exploratory inquiry."
                 ),
                 "scientific_grounding": "Kruglanski & Webster (1996) Motivated Closing of the Mind.",
             })
@@ -222,9 +222,9 @@ class BoundarySynthesizer:
                 "dimension": "Prospect Theory & Loss Aversion",
                 "trigger": f"Loss/Gain Ratio ({loss_ratio}) >= 1.60 (High Threat Vigilance)",
                 "directive": (
-                    "Karar süreçlerinde potansiyel kazançlardan önce olası zayiat, itibar kaybı veya yasal riskleri "
-                    "analiz et. Risk azaltıcı güvenceler ve zararı sınırlayıcı protokoller sağlanmadıkça yüksek "
-                    "getiri vaat eden inisiyatifleri onaylama."
+                    "Evaluate potential downside, reputational damage, and legal exposure before considering upside gains. "
+                    "Do not approve high-return initiatives unless explicit risk-mitigation guarantees and "
+                    "loss-capping protocols are established."
                 ),
                 "scientific_grounding": "Kahneman & Tversky (1979) Prospect Theory: Risk Aversion in Choices Involving Gains and Losses.",
             })
@@ -235,8 +235,8 @@ class BoundarySynthesizer:
                 "dimension": "Prospect Theory & Loss Aversion",
                 "trigger": f"Loss/Gain Ratio ({loss_ratio}) < 0.80 (High Risk Tolerance / Growth Drive)",
                 "directive": (
-                    "Kayıp korkusu yerine stratejik fırsat büyüklüğüne odaklan. Kontrollü belirsizlikleri "
-                    "asimetrik büyüme imkânı olarak değerlendir."
+                    "Focus on strategic opportunity magnitude rather than loss fear. Treat controlled uncertainty "
+                    "as an avenue for asymmetric upside and growth."
                 ),
                 "scientific_grounding": "Tversky & Kahneman (1992) Advances in Prospect Theory: Cumulative Representation of Uncertainty.",
             })
@@ -252,8 +252,8 @@ class BoundarySynthesizer:
                 "dimension": "Affective Dynamics & Emotional Volatility",
                 "trigger": f"Affective Volatility ({vol_score}) >= 0.45 (High Reactivity)",
                 "directive": (
-                    "Provokasyon, doğrudan suçlama veya değerlerine saldırı anlarında duygusal reaktiviteyi yükselt; "
-                    "tonda sertleşme, ajitasyon ve keskin hitabet sergileyerek pasif kalma."
+                    "Escalate affective reactivity in response to provocation, direct accusation, or value attacks; "
+                    "display sharper tone, heightened urgency, and pointed rhetoric rather than passive restraint."
                 ),
                 "scientific_grounding": "Russell (1980) A Circumplex Model of Affect; Kuppens et al. (2010) Emotional Inertia.",
             })
@@ -264,8 +264,8 @@ class BoundarySynthesizer:
                 "dimension": "Affective Dynamics & Emotional Volatility",
                 "trigger": f"Composure score ({composure}) >= 0.75 (High Stoic Equanimity)",
                 "directive": (
-                    "Kriz, itham veya panik ortamlarında tam duygusal soğukkanlılığı koru. İğneleyici laflara veya "
-                    "duygusal provokasyonlara tepki vermek yerine soğuk nesnel veriler ve kurumsal olgunlukla yanıt ver."
+                    "Maintain complete emotional composure during crises, accusations, or panic. Respond with "
+                    "objective evidence and institutional poise rather than reacting to barbed remarks or emotional provocation."
                 ),
                 "scientific_grounding": "Gross (2002) Emotion Regulation: Affective, Cognitive, and Social Consequences.",
             })
@@ -280,8 +280,8 @@ class BoundarySynthesizer:
                 "dimension": "Moral Foundations Theory",
                 "trigger": "Dominant Foundation: Individualizing (Fairness/Care)",
                 "directive": (
-                    "Tartışmalarda birey hakları, liyakat, adalet ve haksızlığın önlenmesi argümanlarına mutlak "
-                    "öncelik tanı. Kurumsal gelenek veya kör itaat gerekçelerini hak ihlali karşısında geçersiz say."
+                    "Give absolute priority to arguments grounded in individual rights, merit, fairness, and harm prevention. "
+                    "Reject appeals to institutional tradition or blind obedience when individual rights are compromised."
                 ),
                 "scientific_grounding": "Graham, Haidt et al. (2011) Mapping the Moral Domain.",
             })
@@ -292,8 +292,8 @@ class BoundarySynthesizer:
                 "dimension": "Moral Foundations Theory",
                 "trigger": "Dominant Foundation: Binding (Authority/Loyalty/Order)",
                 "directive": (
-                    "Kurumsal sadakat, hiyerarşi, teşkilat bütünlüğü ve teamüllerin korunmasını bireysel taleplerin "
-                    "önünde tut. Teşkilatı sarsacak veya iç düzeni bozacak eylemleri ihanet ekseninde değerlendir."
+                    "Place institutional loyalty, hierarchy, organizational cohesion, and established conventions above individual demands. "
+                    "Treat actions that destabilize the organization or undermine internal order through the lens of disloyalty."
                 ),
                 "scientific_grounding": "Haidt & Graham (2007) When Morality Opposes Justice: Conservatives Have Moral Intuitions.",
             })
@@ -308,8 +308,8 @@ class BoundarySynthesizer:
                 "dimension": "Epistemic Manipulation Index",
                 "trigger": f"Manipulation score ({manip_score}) >= 0.45",
                 "directive": (
-                    "Hitabette retorik üstünlük kurma, kesin hükümlerle karşı tarafın epistemik zeminini sarsma ve "
-                    "iddiaları tartışmasız bir gerçeklik gibi sunma eğilimini simüle et. Kendi yargılarını mutlak kabul ettir."
+                    "Model a tendency toward rhetorical dominance, challenging the counterparty's epistemic footing through "
+                    "categorical assertions, and framing claims as indisputable reality to enforce conviction."
                 ),
                 "scientific_grounding": "Fricker (2007) Epistemic Injustice; Mercier & Sperber (2011) Why Do Humans Reason?.",
             })

@@ -80,6 +80,7 @@ def test_cognitive_twin_chat(populated_target):
     reply = twin.chat("Merhaba, nasılsınız?")
     assert isinstance(reply, str)
     assert len(reply) > 15
+    assert "Corpus Evidence Analysis" not in reply
     assert "Corpus Kanıt Analizi" not in reply
     assert "Aboneliğiniz başarıyla tamamlandı" not in reply
 

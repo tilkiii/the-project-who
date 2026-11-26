@@ -205,7 +205,7 @@ class MindsetProfiler:
         chron_lex = chron_drift.get("lexical_diversity_decay_pct", 8)
         chron_stmt = chronomics.get(
             "probabilistic_statement",
-            f"Sirkadyen Sapma: Hedefin gece metinlerinde rasyonel süzgeç (epistemic doubt) gündüze kıyasla %{abs(chron_decay)} oranında azalmaktadır.",
+            f"Circadian Drift: Based on observed corpus timestamps, nocturnal epistemic calibration shifts by {abs(chron_decay)}% compared to daytime.",
         )
 
         # 2. Cognitive Dissonance
@@ -213,29 +213,29 @@ class MindsetProfiler:
         dissonance_clusters = dissonance.get("dissonance_clusters", [])
         if dissonance_clusters:
             first_c = dissonance_clusters[0]
-            concepts_str = " ile ".join(first_c.get("concepts", [])[:2])
+            concepts_str = " and ".join(first_c.get("concepts", [])[:2])
             dissonance_pct = int(first_c.get("mean_dissonance_score", 0.75) * 100)
-            dissonance_stmt = f"Bilişsel Çelişki Kümesi: [{concepts_str}] arasında %{dissonance_pct} olasılıkla çelişen inanç örüntüsü saptanmıştır."
+            dissonance_stmt = f"Cognitive Dissonance Cluster: Conflicting belief pattern detected between [{concepts_str}] at {dissonance_pct}% likelihood."
             clusters_block = "\n".join(
-                f"- **Küme #{c.get('cluster_id')}:** [{', '.join(c.get('concepts', []))}] (Çelişki Skoru: %{int(c.get('mean_dissonance_score', 0) * 100)}, Odak: {c.get('primary_conflict', '')})"
+                f"- **Cluster #{c.get('cluster_id')}:** [{', '.join(c.get('concepts', []))}] (Dissonance Score: {int(c.get('mean_dissonance_score', 0) * 100)}%, Focus: {c.get('primary_conflict', '')})"
                 for c in dissonance_clusters[:3]
             )
         else:
             dissonance_stmt = dissonance.get(
                 "probabilistic_statement",
-                "Bilişsel Çelişki Kümesi: Belirgin bir taban tabana zıtlık saptanmamış olup kavramsal örüntü tutarlıdır (%0 çelişki).",
+                "Cognitive Dissonance Cluster: No pronounced contradiction detected; conceptual coherence is high (0% dissonance).",
             )
-            clusters_block = "- Belirgin çelişki kümesi saptanmadı (Kavramsal tutarlılık yüksek)."
+            clusters_block = "- No pronounced contradiction clusters detected (high conceptual coherence)."
 
         # 3. Epistemic Manipulation Index
         manipulation = features.get("epistemic_manipulation_index", {})
         manip_score_pct = manipulation.get("score_pct", "18%")
-        manip_tier = manipulation.get("risk_tier", "DÜŞÜK / RASYONEL (EMPIRICALLY_CALIBRATED)")
+        manip_tier = manipulation.get("risk_tier", "LOW / CALIBRATED (EMPIRICALLY_CALIBRATED)")
         manip_dogmatic = manipulation.get("dogmatic_density_per_k", 2.1)
         manip_evidence = manipulation.get("evidence_density_per_k", 11.4)
         manip_stmt = manipulation.get(
             "probabilistic_statement",
-            f"Manipülasyon Endeksi: Kanıtsız iddialarda mutlak kesinlik dili kullanımı eğilimi {manip_score_pct} seviyesindedir.",
+            f"Epistemic Manipulation Index: Absolutist unsubstantiated framing tendency estimated at {manip_score_pct}.",
         )
 
         return f"""# Evidence-Based Cognitive & Mindset Profile: {self.target_name}
@@ -272,24 +272,24 @@ Direct primary evidence anchors:
 
 ---
 
-## 5. Cognitive Chronomics (Sirkadyen Bilişsel Kronomik)
-- **Sirkadyen Sapma:** {chron_stmt}
-- **Gece / Gündüz Epistemik Süzgeç Değişimi:** `{chron_decay}%`
-- **Kelime Dağarcığı Çeşitliliği (TTR) Sirkadyen Sapması:** `{chron_lex}%`
+## 5. Cognitive Chronomics (Circadian Drift)
+- **Circadian Drift:** {chron_stmt}
+- **Nocturnal vs. Daytime Epistemic Filter Shift:** `{chron_decay}%`
+- **Lexical Diversity (TTR) Circadian Shift:** `{chron_lex}%`
 
 ---
 
-## 6. Graph-Driven Cognitive Dissonance (Graf Tabanlı Bilişsel Çelişki)
-- **Bilişsel Çelişki Kümesi:** {dissonance_stmt}
+## 6. Graph-Driven Cognitive Dissonance
+- **Cognitive Dissonance Cluster:** {dissonance_stmt}
 {clusters_block}
 
 ---
 
-## 7. Epistemic Gaslighting & Manipulation İndeksi
-- **Manipülasyon Endeksi:** {manip_stmt}
-- **Dogmatik / Mutlakiyetçi Dil Yoğunluğu:** `{manip_dogmatic}` / 1000 kelime
-- **Kanıta Dayalı Temkinlilik Yoğunluğu:** `{manip_evidence}` / 1000 kelime
-- **Olasılıksal Risk Seviyesi:** `{manip_tier}`
+## 7. Epistemic Manipulation & Rhetorical Dogmatism Index
+- **Epistemic Manipulation Index:** {manip_stmt}
+- **Dogmatic / Absolutist Density:** `{manip_dogmatic}` / 1000 words
+- **Evidence-Calibrated Caution Density:** `{manip_evidence}` / 1000 words
+- **Probabilistic Risk Tier:** `{manip_tier}`
 
 ---
 

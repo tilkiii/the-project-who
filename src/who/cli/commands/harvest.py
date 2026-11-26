@@ -217,7 +217,7 @@ def monitor(
         sim_dt = datetime.now()
         feed_items.append({
             "title": f"Live Capture: {target} nocturnal discourse",
-            "content": "Kesinlikle herkes bilmelidir ki, eski usuller tamamen çökmüştür. Asla başka bir alternatif kabul edilemez, durum şüphesiz ortadadır.",
+            "content": "Certainly everyone knows that the legacy system has completely failed. Undoubtedly no alternative can ever be accepted, and there is no other way forward.",
             "url": "https://example.org/simulated_stream",
             "timestamp": sim_dt.replace(hour=2, minute=15).isoformat(),
             "source_type": "simulated_live_feed",

@@ -71,24 +71,28 @@ class OfflineProvider(BaseLLMProvider):
             )
 
         # Interactive Twin Chat conversational fallback
+        combined_ctx = f"{system_prompt or ''}\n{prompt}"
         user_chat_match = re.search(r"(?:USER|Kullanıcı):\s*(.+?)(?:\n|$)", prompt, re.IGNORECASE)
-        target_name_match = re.search(r"digital twin of\s+([^\n\.]+)", prompt, re.IGNORECASE) or re.search(r"bilişsel dijital ikizisin:\s*([^\n\.]+)", prompt, re.IGNORECASE)
-        twin_name = target_name_match.group(1).strip() if target_name_match else "Dijital İkiz"
+        target_name_match = (
+            re.search(r"digital twin of\s+([^\n\.]+)", combined_ctx, re.IGNORECASE)
+            or re.search(r"bilişsel dijital ikizisin[:\s]+([^\n\.]+)", combined_ctx, re.IGNORECASE)
+        )
+        twin_name = target_name_match.group(1).strip() if target_name_match else "Digital Twin"
 
         if user_chat_match and "SCENARIO PROPOSITION" not in prompt:
             user_msg = user_chat_match.group(1).strip()
             from who.utils.text_cleaner import is_boilerplate_or_junk
-            raw_quotes = re.findall(r'Quotation:\s*"([^"]{20,})"', prompt)
+            raw_quotes = re.findall(r'(?:Quotation|Alıntı):\s*"([^"]{20,})"', prompt)
             clean_quotes = [q.strip() for q in raw_quotes if not is_boilerplate_or_junk(q.strip())]
 
             lines = [
-                f"Merhabalar. Ben {twin_name}.",
-                f"Söylediklerinizi dinliyorum: \"{user_msg}\".",
+                f"Hello. I am {twin_name}.",
+                f'I hear your point: "{user_msg}".',
                 "",
-                "Benim düşünsel dünyamda ve ilkelerimde kurumsal nezaket, rasyonellik ve diyalog açıklığı esastır. Bu çerçevede her türlü görüş ve eleştiriyi olgunlukla karşılarım.",
+                "In my framing, analytical clarity, grounded reasoning, and open dialogue are essential. I evaluate proposals carefully against verifiable evidence.",
             ]
             if clean_quotes:
-                lines.append(f"\nBu bağlamda daha önce de ifade ettiğim üzere: \"{clean_quotes[0]}\"")
+                lines.append(f'\nAs reflected in my prior statements: "{clean_quotes[0]}"')
             lines.append("\n(Offline mode: Configure an API key in .env for full model generation.)")
             return "\n".join(lines)
 
@@ -99,53 +103,51 @@ class OfflineProvider(BaseLLMProvider):
         question = (
             scenario_match.group(1).strip()
             if is_scenario
-            else (question_match.group(1).strip() if question_match else (user_chat_match.group(1).strip() if user_chat_match else "bu konu"))
+            else (question_match.group(1).strip() if question_match else (user_chat_match.group(1).strip() if user_chat_match else "this topic"))
         )
 
         from who.utils.text_cleaner import is_boilerplate_or_junk
-        raw_quotes = re.findall(r'Quotation:\s*"([^"]{20,})"', prompt)
+        raw_quotes = re.findall(r'(?:Quotation|Alıntı):\s*"([^"]{20,})"', prompt)
         usable_quotes = [q.strip() for q in raw_quotes if not is_boilerplate_or_junk(q.strip()) and len(q.strip()) > 30][:3]
         graph_edges = re.findall(r"Graph Edge:\s*(.+?)(?:\n|$)", prompt)
 
-        label = "**Senaryo:**" if is_scenario else "**Soru:**"
+        label = "**Scenario:**" if is_scenario else "**Question:**"
         lines = [f"{label} {question}\n"]
 
         if is_scenario:
-            lines.append("**Olası Tepki Simülasyonu (Corpus Tabanlı):**\n")
+            lines.append("**Plausible Reaction Simulation (Corpus-Grounded):**\n")
             lines.append(
-                "**1. Birincil Hipotez:** Gözlemlenen corpus sinyallerine dayanarak, "
-                "hedef profilin bu senaryoya kurumsal ve analitik bir perspektifle yaklaşmasının "
-                "yüksek olasılıkta olduğu değerlendirilmektedir.\n"
+                "**1. Primary Hypothesis:** Based on observed corpus signals, the subject profile is plausibly "
+                "inclined to approach this scenario from an analytical and principle-driven perspective.\n"
             )
             if usable_quotes:
-                lines.append("**Destekleyici Corpus Kanıtları:**")
+                lines.append("**Supporting Corpus Evidence:**")
                 for i, q in enumerate(usable_quotes, 1):
                     lines.append(f'> [{i}] "{q[:200].replace(chr(10), " ")}"')
             lines.append(
-                "\n**2. Olasılıklı İtirazlar:** Spekülatif çerçevelemeye karşı epistemik "
-                "rezerv gösterilmesi beklenmektedir.\n"
-                "**3. Güven Skoru:** 76% (Corpus derinliğine göre hesaplanmıştır)"
+                "\n**2. Likely Counter-Considerations:** Epistemic caution is expected regarding speculative "
+                "or unverified framing.\n"
+                "**3. Confidence Score:** 76% (Estimated from corpus coverage)"
             )
         else:
             if usable_quotes:
-                lines.append("**Corpus Kanıt Analizi:**\n")
+                lines.append("**Corpus Evidence Analysis:**\n")
                 lines.append(
-                    "Birincil kaynak corpus incelendiğinde aşağıdaki doğrudan kanıtlar saptanmıştır:\n"
+                    "Direct evidence retrieved from the primary source corpus:\n"
                 )
                 for i, q in enumerate(usable_quotes, 1):
                     lines.append(f'> [{i}] "{q.replace(chr(10), " ")}"\n')
                 lines.append(
-                    "\nBu alıntılar ışığında veriler, hedef profilin konuya dair tutarlı ve "
-                    "kurumsal bir perspektif sergilediğine yüksek olasılıkla işaret etmektedir."
+                    "\nBased on these observed quotes, the corpus suggests a consistent analytical stance on this topic."
                 )
             else:
                 lines.append(
-                    "Mevcut corpus'ta bu soruya doğrudan yanıt veren birincil alıntı "
-                    "bulunamamıştır. Daha fazla kaynak eklenmesi önerilir."
+                    "No direct primary quotes matching this question were found in the current corpus. "
+                    "Adding more source material is recommended."
                 )
 
         if graph_edges:
-            lines.append(f"\n**Graf Bağlantıları:** {'  |  '.join(graph_edges[:3])}")
+            lines.append(f"\n**Graph Connections:** {'  |  '.join(graph_edges[:3])}")
 
         lines.append(
             "\n\n(Offline mode: Configure an API key in .env for full model generation.)"

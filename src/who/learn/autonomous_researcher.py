@@ -533,7 +533,7 @@ class AutonomousAcademicResearcher:
             "- Extract significance (p-value, e.g., 'p < 0.001', 'p < 0.05').\n"
             "- Extract sample size (N).\n"
             "- Evaluate methodology rigor.\n"
-            "- Formulate 'Ajanın Bilimsel Muhakeme Notu' (Agent's Scientific Reasoning Note) in Turkish.\n"
+            "- Formulate 'Agent Scientific Reasoning Note' in clear, concise English.\n"
             "- Return a valid JSON array matching the requested schema.\n"
         )
 
@@ -554,7 +554,7 @@ class AutonomousAcademicResearcher:
             '    "confidence_score": 0.88,\n'
             f'    "evidence_source": "{doi}",\n'
             f'    "doi_url": "{doi_url}",\n'
-            '    "agent_reasoning_note": "Ajanın Bilimsel Muhakeme Notu: N=1450 katılımcılı çalışmada [Marker] ile [Boyut] arasında r=0.38 (p<0.001) korelasyon saptanmıştır."\n'
+            '    "agent_reasoning_note": "Agent Scientific Reasoning Note: In a cohort of N=1450 participants, a statistically significant correlation of r=0.38 (p<0.001) was observed between [Marker] and [Dimension]."\n'
             "  }\n"
             "]"
         )
@@ -648,10 +648,10 @@ class AutonomousAcademicResearcher:
         confidence = min(0.96, 0.65 + (min(final_n, 4000) / 4000.0) * 0.25)
 
         reasoning = (
-            f"Ajanın Bilimsel Muhakeme Notu: '{paper_title[:80]}' başlıklı hakemli çalışmada "
-            f"(N={final_n}), '{behavioral_marker}' belirtisi ile '{default_trait}' arasında "
-            f"istatistiksel olarak anlamlı r={final_r} ({p_val}) korelasyonu saptanmıştır. "
-            f"Metodolojik güven katsayısı %{int(confidence * 100)} olarak değerlendirilmiştir."
+            f"Agent Scientific Reasoning Note: In the study '{paper_title[:80]}' "
+            f"(N={final_n}), a statistically significant correlation of r={final_r} ({p_val}) "
+            f"was mapped between '{behavioral_marker}' and '{default_trait}' "
+            f"(Methodological confidence: {int(confidence * 100)}%)."
         )
 
         return [{
@@ -760,9 +760,9 @@ class AutonomousAcademicResearcher:
                     doi_urls.append(new_doi_url)
 
                 bayesian_note = (
-                    f"Ajanın Bilimsel Muhakeme Notu: Önceki r={prior_r} (N={prior_n} katılımcı), "
-                    f"yeni bulgu ({new_doi}, N={new_n}, r={new_r}) ile Bayesyen Fisher-z meta-analitik "
-                    f"ağırlıklandırmasına tabi tutulmuş ve r={r_calibrated} olarak güncellenmiştir (Toplam N={total_n})."
+                    f"Agent Scientific Reasoning Note: Prior r={prior_r} (N={prior_n}) pooled with "
+                    f"new finding ({new_doi}, N={new_n}, r={new_r}) via Bayesian Fisher-z meta-analytic "
+                    f"updating, yielding calibrated r={r_calibrated} (Total N={total_n})."
                 )
 
                 weights_dict[key] = {
@@ -867,7 +867,7 @@ class AutonomousAcademicResearcher:
                     "evidence_sources": ["DOI:10.1016/j.chb.2024.108123", "DOI:10.1177/0261927X09351676"],
                     "doi_url": "https://doi.org/10.1016/j.chb.2024.108123",
                     "bayesian_updates_count": 1,
-                    "agent_reasoning_note": "Ajanın Bilimsel Muhakeme Notu: 2,450 katılımcılı büyük kohortta benmerkezci zamir kullanımı (I-talk) ile nevrotik yatkınlık arasında pozitif ve istatistiksel olarak anlamlı (r=0.42, p<0.001) korelasyon doğrulanmıştır.",
+                    "agent_reasoning_note": "Agent Scientific Reasoning Note: Across a 2,450-participant cohort, self-referential pronoun usage (I-talk) showed a statistically significant positive correlation with neuroticism (r=0.42, p<0.001).",
                     "extracted_at": "2026-01-15T12:00:00Z",
                 },
                 "high_pronoun_density_we::Social Cohesion": {
@@ -880,7 +880,7 @@ class AutonomousAcademicResearcher:
                     "evidence_sources": ["DOI:10.1177/0261927X09351676"],
                     "doi_url": "https://doi.org/10.1177/0261927X09351676",
                     "bayesian_updates_count": 1,
-                    "agent_reasoning_note": "Ajanın Bilimsel Muhakeme Notu: Çoğul birinci şahıs kullanımı (we-talk), kolektif kurumsal aidiyet ve kurumsal sadakat göstergeleriyle orta-yüksek düzeyde (r=0.39, p<0.001) örtüşmektedir.",
+                    "agent_reasoning_note": "Agent Scientific Reasoning Note: First-person plural pronoun usage (we-talk) shows moderate-to-strong alignment with collective institutional belonging and group loyalty indicators (r=0.39, p<0.001).",
                     "extracted_at": "2026-01-15T12:00:00Z",
                 },
                 "epistemic_overconfidence_dogmatism::Cognitive Closure": {
@@ -893,7 +893,7 @@ class AutonomousAcademicResearcher:
                     "evidence_sources": ["DOI:10.1037/xge0000451"],
                     "doi_url": "https://doi.org/10.1037/xge0000451",
                     "bayesian_updates_count": 1,
-                    "agent_reasoning_note": "Ajanın Bilimsel Muhakeme Notu: Kanıtsız mutlak kesinlik dili (asla, şüphesiz) bilişsel kapalılık ihtiyacı (need for cognitive closure) ve teyit yanlılığı ile r=0.48 düzeyinde güçlü bir korelasyon sergilemektedir.",
+                    "agent_reasoning_note": "Agent Scientific Reasoning Note: Unsubstantiated absolutist certainty markers (e.g., never, undoubtedly) correlate strongly with need for cognitive closure and confirmation bias (r=0.48).",
                     "extracted_at": "2026-01-15T12:00:00Z",
                 },
                 "circadian_cognitive_drift_night::Nocturnal Executive Control Relaxation": {
@@ -906,7 +906,7 @@ class AutonomousAcademicResearcher:
                     "evidence_sources": ["DOI:10.1016/j.smrv.2023.101824"],
                     "doi_url": "https://doi.org/10.1016/j.smrv.2023.101824",
                     "bayesian_updates_count": 1,
-                    "agent_reasoning_note": "Ajanın Bilimsel Muhakeme Notu: Sirkadyen gece döngüsünde prefrontal korteks yürütücü işlev süzgecinin gevşemesi sonucu temkinlilik dili %28 oranında gerilemekte ve duygusal tepkisellik r=0.36 düzeyinde artmaktadır.",
+                    "agent_reasoning_note": "Agent Scientific Reasoning Note: During the nocturnal circadian window, relaxation of prefrontal executive filtering corresponds to a 28% drop in hedging language and increased affective reactivity (r=0.36).",
                     "extracted_at": "2026-01-15T12:00:00Z",
                 },
                 "epistemic_gaslighting_dogmatism::Rhetorical Dominance": {
@@ -919,7 +919,7 @@ class AutonomousAcademicResearcher:
                     "evidence_sources": ["DOI:10.1016/j.cogsys.2021.04.002"],
                     "doi_url": "https://doi.org/10.1016/j.cogsys.2021.04.002",
                     "bayesian_updates_count": 1,
-                    "agent_reasoning_note": "Ajanın Bilimsel Muhakeme Notu: Kanıtsız mutlakiyetçi dil kullanımı, muhatabı epistemik olarak baskılama (epistemic injustice/gaslighting) ve retorik hakimiyet kurma taktiğiyle r=0.44 oranında koreledir.",
+                    "agent_reasoning_note": "Agent Scientific Reasoning Note: Unsubstantiated absolutist framing correlates with epistemic pressure tactics (epistemic injustice/gaslighting) and rhetorical dominance (r=0.44).",
                     "extracted_at": "2026-01-15T12:00:00Z",
                 },
                 "machiavellian_strategic_orientation::Strategic Utility & Tactical Leverage": {
@@ -932,7 +932,7 @@ class AutonomousAcademicResearcher:
                     "evidence_sources": ["DOI:10.1016/j.jrp.2013.08.003"],
                     "doi_url": "https://doi.org/10.1016/j.jrp.2013.08.003",
                     "bayesian_updates_count": 1,
-                    "agent_reasoning_note": "Ajanın Bilimsel Muhakeme Notu: Makyavelist ve faydacı dil örüntüleri, araçsal güç kazanımı ve müzakerelerde asimetrik avantaj arayışı ile r=0.45 düzeyinde koreledir.",
+                    "agent_reasoning_note": "Agent Scientific Reasoning Note: Machiavellian and utilitarian discourse patterns correlate with instrumental power seeking and asymmetric advantage framing in negotiations (r=0.45).",
                     "extracted_at": "2026-01-15T12:00:00Z",
                 },
                 "high_need_for_cognitive_closure::Ambiguity Intolerance & Decision Freezing": {
@@ -945,7 +945,7 @@ class AutonomousAcademicResearcher:
                     "evidence_sources": ["DOI:10.1037/0022-3514.67.6.1049"],
                     "doi_url": "https://doi.org/10.1037/0022-3514.67.6.1049",
                     "bayesian_updates_count": 1,
-                    "agent_reasoning_note": "Ajanın Bilimsel Muhakeme Notu: Bilişsel kapalılık ihtiyacı (NFCS), belirsizliğe tahammülsüzlük ve aceleci bağlayıcı karar alma arzusuyla r=0.48 oranında güçlü korelasyon taşır.",
+                    "agent_reasoning_note": "Agent Scientific Reasoning Note: Need for cognitive closure (NFCS) strongly correlates with ambiguity intolerance and urgency toward binding, conclusive decisions (r=0.48).",
                     "extracted_at": "2026-01-15T12:00:00Z",
                 },
                 "heightened_loss_aversion_threat_vigilance::Prospect Threat Vigilance & Defensive Risk": {
@@ -958,7 +958,7 @@ class AutonomousAcademicResearcher:
                     "evidence_sources": ["DOI:10.2307/1914185"],
                     "doi_url": "https://doi.org/10.2307/1914185",
                     "bayesian_updates_count": 1,
-                    "agent_reasoning_note": "Ajanın Bilimsel Muhakeme Notu: Prospekt teorisi çerçevesinde kayıp kelime yoğunluğu potansiyel zararlara karşı aşırı teyakkuz (loss aversion lambda ~ 1.85) ile r=0.52 düzeyinde eşleşir.",
+                    "agent_reasoning_note": "Agent Scientific Reasoning Note: Under Prospect Theory, elevated loss-lexicon density aligns with heightened threat vigilance (loss aversion lambda ~ 1.85) (r=0.52).",
                     "extracted_at": "2026-01-15T12:00:00Z",
                 },
                 "affective_volatility_reactivity::Emotional Instability & Surge Dynamics": {
@@ -971,7 +971,7 @@ class AutonomousAcademicResearcher:
                     "evidence_sources": ["DOI:10.1037/0022-3514.89.5.795"],
                     "doi_url": "https://doi.org/10.1037/0022-3514.89.5.795",
                     "bayesian_updates_count": 1,
-                    "agent_reasoning_note": "Ajanın Bilimsel Muhakeme Notu: Afektif dalgalanma ve ajitasyon sıklığı, baskı altındaki duygusal reaktivite ile r=0.41 düzeyinde anlamlı bir korelasyon gösterir.",
+                    "agent_reasoning_note": "Agent Scientific Reasoning Note: Frequency of affective oscillation and agitation markers correlates meaningfully with emotional reactivity under pressure (r=0.41).",
                     "extracted_at": "2026-01-15T12:00:00Z",
                 },
                 "moral_foundation_individual_fairness::Moral Foundation (Fairness/Care)": {
@@ -984,7 +984,7 @@ class AutonomousAcademicResearcher:
                     "evidence_sources": ["DOI:10.1037/a0021847"],
                     "doi_url": "https://doi.org/10.1037/a0021847",
                     "bayesian_updates_count": 1,
-                    "agent_reasoning_note": "Ajanın Bilimsel Muhakeme Notu: Birey odaklı adalet ve şefkat kelime dağarcığı, hak temelli ahlaki temeller profiliyle r=0.46 oranında güçlü bağ sergiler.",
+                    "agent_reasoning_note": "Agent Scientific Reasoning Note: Individual-focused fairness and care vocabulary exhibits a strong association with individualizing Moral Foundations profiles (r=0.46).",
                     "extracted_at": "2026-01-15T12:00:00Z",
                 },
             },
@@ -1201,7 +1201,7 @@ class AutonomousAcademicResearcher:
                     p["agent_reasoning_note"] = f.get("agent_reasoning_note")
                     break
             if "agent_reasoning_note" not in p:
-                p["agent_reasoning_note"] = f"Ajan Notu: Bu çalışma '{topic}' literatürü kapsamında ampirik referans olarak indekslenmiştir."
+                p["agent_reasoning_note"] = f"Agent Note: Indexed as empirical reference literature for '{topic}'."
             # Ensure standard alias fields for SDK & examples
             p.setdefault("source", p.get("repository", "Academic"))
             p.setdefault("url", p.get("doi_or_url") or p.get("doi", ""))
@@ -1334,7 +1334,7 @@ class AutonomousAcademicResearcher:
                 "abstract": "Pennebaker et al. demonstrate that functional word usage (pronouns, prepositions, epistemic particles) reliably reflects attentional focus, social integration, and cognitive complexity.",
                 "repository": "Journal of Language and Social Psychology",
                 "query_matched": "canonical_linguistic_inquiry",
-                "agent_reasoning_note": "Ajanın Bilimsel Muhakeme Notu: N=1850 kohortunda birinci şahıs çoğul zamirler (we-talk) ile kolektif aidiyet arasında r=0.39 korelasyon doğrulanmıştır.",
+                "agent_reasoning_note": "Agent Scientific Reasoning Note: In an N=1850 cohort, first-person plural pronouns (we-talk) correlated with collective belonging at r=0.39.",
             },
             {
                 "title": "Epistemic Humility and Cognitive Calibration in Complex Reasoning",
@@ -1344,7 +1344,7 @@ class AutonomousAcademicResearcher:
                 "abstract": "Explores how verbal uncertainty markers correlate with probabilistic forecasting skill, analytical calibration, and resistance to confirmation bias.",
                 "repository": "Journal of Experimental Psychology",
                 "query_matched": "canonical_epistemic_calibration",
-                "agent_reasoning_note": "Ajanın Bilimsel Muhakeme Notu: Kanıtsız mutlak kesinlik dili (asla, şüphesiz) bilişsel kapalılık ihtiyacı ile r=0.48 düzeyinde koreledir.",
+                "agent_reasoning_note": "Agent Scientific Reasoning Note: Unsubstantiated absolutist certainty markers (e.g., never, undoubtedly) correlate with need for cognitive closure at r=0.48.",
             },
             {
                 "title": "Tracking Temporal Shift in Ideological and Cognitive Networks",
@@ -1354,7 +1354,7 @@ class AutonomousAcademicResearcher:
                 "abstract": "Demonstrates temporal topic modeling and semantic graph analysis for mapping ideological persistence, abandonment, and emerging problem formulations.",
                 "repository": "Cognitive Systems Research",
                 "query_matched": "canonical_topic_evolution",
-                "agent_reasoning_note": "Ajanın Bilimsel Muhakeme Notu: Zamansal konu akışı modellemesinde kavramsal zıtlıklar ideolojik gerilim göstergesi olarak r=0.44 düzeyinde etkilidir.",
+                "agent_reasoning_note": "Agent Scientific Reasoning Note: Conceptual oppositions in temporal topic flow serve as indicators of ideological tension (r=0.44).",
             },
             {
                 "title": "The Dark Triad of Personality: Narcissism, Machiavellianism, and Psychopathy",
@@ -1364,7 +1364,7 @@ class AutonomousAcademicResearcher:
                 "abstract": "Paulhus and Williams introduce the Short Dark Triad (SD3). Machiavellianism is characterized by cold strategic calculation, manipulative utility, and cynical pragmatism.",
                 "repository": "Journal of Research in Personality",
                 "query_matched": "canonical_machiavellianism",
-                "agent_reasoning_note": "Ajanın Bilimsel Muhakeme Notu: N=2800 kişilik çok merkezli çalışmada Makyavelizm skoru ile stratejik çıkar odaklı söylem arasında r=0.45 düzeyinde güçlü bağ saptanmıştır.",
+                "agent_reasoning_note": "Agent Scientific Reasoning Note: Across a multi-site study (N=2800), Machiavellianism scores strongly tracked strategic utility discourse (r=0.45).",
             },
             {
                 "title": "Individual Differences in Need for Cognitive Closure",
@@ -1374,7 +1374,7 @@ class AutonomousAcademicResearcher:
                 "abstract": "Webster and Kruglanski validate the Need for Closure Scale (NFCS). High closure individuals exhibit urgent preference for order, predictability, and decisive closure.",
                 "repository": "Journal of Personality and Social Psychology",
                 "query_matched": "canonical_need_for_closure",
-                "agent_reasoning_note": "Ajanın Bilimsel Muhakeme Notu: N=1950 kohortunda bilişsel kapalılık ihtiyacı ile belirsizlikten kaçınma ve kesin teslimiyet talebi r=0.48 oranında koreledir.",
+                "agent_reasoning_note": "Agent Scientific Reasoning Note: In an N=1950 cohort, need for cognitive closure correlated with ambiguity intolerance and demand for decisive closure (r=0.48).",
             },
             {
                 "title": "Prospect Theory: An Analysis of Decision under Risk",
@@ -1384,7 +1384,7 @@ class AutonomousAcademicResearcher:
                 "abstract": "Kahneman and Tversky present Prospect Theory, demonstrating that losses loom larger than gains (loss aversion ratio ~ 1.8 to 2.25) causing asymmetric risk behavior.",
                 "repository": "Econometrica",
                 "query_matched": "canonical_loss_aversion",
-                "agent_reasoning_note": "Ajanın Bilimsel Muhakeme Notu: N=3200 katılımcılı ampirik deneylerde kayıp algısının kazanç arzusuna baskınlığı (lambda=1.85) ile savunmacı karar refleksi r=0.52 düzeyinde doğrulanmıştır.",
+                "agent_reasoning_note": "Agent Scientific Reasoning Note: Empirical experiments (N=3200) confirmed that loss salience outweighs gain pursuit (lambda=1.85), driving defensive risk reflexes (r=0.52).",
             },
             {
                 "title": "Mapping the Moral Domain: Moral Foundations Theory and Ideology",
@@ -1394,7 +1394,7 @@ class AutonomousAcademicResearcher:
                 "abstract": "Graham, Haidt et al. establish Moral Foundations Theory, measuring individualizing foundations (care, fairness) versus binding foundations (loyalty, authority, sanctity).",
                 "repository": "Journal of Personality and Social Psychology",
                 "query_matched": "canonical_moral_foundations",
-                "agent_reasoning_note": "Ajanın Bilimsel Muhakeme Notu: N=4500 kişilik uluslararası veri setinde ahlaki temeller dili ile kurumsal sadakat vs bireysel hak önceliği r=0.46 korelasyon göstermektedir.",
+                "agent_reasoning_note": "Agent Scientific Reasoning Note: In an international dataset (N=4500), moral foundations vocabulary distinguished institutional loyalty vs. individual rights priority (r=0.46).",
             },
         ]
 

@@ -111,9 +111,9 @@ class ExplainabilityEngine:
         if has_tension:
             first_c = matching_clusters[0] if matching_clusters else {}
             statement = (
-                f"Bilişsel Çelişki Uyarısı: İddia, hedefin çelişen inanç örüntüsü gösterdiği "
-                f"[{', '.join(first_c.get('concepts', ['çelişen konseptler'])[:2])}] kümelenmesiyle kesişmektedir. "
-                f"(Gerilim Nedeni: {first_c.get('primary_conflict', 'İdeolojik/Kurumsal Zıtlık')})."
+                f"Cognitive Dissonance Alert: Claim intersects with the subject's conflicting belief cluster "
+                f"[{', '.join(first_c.get('concepts', ['conflicting concepts'])[:2])}] "
+                f"(Tension source: {first_c.get('primary_conflict', 'Ideological/Institutional Tension')})."
             )
 
         return {

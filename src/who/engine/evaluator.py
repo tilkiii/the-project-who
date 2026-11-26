@@ -1541,6 +1541,8 @@ class ProfileEvaluator:
         cand_lower = candidate_text.lower()
         violations: List[str] = []
         forbidden_phrases = [
+            "corpus evidence analysis",
+            "target profile indicates",
             "corpus kanıt analizi",
             "hedef profil şöyledir",
             "exact psychological mapping",

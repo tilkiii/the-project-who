@@ -191,12 +191,12 @@ def topics(
 
     if chron_data and chron_data.get("metrics_by_window"):
         c_table = Table(title=f"⏰ Cognitive Chronomics: Circadian Drift Analysis ({target})", header_style="bold yellow")
-        c_table.add_column("Sirkadyen Pencere", style="bold white", width=18)
-        c_table.add_column("Saat Aralığı", style="dim", width=16)
-        c_table.add_column("Kelime Çeşitliliği (TTR)", style="green", width=22)
-        c_table.add_column("Epistemik Kalibrasyon", style="cyan", width=22)
-        c_table.add_column("Kesinlik / 1k", style="magenta", width=16)
-        c_table.add_column("Eleştirel Ton / 1k", style="red", width=18)
+        c_table.add_column("Circadian Window", style="bold white", width=18)
+        c_table.add_column("Time Range", style="dim", width=16)
+        c_table.add_column("Lexical Diversity (TTR)", style="green", width=22)
+        c_table.add_column("Epistemic Calibration", style="cyan", width=22)
+        c_table.add_column("Certainty / 1k", style="magenta", width=16)
+        c_table.add_column("Critical Tone / 1k", style="red", width=18)
 
         hour_labels = {
             "NIGHT": "00:00 - 05:00",
@@ -219,7 +219,7 @@ def topics(
         if chron_data.get("probabilistic_statement"):
             console.print(Panel(
                 f"[yellow]{chron_data.get('probabilistic_statement')}[/yellow]",
-                title="[bold yellow]Sirkadyen Bilişsel Sapma Raporu[/bold yellow]",
+                title="[bold yellow]Circadian Cognitive Drift Report[/bold yellow]",
                 border_style="yellow"
             ))
         console.print()
@@ -362,16 +362,16 @@ def graph(
     diss_clusters = cog_diss.get("dissonance_clusters", [])
     if diss_clusters:
         d_table = Table(title=f"⚡ Graph-Driven Cognitive Dissonance Tensions ([CONTRADICTS]): {target}", header_style="bold red")
-        d_table.add_column("Küme ID", width=10)
-        d_table.add_column("Çelişen Kavramlar / Düğümler", style="bold white", width=34)
-        d_table.add_column("Çelişki Skoru", style="red", width=16)
-        d_table.add_column("Çelişki Açıklaması", style="dim")
+        d_table.add_column("Cluster ID", width=10)
+        d_table.add_column("Conflicting Concepts / Nodes", style="bold white", width=34)
+        d_table.add_column("Dissonance Score", style="red", width=16)
+        d_table.add_column("Conflict Summary", style="dim")
 
         for cl in diss_clusters:
             d_table.add_row(
                 str(cl.get("cluster_id")),
                 " ⚡ ".join(cl.get("concepts", [])[:3]),
-                f"%{int(cl.get('mean_dissonance_score', 0) * 100)}",
+                f"{int(cl.get('mean_dissonance_score', 0) * 100)}%",
                 cl.get("primary_conflict", ""),
             )
         console.print(d_table)
@@ -379,7 +379,7 @@ def graph(
     if cog_diss.get("probabilistic_statement"):
         console.print(Panel(
             f"[bold red]{cog_diss.get('probabilistic_statement')}[/bold red]",
-            title="[bold red]Bilişsel Çelişki Kümelenmesi & Gerilim Özeti[/bold red]",
+            title="[bold red]Cognitive Dissonance Clusters & Tension Summary[/bold red]",
             border_style="red"
         ))
 

@@ -599,18 +599,18 @@ class GraphAnalytics:
 
         if dissonance_clusters:
             top_cluster = dissonance_clusters[0]
-            concepts_str = " ile ".join(top_cluster["concepts"][:2])
+            concepts_str = " and ".join(top_cluster["concepts"][:2])
             prob_stmt = (
-                f"Bilişsel Çelişki Kümesi: [{concepts_str}] arasında "
-                f"%{int(top_cluster['mean_dissonance_score'] * 100)} olasılıkla çelişen inanç/tutum örüntüsü saptanmıştır "
-                f"(Ising Taban Enerjisi H={ising_physics['hamiltonian_ground_energy_H']}, "
-                f"Yapısal Frustrasyon Φ={ising_physics['structural_frustration_index']}; "
+                f"Cognitive Dissonance Cluster: Conflicting belief/attitude pattern detected between [{concepts_str}] "
+                f"at {int(top_cluster['mean_dissonance_score'] * 100)}% likelihood "
+                f"(Ising Ground Energy H={ising_physics['hamiltonian_ground_energy_H']}, "
+                f"Structural Frustration Φ={ising_physics['structural_frustration_index']}; "
                 f"{top_cluster.get('primary_conflict', '')})."
             )
         else:
             prob_stmt = (
-                "Bilişsel Çelişki Düzeyi: Gözlemlenen graf bağlantılarında belirgin bir tutarsızlık saptanmamış olup "
-                "kavramsal bütünlük yüksek oranda tutarlıdır (Çelişki Skoru: %0, Ising Frustrasyon Φ=0.0)."
+                "Cognitive Dissonance Level: No pronounced contradiction detected across observed graph edges; "
+                "conceptual coherence is high (Dissonance Score: 0%, Ising Frustration Φ=0.0)."
             )
 
         return {
@@ -746,7 +746,7 @@ class GraphAnalytics:
                     "distinct_ground_states_count": 1,
                     "spin_configuration": {},
                 },
-                "probabilistic_statement": "Grafik verisi bulunamadı.",
+                "probabilistic_statement": "No graph data available.",
             },
             "network_physics": {
                 "ising_spin_glass": {

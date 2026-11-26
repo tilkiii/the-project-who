@@ -504,14 +504,14 @@ class FeatureExtractor:
         bayes = self._compute_bayesian_credible_interval(dogmatic_matches * 1.5, evidence_matches + 0.5, total_words)
 
         if manipulation_index >= 0.70:
-            risk_tier = "YÜKSEK (HIGH_MANIPULATION_RISK)"
-            risk_desc = "Kanıtsız ve mutlakiyetçi dil kullanımı belirgin düzeydedir."
+            risk_tier = "HIGH (HIGH_MANIPULATION_RISK)"
+            risk_desc = "Pronounced reliance on unsubstantiated, absolutist framing."
         elif manipulation_index >= 0.40:
-            risk_tier = "ORTA (MODERATE_DOGMATIC_TENDENCY)"
-            risk_desc = "Ara sıra mutlakiyetçi ifadelere rastlanmakta, ancak rasyonel süzgeç dengelenmektedir."
+            risk_tier = "MODERATE (MODERATE_DOGMATIC_TENDENCY)"
+            risk_desc = "Occasional absolutist assertions balanced by rational epistemic hedging."
         else:
-            risk_tier = "DÜŞÜK / RASYONEL (EMPIRICALLY_CALIBRATED)"
-            risk_desc = "Gözlemlenen beyanlarda iddialar olasılıksal ve kanıta dayalı ihtiyatla temellendirilmektedir."
+            risk_tier = "LOW / CALIBRATED (EMPIRICALLY_CALIBRATED)"
+            risk_desc = "Observed statements ground claims with probabilistic and evidence-based caution."
 
         confidence = min(0.95, 0.60 + (total_words / 1500.0) * 0.3)
 
@@ -527,8 +527,8 @@ class FeatureExtractor:
             "risk_tier": risk_tier,
             "confidence_score": round(confidence, 2),
             "probabilistic_statement": (
-                f"Manipülasyon Endeksi: Kanıtsız iddialarda mutlak kesinlik dili kullanımı eğilimi "
-                f"%{int(manipulation_index * 100)} (±%{int(bayes['uncertainty_margin']*100)}) seviyesindedir ({risk_desc} Olasılık Skoru: %{int(confidence * 100)})."
+                f"Epistemic Manipulation Index: Absolutist unsubstantiated framing tendency estimated at "
+                f"{int(manipulation_index * 100)}% (±{int(bayes['uncertainty_margin']*100)}%) ({risk_desc} Confidence: {int(confidence * 100)}%)."
             ),
         }
 
@@ -567,14 +567,14 @@ class FeatureExtractor:
         bayes = self._compute_bayesian_credible_interval(m_count * 2.2, c_count + 1.5, total_words)
 
         if score >= 0.55:
-            tier = "YÜKSEK / MAKYAVELİST (STRATEGIC_MACHIAVELLIAN)"
-            desc = "Pragmatik fayda ve stratejik manevra dili yüksek, ahlaki duygulanımdan ziyade güce odaklı."
+            tier = "HIGH / STRATEGIC_MACHIAVELLIAN"
+            desc = "High pragmatic utility and strategic leverage framing, prioritizing power dynamics over moral sentiment."
         elif score >= 0.25:
-            tier = "DENGELİ / STRATEJİK PRAGMATİST (BALANCED_PRAGMATIST)"
-            desc = "İş birliğine açık fakat stratejik çıkar ve kurumsal rasyonaliteyi gözeten tutum."
+            tier = "BALANCED / BALANCED_PRAGMATIST"
+            desc = "Open to cooperation while safeguarding strategic interests and institutional rationality."
         else:
-            tier = "DÜŞÜK / ALTRUİST & İŞBİRLİKÇİ (COOPERATIVE_ALTRUIST)"
-            desc = "Yüksek empati, etik ilkelere bağlılık ve kolektif dayanışma dili baskın."
+            tier = "LOW / COOPERATIVE_ALTRUIST"
+            desc = "High empathy, ethical commitment, and collective solidarity framing predominate."
 
         return {
             "score": score,
@@ -589,7 +589,7 @@ class FeatureExtractor:
             "machiavellian_hits": m_count,
             "cooperation_hits": c_count,
             "probabilistic_statement": (
-                f"Makyavelizm & Güç Yönelimi: %{int(score * 100)} (95% CI: {bayes['credible_interval_95']}) seviyesinde ({desc})."
+                f"Machiavellianism & Strategic Utility: {int(score * 100)}% (95% CI: {bayes['credible_interval_95']}) ({desc})."
             ),
         }
 
@@ -625,14 +625,14 @@ class FeatureExtractor:
         bayes = self._compute_bayesian_credible_interval(cl_count * 1.8, op_count + 1.5, total_words)
 
         if score >= 0.65:
-            tier = "KATI / YÜKSEK KAPATMA İHTİYACI (HIGH_NEED_FOR_CLOSURE)"
-            desc = "Belirsizliğe tahammül düşük; hızla kesin hükme varma ve sabit kurallar arayışı baskın."
+            tier = "HIGH / HIGH_NEED_FOR_CLOSURE"
+            desc = "Low tolerance for ambiguity; strong preference for rapid decisive judgment and fixed rules."
         elif score >= 0.35:
-            tier = "DENGELİ BİLİŞSEL DÜZEN (CALIBRATED_CLOSURE)"
-            desc = "Karar alırken yapısal çerçeveyi koruyan ancak yeni kanıtlar karşısında esneyebilen tutum."
+            tier = "BALANCED / CALIBRATED_CLOSURE"
+            desc = "Maintains structural order while remaining adaptable to new evidence."
         else:
-            tier = "AÇIK UÇLU & BİLİŞSEL ESNEK (HIGH_AMBIGUITY_TOLERANCE)"
-            desc = "Belirsizlikle rahatça çalışabilen, keşifçi ve alternatif hipotezlere açık bilişsel yapı."
+            tier = "OPEN / HIGH_AMBIGUITY_TOLERANCE"
+            desc = "Comfortable operating under ambiguity; exploratory and open to alternative hypotheses."
 
         return {
             "score": score,
@@ -647,7 +647,7 @@ class FeatureExtractor:
             "closure_hits": cl_count,
             "openness_hits": op_count,
             "probabilistic_statement": (
-                f"Bilişsel Kapanma İhtiyacı: %{int(score * 100)} (95% CI: {bayes['credible_interval_95']}) seviyesinde ({desc})."
+                f"Need for Cognitive Closure: {int(score * 100)}% (95% CI: {bayes['credible_interval_95']}) ({desc})."
             ),
         }
 
@@ -683,14 +683,14 @@ class FeatureExtractor:
         ci_high_beta = round(0.80 + (bayes["credible_interval_95"][1] * 1.70), 2)
 
         if ratio >= 1.7:
-            orientation = "KAYIPTAN KAÇINMA BASKIN (LOSS_AVERSIVE_DEFENSIVE)"
-            desc = "Riskten kaçınma, savunma ve mevcut kazanımları koruma odağı belirleyici."
+            orientation = "LOSS_AVERSIVE_DEFENSIVE"
+            desc = "Risk avoidance, defensive posture, and protection of existing positions predominate."
         elif ratio >= 0.7:
-            orientation = "DENGELİ PROSPEKT (CALIBRATED_RISK)"
-            desc = "Kayıp ve kazanç senaryolarını rasyonel olasılıklarla tartan dengeli risk iştahı."
+            orientation = "CALIBRATED_RISK"
+            desc = "Balanced risk appetite weighing potential losses and gains probabilistically."
         else:
-            orientation = "FIRSAT & KAZANÇ ODAKLI (OPPORTUNITY_SEEKING)"
-            desc = "Potansiyel büyüme ve yeni fırsatlara odaklanan yüksek risk toleransı."
+            orientation = "OPPORTUNITY_SEEKING"
+            desc = "High risk tolerance focused on potential growth and upside opportunities."
 
         return {
             "loss_to_gain_ratio": ratio,
@@ -703,7 +703,7 @@ class FeatureExtractor:
             "loss_hits": l_count,
             "gain_hits": g_count,
             "orientation": orientation,
-            "probabilistic_statement": f"Prospekt Risk Yönelimi: Kayıp/Kazanç oranı {ratio} (β={estimated_beta}, 95% CI: {[ci_low_beta, ci_high_beta]}) ({desc}).",
+            "probabilistic_statement": f"Prospect Risk Orientation: Loss/Gain ratio {ratio} (β={estimated_beta}, 95% CI: {[ci_low_beta, ci_high_beta]}) ({desc}).",
         }
 
     def _calculate_affective_volatility(
@@ -738,14 +738,14 @@ class FeatureExtractor:
         bayes = self._compute_bayesian_credible_interval(arousal_count * 2.0, calm_count + 2.0, total_words)
 
         if volatility_score >= 0.50:
-            tier = "YÜKSEK VOLATİLİTE / DUYGUSAL TEPKİSELLİK"
-            desc = "Kriz veya baskı anlarında yüksek ajitasyon ve keskin duygusal iniş-çıkışlar gözlemlenmektedir."
+            tier = "HIGH_AFFECTIVE_VOLATILITY"
+            desc = "Elevated agitation and sharp affective swings observed under pressure or crisis."
         elif volatility_score >= 0.20:
-            tier = "DENGELİ REAKTİVİTE"
-            desc = "Duygusal ifadeler bağlama uygun, kontrol edilebilir bir reaktivite aralığındadır."
+            tier = "BALANCED_REACTIVITY"
+            desc = "Emotional expressions stay within a context-appropriate, controllable reactivity range."
         else:
-            tier = "STOİK / YÜKSEK SOĞUKKANLILIK (STOIC_COMPOSURE)"
-            desc = "Yüksek duygusal öz-denetim, baskı altında dahi sükûnet ve nesnel tonunu korur."
+            tier = "STOIC_COMPOSURE"
+            desc = "High emotional self-regulation; maintains calm, objective tone even under pressure."
 
         return {
             "volatility_score": volatility_score,
@@ -755,7 +755,7 @@ class FeatureExtractor:
             "negated_reversals_detected": reversals,
             "negated_reversals": reversals,
             "tier": tier,
-            "probabilistic_statement": f"Duygusal Denge & Afektif Denge: {tier} ({desc}).",
+            "probabilistic_statement": f"Affective Balance & Reactivity: {tier} ({desc}).",
         }
 
     def _calculate_moral_foundations(
@@ -785,14 +785,14 @@ class FeatureExtractor:
         bayes = self._compute_bayesian_credible_interval(ind_count, bind_count, total_words)
 
         if ind_count > bind_count * 1.5:
-            foundation = "BİREY & HAKKANİYET ODAKLI (INDIVIDUALIZING_FAIRNESS)"
-            desc = "Bireysel haklar, adalet ve şefkat/koruma ilkeleri kurumsal otoritenin üzerinde tutulur."
+            foundation = "INDIVIDUALIZING_FAIRNESS"
+            desc = "Individual rights, fairness, and care/protection principles outweigh institutional authority."
         elif bind_count > ind_count * 1.5:
-            foundation = "OTORİTE & NİZAM ODAKLI (BINDING_AUTHORITY)"
-            desc = "Kurumsal sadakat, hiyerarşi, gelenek ve nizamın korunması önceliklidir."
+            foundation = "BINDING_AUTHORITY"
+            desc = "Institutional loyalty, hierarchy, tradition, and order take precedence."
         else:
-            foundation = "ÇOK BOYUTLU / DENGELİ AHLAKİ TEMEL (BALANCED_FOUNDATIONS)"
-            desc = "Hem bireysel adalet ve hakkaniyeti hem de kurumsal gelenek ve düzeni birlikte gözetir."
+            foundation = "BALANCED_FOUNDATIONS"
+            desc = "Balances individual fairness/care alongside institutional order and tradition."
 
         return {
             "individualizing_hits": ind_count,
@@ -801,7 +801,7 @@ class FeatureExtractor:
             "negated_reversals_detected": reversals,
             "negated_reversals": reversals,
             "dominant_foundation": foundation,
-            "probabilistic_statement": f"Ahlaki Temeller Matrisi: {foundation} ({desc}).",
+            "probabilistic_statement": f"Moral Foundations Matrix: {foundation} ({desc}).",
         }
 
     def _calculate_caps_contextual_matrix(self, sentences: List[str]) -> Dict[str, Any]:
@@ -932,28 +932,28 @@ class FeatureExtractor:
             divergence = 0.0
             verdict = "INSUFFICIENT_PREFERENCE_EVIDENCE"
             explanation = (
-                "Yetersiz Tercih Kanıtı: Korpusta açık bir normatif beyan veya geçmiş eylem kaydı "
-                "bulunmadığından simetrik Beta(1,1) önseli (sapma=0.0) korunmuştur."
+                "Insufficient Preference Evidence: No explicit normative statements or documented past actions "
+                "found in corpus; retaining symmetric Beta(1,1) prior (divergence=0.0)."
             )
         else:
             divergence = round(abs(stated_coop_score - revealed_coop_score), 2)
             if divergence >= 0.35:
                 verdict = "STRATEGIC_DISSONANCE_DETECTED"
                 explanation = (
-                    "Yüksek Söylem-Eylem Sapması: Kamusal söylemlerde uzlaşıcı/açık bir dil kullanılırken, "
-                    "gerçekleşen kararlarda otonomi koruma ve katı kontrol/veto davranışı ağır basmaktadır."
+                    "High Rhetoric-Action Divergence: Public rhetoric emphasizes collaborative openness while "
+                    "documented actions favor autonomy preservation and strict veto control."
                 )
             elif divergence >= 0.15:
                 verdict = "PRAGMATIC_BOUNDARY_GUARDING"
                 explanation = (
-                    "Kısmi Pragmatik Sapma: Söylem düzeyinde iş birliğine açık olmakla birlikte, "
-                    "uygulama aşamasında yapısal güvenceler sağlanmadan yetki devri yapılmamaktadır."
+                    "Partial Pragmatic Divergence: Rhetoric signals openness to collaboration, "
+                    "but execution avoids delegating authority without structural guarantees."
                 )
             else:
                 verdict = "HIGH_EPISTEMIC_CONGRUENCE"
                 explanation = (
-                    "Söylem-Eylem Tutarlılığı: Beyan edilen normatif ilkeler ile geçmişte alınan somut kararlar "
-                    "yüksek düzeyde örtüşmektedir."
+                    "Rhetoric-Action Congruence: Stated normative principles closely align with "
+                    "documented past decisions."
                 )
 
         return {
@@ -1039,14 +1039,14 @@ class FeatureExtractor:
                 "score_pct": "0%",
                 "credible_interval_95": [0.0, 0.5],
                 "uncertainty_margin": 0.25,
-                "risk_tier": "YETERSİZ VERİ",
-                "probabilistic_statement": "Yetersiz korpus nedeniyle manipülasyon endeksi hesaplanamadı."
+                "risk_tier": "INSUFFICIENT_DATA",
+                "probabilistic_statement": "Insufficient corpus volume to compute the epistemic manipulation index."
             },
-            "machiavellianism_index": {"score": 0.0, "estimated_score": 0.0, "credible_interval_95": [0.0, 0.5], "tier": "YETERSİZ VERİ"},
-            "need_for_closure_index": {"score": 0.0, "estimated_score": 0.0, "credible_interval_95": [0.0, 0.5], "tier": "YETERSİZ VERİ"},
-            "loss_aversion_index": {"loss_to_gain_ratio": 1.0, "estimated_score": 1.5, "credible_interval_95": [1.0, 2.0], "orientation": "YETERSİZ VERİ"},
-            "affective_volatility_index": {"volatility_score": 0.0, "credible_interval_95": [0.0, 0.5], "tier": "YETERSİZ VERİ"},
-            "moral_foundations_profile": {"dominant_foundation": "YETERSİZ VERİ", "credible_interval_95": [0.0, 0.5]},
+            "machiavellianism_index": {"score": 0.0, "estimated_score": 0.0, "credible_interval_95": [0.0, 0.5], "tier": "INSUFFICIENT_DATA"},
+            "need_for_closure_index": {"score": 0.0, "estimated_score": 0.0, "credible_interval_95": [0.0, 0.5], "tier": "INSUFFICIENT_DATA"},
+            "loss_aversion_index": {"loss_to_gain_ratio": 1.0, "estimated_score": 1.5, "credible_interval_95": [1.0, 2.0], "orientation": "INSUFFICIENT_DATA"},
+            "affective_volatility_index": {"volatility_score": 0.0, "credible_interval_95": [0.0, 0.5], "tier": "INSUFFICIENT_DATA"},
+            "moral_foundations_profile": {"dominant_foundation": "INSUFFICIENT_DATA", "credible_interval_95": [0.0, 0.5]},
             "caps_contextual_matrix": {"contextual_plasticity_index": 0.0, "contexts": {}, "if_then_signatures": []},
             "stated_vs_revealed_preference": {
                 "stated_cooperation_polarity": 0.5,
@@ -1054,7 +1054,7 @@ class FeatureExtractor:
                 "preference_divergence_index": 0.0,
                 "stated_sample_count": 0,
                 "revealed_sample_count": 0,
-                "verdict": "YETERSİZ VERİ",
+                "verdict": "INSUFFICIENT_DATA",
             },
             "conditional_commitments": {
                 "total_commitments_extracted": 0,

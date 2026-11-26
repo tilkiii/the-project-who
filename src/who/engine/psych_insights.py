@@ -138,27 +138,27 @@ class PsychInsights:
         chron_decay = chronomics.get("circadian_drift_summary", {}).get("epistemic_filter_decay_pct", 14)
         chronomics_stmt = chronomics.get(
             "probabilistic_statement",
-            f"Sirkadyen Sapma: Hedefin gece metinlerinde rasyonel süzgeç (epistemic doubt) gündüze kıyasla %{abs(chron_decay)} oranında azalmaktadır.",
+            f"Circadian Drift: Based on observed corpus timestamps, nocturnal epistemic calibration shifts by {abs(chron_decay)}% compared to daytime.",
         )
 
         # b. Cognitive Dissonance
         top_dissonance_clusters = dissonance.get("dissonance_clusters", [])
         if top_dissonance_clusters:
             first_c = top_dissonance_clusters[0]
-            concepts_str = " ile ".join(first_c.get("concepts", [])[:2])
+            concepts_str = " and ".join(first_c.get("concepts", [])[:2])
             dissonance_pct = int(first_c.get("mean_dissonance_score", 0.75) * 100)
-            dissonance_stmt = f"Bilişsel Çelişki Kümesi: [{concepts_str}] arasında %{dissonance_pct} olasılıkla çelişen inanç örüntüsü saptanmıştır."
+            dissonance_stmt = f"Cognitive Dissonance Cluster: Conflicting belief pattern detected between [{concepts_str}] at {dissonance_pct}% likelihood."
         else:
             dissonance_stmt = dissonance.get(
                 "probabilistic_statement",
-                "Bilişsel Çelişki Kümesi: Belirgin bir taban tabana çelişki tespit edilmemiş olup kavramsal örüntü tutarlıdır (%0 çelişki).",
+                "Cognitive Dissonance Cluster: No pronounced contradiction detected; conceptual coherence is high (0% dissonance).",
             )
 
         # c. Epistemic Manipulation Index
         manip_score_pct = manipulation.get("score_pct", "18%")
         manipulation_stmt = manipulation.get(
             "probabilistic_statement",
-            f"Manipülasyon Endeksi: Kanıtsız iddialarda mutlak kesinlik dili kullanımı eğilimi {manip_score_pct} seviyesindedir.",
+            f"Epistemic Manipulation Index: Absolutist unsubstantiated framing tendency estimated at {manip_score_pct}.",
         )
 
         system_prompt = (
@@ -188,7 +188,7 @@ class PsychInsights:
             f"RETRIEVED SCIENTIFIC LITERATURE:\n{json.dumps(literature[:4])}\n\n"
             "Generate a structured Behavioral Science Report containing:\n"
             "1. Cognitive Architecture & Reasoning Stance (with primary quote citations)\n"
-            "2. Academic Literature Mapping & Autonomous Agent Calibration (cite explicit DOIs/URLs, correlation coefficients r, and include 'Ajanın Bilimsel Muhakeme Notu' verbatim)\n"
+            "2. Academic Literature Mapping & Autonomous Agent Calibration (cite explicit DOIs/URLs, correlation coefficients r, and include 'Agent Scientific Reasoning Note' verbatim)\n"
             "3. Cognitive Chronomics & Circadian Epistemic Drift Analysis\n"
             "4. Graph-Driven Cognitive Dissonance Tensions\n"
             "5. Epistemic Manipulation & Rhetorical Dogmatism Assessment\n"
@@ -216,22 +216,22 @@ class PsychInsights:
         academic_segment = ""
         if agent_reasoning_items:
             notes_block = "\n".join(
-                f"- **{it['marker']}** ➔ **{it['trait']}** (Korelasyon: `r={it['r']}`, Güven Skoru: `%{it['confidence_pct']}`, N={it['sample_size']})\n"
-                f"  * **Kanıt Kaynağı (DOI):** [{it['doi']}]({it['doi_url']})\n"
+                f"- **{it['marker']}** -> **{it['trait']}** (Correlation: `r={it['r']}`, Confidence: `{it['confidence_pct']}%`, N={it['sample_size']})\n"
+                f"  * **Evidence Source (DOI):** [{it['doi']}]({it['doi_url']})\n"
                 f"  * **{it['note']}**"
                 for it in agent_reasoning_items
             )
             academic_segment = (
-                f"\n\n---\n\n### 📚 Akademik Ajanın Bilimsel Muhakeme ve Literatür Kalibrasyonu\n"
+                f"\n\n---\n\n### 📚 Autonomous Academic Agent Calibration & Scientific Reasoning\n"
                 f"{notes_block}\n"
             )
 
-        if "Akademik Ajanın Bilimsel Muhakeme" not in report_content and academic_segment:
+        if "Autonomous Academic Agent Calibration" not in report_content and academic_segment:
             report_content += academic_segment
 
-        if chronomics_stmt not in report_content and "Sirkadyen Sapma" not in report_content:
+        if chronomics_stmt not in report_content and "Circadian Drift" not in report_content:
             report_content += (
-                f"\n\n---\n\n### 🔬 Bilişsel Kronomik ve Epistemik Gerilim Göstergeleri\n"
+                f"\n\n---\n\n### 🔬 Cognitive Chronomics & Epistemic Tension Indicators\n"
                 f"- **{chronomics_stmt}**\n"
                 f"- **{dissonance_stmt}**\n"
                 f"- **{manipulation_stmt}**\n"

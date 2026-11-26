@@ -165,16 +165,16 @@ class ScientificReferee:
 
         if total_rigor >= 70.0:
             rigor_tier = "GOLD_STANDARD"
-            tier_desc = "Hakemli, yüksek örneklemli ve replike edilebilir altın standart ampirik çalışma."
+            tier_desc = "Peer-reviewed, large-sample, replicable gold-standard empirical study."
         elif total_rigor >= 50.0:
             rigor_tier = "SOLID_EMPIRICAL"
-            tier_desc = "Güvenilir ampirik metodoloji ve istatistiksel anlamlılık."
+            tier_desc = "Reliable empirical methodology and statistical significance."
         elif total_rigor >= 35.0:
-            tier_desc = "Keşifsel veya önbaskı aşamasında; dikkatle değerlendirilmeli."
+            tier_desc = "Exploratory or preprint stage; interpret with caution."
             rigor_tier = "EXPLORATORY_PREPRINT"
         else:
             rigor_tier = "REJECTED_LOW_RIGOR"
-            tier_desc = "Düşük örneklem, zayıf etki büyüklüğü veya yöntemsel tutarsızlık nedeniyle elendi."
+            tier_desc = "Filtered out due to small sample size, weak effect size, or methodological inconsistency."
 
         sample_size_imputed = not (n is not None and int(n) >= 10)
         if not sample_size_imputed:

@@ -94,4 +94,4 @@ def test_cli_monitor_and_arena_commands():
     res_arena = runner.invoke(app, ["arena", "--targets", "Target X, Test Target", "--topic", "Oyun teorisi ve konsensüs protokolleri", "--rounds", "1"])
     assert res_arena.exit_code == 0
     assert "Swarm Arena Debate" in res_arena.output
-    assert "Konsensüs" in res_arena.output
+    assert "Consensus" in res_arena.output

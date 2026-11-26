@@ -48,7 +48,7 @@ def test_cognitive_chronomics_parsing_and_drift(tmp_path: Path):
     report = cc.analyze_circadian_drift(sample_docs)
     assert "circadian_drift_summary" in report
     assert "probabilistic_statement" in report
-    assert "Sirkadyen Sapma" in report["probabilistic_statement"]
+    assert "Circadian Drift" in report["probabilistic_statement"]
 
     # Verify JSON persistence
     assert (tmp_path / "chronomics.json").exists()
@@ -68,7 +68,7 @@ def test_epistemic_manipulation_index(tmp_path: Path):
     assert manip_d["score"] > 0.3
     assert "score_pct" in manip_d
     assert "probabilistic_statement" in manip_d
-    assert "Manipülasyon Endeksi" in manip_d["probabilistic_statement"]
+    assert "Epistemic Manipulation Index" in manip_d["probabilistic_statement"]
 
     rational_texts = [
         "Veriler gösteriyor ki model olasılıkla tutarlıdır, belki de alternatif hipotezleri göz önünde bulundurmalıyız.",
@@ -115,7 +115,7 @@ def test_graph_cognitive_dissonance_and_clustering(tmp_path: Path):
     cd = metrics["cognitive_dissonance"]
     assert cd["total_contradiction_edges"] >= 1
     assert len(cd["dissonance_clusters"]) >= 1
-    assert "Bilişsel Çelişki Kümesi" in cd["probabilistic_statement"]
+    assert "Cognitive Dissonance Cluster" in cd["probabilistic_statement"]
 
     gs.close()
 
@@ -162,7 +162,7 @@ def test_explainability_dissonance_check(tmp_path: Path):
     dissonance_res = engine._check_cognitive_dissonance("Kurumsal gizlilik ve kurumsal şeffaflık dengesi")
 
     assert dissonance_res["has_dissonance_tension"] is True
-    assert "Bilişsel Çelişki Uyarısı" in dissonance_res["probabilistic_warning"]
+    assert "Cognitive Dissonance Alert" in dissonance_res["probabilistic_warning"]
 
 
 def test_mindset_summary_includes_new_capabilities(tmp_path: Path):
@@ -172,14 +172,14 @@ def test_mindset_summary_includes_new_capabilities(tmp_path: Path):
     features = {
         "chronomics": {
             "circadian_drift_summary": {"epistemic_filter_decay_pct": 18, "lexical_diversity_decay_pct": 10},
-            "probabilistic_statement": "Sirkadyen Sapma: Hedefin gece metinlerinde rasyonel süzgeç %18 azalmaktadır.",
+            "probabilistic_statement": "Circadian Drift: Nocturnal rational epistemic filter shifts by 18%.",
         },
         "epistemic_manipulation_index": {
             "score_pct": "22%",
-            "risk_tier": "DÜŞÜK / RASYONEL",
+            "risk_tier": "LOW / CALIBRATED",
             "dogmatic_density_per_k": 3.2,
             "evidence_density_per_k": 14.5,
-            "probabilistic_statement": "Manipülasyon Endeksi: Kanıtsız iddialarda mutlak kesinlik dili kullanımı %22 seviyesindedir.",
+            "probabilistic_statement": "Epistemic Manipulation Index: Absolutist framing tendency estimated at 22%.",
         },
     }
 
@@ -191,10 +191,10 @@ def test_mindset_summary_includes_new_capabilities(tmp_path: Path):
                     "cluster_id": 1,
                     "concepts": ["Gizlilik", "Seffaflik"],
                     "mean_dissonance_score": 0.80,
-                    "primary_conflict": "Kurumsal gerilim",
+                    "primary_conflict": "Institutional tension",
                 }
             ],
-            "probabilistic_statement": "Bilişsel Çelişki Kümesi: [Gizlilik ile Seffaflik] arasında %80 olasılıkla çelişen inanç saptanmıştır.",
+            "probabilistic_statement": "Cognitive Dissonance Cluster: Conflicting belief pattern detected between [Gizlilik and Seffaflik] at 80% likelihood.",
         },
     }
 
@@ -207,8 +207,8 @@ def test_mindset_summary_includes_new_capabilities(tmp_path: Path):
 
     summary_md = res["mindset_summary"]
     assert "Cognitive Chronomics" in summary_md
-    assert "Sirkadyen Sapma" in summary_md
+    assert "Circadian Drift" in summary_md
     assert "Graph-Driven Cognitive Dissonance" in summary_md
-    assert "Bilişsel Çelişki Kümesi" in summary_md
-    assert "Epistemic Gaslighting & Manipulation İndeksi" in summary_md
-    assert "Manipülasyon Endeksi" in summary_md
+    assert "Cognitive Dissonance Cluster" in summary_md
+    assert "Epistemic Manipulation & Rhetorical Dogmatism Index" in summary_md
+    assert "Epistemic Manipulation Index" in summary_md

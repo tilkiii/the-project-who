@@ -185,12 +185,12 @@ class GraphBuilder:
 
         # 3. Known Concept Semantic Tension Pairs in Political / Epistemic Discourse
         semantic_tension_pairs = [
-            ("Kurumsal Gizlilik", "Kurumsal Seffaflik", 0.78, "Kurumsal sır vs radikal şeffaflık gerilimi"),
+            ("Kurumsal Gizlilik", "Kurumsal Seffaflik", 0.78, "Institutional secrecy vs. radical transparency tension"),
             ("Institutional Secrecy", "Transparency", 0.78, "Institutional privacy vs democratic transparency"),
-            ("Merkeziyetci Otorite", "Ozerklik", 0.85, "Merkezi yönetim vs akademik/kurumsal özerklik gerilimi"),
+            ("Merkeziyetci Otorite", "Ozerklik", 0.85, "Centralized control vs. academic/institutional autonomy tension"),
             ("Centralized Authority", "Autonomy", 0.85, "Centralized control vs local autonomy"),
             ("Tradition", "Progressivism", 0.72, "Preservation of established norms vs institutional reform"),
-            ("Gelenek", "Yenilikcilik", 0.72, "Geleneksel yaklaşım vs yenilikçi reform gerilimi"),
+            ("Gelenek", "Yenilikcilik", 0.72, "Traditional norms vs. institutional reform tension"),
         ]
 
         if isinstance(entities, list):
