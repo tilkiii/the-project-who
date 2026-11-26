@@ -6,7 +6,7 @@ Orchestrates multi-provider detection, routing, and status auditing.
 from __future__ import annotations
 
 import os
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 from who.providers.anthropic_provider import AnthropicProvider
 from who.providers.base import BaseLLMProvider

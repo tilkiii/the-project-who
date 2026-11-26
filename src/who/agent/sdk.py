@@ -14,7 +14,6 @@ from who.engine.composer import Composer
 from who.engine.evaluator import ProfileEvaluator
 from who.engine.explainability_engine import ExplainabilityEngine
 from who.engine.oracle import Oracle
-from who.engine.psych_insights import PsychInsights
 from who.engine.simulator import Simulator
 from who.engine.twin_chat import TwinChat
 from who.learn.autonomous_researcher import AutonomousAcademicResearcher
@@ -57,7 +56,7 @@ class CognitiveTwin:
     def __init__(self, target_name: str, mode: str = "autodetect"):
         self.target_name = target_name
         self.slug = sanitize_slug(target_name)
-        self.dirs = settings.get_target_dirs(self.target_name)
+        self.dirs = settings.get_target_dirs(self.target_name, create=False)
         self.mode = mode
 
         # Core engines
@@ -274,7 +273,7 @@ class AcademicResearcher:
         self.target_name = target_name
         output_dir = None
         if target_name:
-            target_dirs = settings.get_target_dirs(target_name)
+            target_dirs = settings.get_target_dirs(target_name, create=False)
             output_dir = target_dirs.learned_skills_dir
 
         self.researcher = AutonomousAcademicResearcher(output_dir=output_dir)

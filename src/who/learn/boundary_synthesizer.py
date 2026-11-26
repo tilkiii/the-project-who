@@ -11,9 +11,8 @@ from __future__ import annotations
 import datetime
 from datetime import timezone
 import json
-import math
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 from who.utils.logger import get_logger
 

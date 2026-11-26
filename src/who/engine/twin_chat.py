@@ -8,13 +8,12 @@ from __future__ import annotations
 
 import json
 import re
-from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from who.config import call_llm
 from who.engine.evaluator import ProfileEvaluator
 from who.learn.feature_extractor import CAPS_CONTEXT_MARKERS
-from who.utils.logger import console, get_logger
+from who.utils.logger import get_logger
 from who.utils.text_cleaner import is_boilerplate_or_junk
 from who.vault.vector_embedder import VectorEmbedder
 
@@ -197,8 +196,10 @@ class TwinChat:
         # 2. Retrieve relevant context quotes (filter out boilerplate & web junk)
         quotes_ctx = ""
         user_msg_clean = user_message.strip()
-        is_greeting_or_chatter = len(user_msg_clean.split()) <= 4 and any(
-            w in user_msg_clean.lower() for w in ["selam", "merhaba", "hey", "lan", "naber", "günaydın", "iyi günler", "siz"]
+        msg_tokens = set(re.findall(r"\b\w+\b", user_msg_clean.lower()))
+        is_greeting_or_chatter = len(msg_tokens) <= 4 and (
+            bool(msg_tokens & {"selam", "merhaba", "hey", "hi", "hello", "naber", "günaydın"})
+            or "iyi günler" in user_msg_clean.lower()
         )
 
         if not is_greeting_or_chatter:

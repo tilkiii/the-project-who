@@ -7,7 +7,7 @@ Uses httpx directly without external heavy dependencies.
 from __future__ import annotations
 
 import os
-from typing import Any, Dict, List, Optional
+from typing import Dict, List, Optional
 import httpx
 
 from who.providers.base import BaseLLMProvider

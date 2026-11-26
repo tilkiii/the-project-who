@@ -6,8 +6,7 @@ Generates tailored communications calibrated to target rhetoric with adversarial
 from __future__ import annotations
 
 import json
-from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 from who.config import call_llm
 from who.utils.logger import get_logger

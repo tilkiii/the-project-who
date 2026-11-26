@@ -10,9 +10,9 @@ import math
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from who.config import get_embedding, settings
+from who.config import get_embedding
 from who.utils.logger import get_logger
-from who.utils.text_cleaner import chunk_text
+from who.utils.text_cleaner import chunk_text, sanitize_slug
 
 logger = get_logger("who.vault.vector")
 
@@ -29,13 +29,12 @@ class VectorEmbedder:
         self._init_chroma()
 
     def _init_chroma(self) -> None:
-        """Initialize ChromaDB client or local vector store fallback."""
-        if self.chroma_dir:
-            self.chroma_dir.mkdir(parents=True, exist_ok=True)
+        """Initialize ChromaDB client or local vector store fallback without eagerly creating empty directories."""
+        if self.chroma_dir and self.chroma_dir.exists():
             try:
                 import chromadb
                 client = chromadb.PersistentClient(path=str(self.chroma_dir))
-                safe_col_name = f"who_{self.target_name.lower().replace(' ', '_')}"[:63]
+                safe_col_name = f"who_{sanitize_slug(self.target_name)}"[:63]
                 self.collection = client.get_or_create_collection(
                     name=safe_col_name,
                     metadata={"hnsw:space": "cosine"}
@@ -49,9 +48,12 @@ class VectorEmbedder:
         self._load_local_vector_index()
 
     def add_documents(self, documents: List[Dict[str, Any]]) -> int:
-        """Chunk, embed, and store documents with rich metadata."""
-        total_added = 0
+        """Chunk, embed, and store documents with rich metadata (idempotent upsert by chunk id)."""
         all_chunks: List[Dict[str, Any]] = []
+        if self.chroma_dir:
+            self.chroma_dir.mkdir(parents=True, exist_ok=True)
+            if self.collection is None:
+                self._init_chroma()
 
         for idx, doc in enumerate(documents):
             source_type = doc.get("source_type", "document")
@@ -109,8 +111,16 @@ class VectorEmbedder:
             except Exception as e:
                 logger.error(f"ChromaDB upsert error: {e}")
 
-        # Store in local fallback list and persist
-        self.local_chunks.extend(all_chunks)
+        # Upsert into local fallback index by chunk ID to prevent duplicate bloat across repeated runs
+        existing_by_id = {c.get("id"): idx for idx, c in enumerate(self.local_chunks) if c.get("id")}
+        for chunk in all_chunks:
+            cid = chunk.get("id")
+            if cid and cid in existing_by_id:
+                self.local_chunks[existing_by_id[cid]] = chunk
+            else:
+                if cid:
+                    existing_by_id[cid] = len(self.local_chunks)
+                self.local_chunks.append(chunk)
         self._persist_local_vector_index()
         return len(all_chunks)
 

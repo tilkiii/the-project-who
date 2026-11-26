@@ -9,12 +9,10 @@ from __future__ import annotations
 from datetime import datetime, timezone
 import hashlib
 import json
-from pathlib import Path
 import re
 from typing import Any, Dict, List, Optional
 import urllib.request
 
-from who.config import call_llm
 from who.learn.chronomics import CognitiveChronomics
 from who.learn.feature_extractor import FeatureExtractor
 from who.utils.logger import get_logger
@@ -133,7 +131,8 @@ class LiveMonitor:
             except Exception:
                 pass
 
-        baseline_manip = baseline_features.get("epistemic_manipulation_index", {}).get("dogmatic_density", 0.5)
+        baseline_manip_block = baseline_features.get("epistemic_manipulation_index", {})
+        baseline_manip = float(baseline_manip_block.get("dogmatic_density_per_k", baseline_manip_block.get("dogmatic_density", 0.5)))
         baseline_cal = baseline_features.get("epistemic_markers", {}).get("epistemic_calibration_ratio", 1.0)
 
         fe = FeatureExtractor()
@@ -149,10 +148,10 @@ class LiveMonitor:
             processed_hashes.add(item_hash)
 
             # Analyze item
-            doc_feats = fe.extract_features(raw_content)
+            doc_feats = fe.extract_features([raw_content])
             epistemic = doc_feats.get("epistemic_markers", {})
             manip = doc_feats.get("epistemic_manipulation_index", {})
-            item_dogmatic = manip.get("dogmatic_density", 0.0)
+            item_dogmatic = float(manip.get("dogmatic_density_per_k", manip.get("dogmatic_density", 0.0)))
             item_cal = epistemic.get("epistemic_calibration_ratio", 1.0)
 
             # 1. Nocturnal Circadian Anomaly

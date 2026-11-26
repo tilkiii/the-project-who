@@ -4,9 +4,10 @@ Text cleaning, normalization, speaker token parsing, and slug sanitization.
 
 from __future__ import annotations
 
+from pathlib import Path
 import re
 import unicodedata
-from typing import Dict, List, Tuple
+from typing import Any, Dict, List, Tuple
 
 
 def sanitize_slug(name: str) -> str:
@@ -243,3 +244,52 @@ def extract_quotes(text: str, query: str, max_quotes: int = 3) -> List[str]:
 
     scored.sort(key=lambda x: x[0], reverse=True)
     return [s[1] for s in scored[:max_quotes]]
+
+
+def search_raw_corpus_paragraphs(
+    raw_data_dir: Path,
+    query: str,
+    top_k: int = 4,
+) -> List[Dict[str, Any]]:
+    """Fallback lexical paragraph search across raw_data/*.md|*.txt when no vector index is present."""
+    if not raw_data_dir or not raw_data_dir.exists() or not query.strip():
+        return []
+
+    q_tokens = set(re.findall(r"\b\w{4,}\b", query.lower()))
+    if not q_tokens:
+        return []
+
+    files = sorted(list(raw_data_dir.glob("*.md")) + list(raw_data_dir.glob("*.txt")))
+    scored: List[Tuple[int, Dict[str, Any]]] = []
+    seen_texts: set[str] = set()
+
+    for fpath in files:
+        try:
+            content = fpath.read_text(encoding="utf-8", errors="replace")
+        except Exception:
+            continue
+        for raw_block in re.split(r"\n+", content):
+            block = raw_block.strip()
+            if not block or block.startswith("#") or block.startswith("---"):
+                continue
+            block = re.sub(r"^(?:>|[-*]|\d+\.)\s*", "", block).strip()
+            if len(block) < 25 or is_boilerplate_or_junk(block):
+                continue
+            if block in seen_texts:
+                continue
+            seen_texts.add(block)
+            block_lower = block.lower()
+            hits = sum(1 for tok in q_tokens if tok in block_lower)
+            if hits > 0:
+                score = round(min(0.85, 0.45 + (0.10 * hits)), 3)
+                scored.append((
+                    hits,
+                    {
+                        "text": block,
+                        "metadata": {"source_id": fpath.name},
+                        "similarity_score": score,
+                    },
+                ))
+
+    scored.sort(key=lambda item: (item[0], item[1]["similarity_score"]), reverse=True)
+    return [item[1] for item in scored[:top_k]]

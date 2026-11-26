@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import List, Optional
+from typing import Optional
 import typer
 from rich.panel import Panel
 from rich.table import Table
@@ -131,7 +131,7 @@ def topics(
 ) -> None:
     """Display topic evolution, emergence, persistence, and abandonment trajectory."""
     print_banner()
-    dirs = settings.get_target_dirs(target)
+    dirs = settings.get_target_dirs(target, create=False)
     topics_file = dirs.learned_skills_dir / "topics.json"
     evo_file = dirs.learned_skills_dir / "topic_evolution.json"
 
@@ -316,7 +316,7 @@ def graph(
 ) -> None:
     """Inspect knowledge graph metrics, influential concepts, and community clusters."""
     print_banner()
-    dirs = settings.get_target_dirs(target)
+    dirs = settings.get_target_dirs(target, create=False)
     metrics_file = dirs.vault_dir / "graph_metrics.json"
 
     if not metrics_file.exists():
@@ -405,7 +405,7 @@ def graph_export(
     output: Optional[str] = typer.Option(None, "--output", "-o", help="Target JSON output path"),
 ) -> None:
     """Export the complete Knowledge Graph to a JSON file."""
-    dirs = settings.get_target_dirs(target)
+    dirs = settings.get_target_dirs(target, create=False)
     gs = GraphStore(target, vault_dir=dirs.vault_dir)
     data = gs.export_graph_json()
     gs.close()

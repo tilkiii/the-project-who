@@ -7,7 +7,6 @@ from __future__ import annotations
 import json
 from pathlib import Path
 import shutil
-from typing import Optional
 import typer
 from rich.panel import Panel
 from rich.table import Table

@@ -26,4 +26,4 @@ jobs:
           python -m pip install ruff
 
       - name: Run Ruff syntax & error check
-        run: ruff check src/who/ examples/ --select=E9,F63,F7,F82 --output-format=github
+        run: ruff check src/who/ examples/ --select=E9,F401,F63,F7,F82 --output-format=github

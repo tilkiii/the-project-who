@@ -8,7 +8,7 @@ from __future__ import annotations
 import hashlib
 import math
 import re
-from typing import Any, Dict, List, Optional
+from typing import List, Optional
 
 from who.providers.base import BaseLLMProvider
 
@@ -95,6 +95,46 @@ class OfflineProvider(BaseLLMProvider):
                 lines.append(f'\nAs reflected in my prior statements: "{clean_quotes[0]}"')
             lines.append("\n(Offline mode: Configure an API key in .env for full model generation.)")
             return "\n".join(lines)
+
+        # Outreach Composer fallback (Initial Draft / Adversarial Critique / Final Refinement)
+        if "write an outreach message/email to" in p_lower:
+            tgt_m = re.search(r"write an outreach message/email to[ \t]+([^\r\n\.]+)", prompt, re.IGNORECASE)
+            goal_m = re.search(r"GOAL:[ \t]*([^\r\n]*)", prompt)
+            ctx_m = re.search(r"ADDITIONAL CONTEXT:[ \t]*([^\r\n]*)", prompt)
+            terms_m = re.search(r"Characteristic terms to resonate with:[ \t]*([^\r\n]*)", prompt)
+            tgt = tgt_m.group(1).strip() if tgt_m else "Recipient"
+            goal = (goal_m.group(1).strip() if goal_m else "") or "Research collaboration"
+            ctx = (ctx_m.group(1).strip() if ctx_m else "") or "Direct professional engagement"
+            terms_line = terms_m.group(1).strip() if terms_m else ""
+            res_note = f", aligning around {terms_line}" if terms_line else ""
+            return (
+                f"Subject: {goal}\n\n"
+                f"Hello {tgt},\n\n"
+                f"I am reaching out regarding {goal} ({ctx}). Rather than sending a broad pitch, I wanted to share "
+                f"clear empirical premises, explicit methodology, and reciprocal commitments{res_note}.\n\n"
+                "If useful, we can start with a concrete agenda and verifiable assumptions.\n\n"
+                "(Offline mode: Configure an API key in .env for full model generation.)"
+            )
+        if "review this incoming outreach proposal" in p_lower:
+            return (
+                "1. Likely Friction Triggers: Unverified assumptions, vague deliverables, or asymmetric commitments.\n"
+                "2. Rhetoric & Evidence Audit: Claims should cite concrete evidence bounds rather than broad enthusiasm.\n"
+                "3. Recommended Revision: Lead with explicit scope, falsifiable metrics, and reciprocal terms.\n\n"
+                "(Offline mode: Configure an API key in .env for full model generation.)"
+            )
+        if "you are finalizing the outreach message for" in p_lower:
+            tgt_m = re.search(r"finalizing the outreach message for\s+([^\n\.]+)", prompt, re.IGNORECASE)
+            tgt = tgt_m.group(1).strip() if tgt_m else "Recipient"
+            draft_goal_m = re.search(r"Subject:\s*(.+?)(?:\n|$)", prompt)
+            subj = draft_goal_m.group(1).strip() if draft_goal_m else "Focused Evidence-Based Proposal"
+            return (
+                f"Subject: {subj} — Bounded Scope & Evidence\n\n"
+                f"Hello {tgt},\n\n"
+                f"To keep this strictly actionable: the objective is {subj}, scoped around verifiable evidence, "
+                "explicit evaluation criteria, and balanced mutual opt-out boundaries.\n\n"
+                "Let me know which verifiable details would help evaluate fit cleanly.\n\n"
+                "(Offline mode: Configure an API key in .env for full model generation.)"
+            )
 
         # Monte Carlo Game-Theoretic synthesis fallback
         if "monte carlo & boltzmann-gibbs results" in p_lower:

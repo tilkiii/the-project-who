@@ -194,25 +194,33 @@ class GraphStore:
         return payload
 
     def _load_local_graph(self) -> None:
-        """Load graph state from local concept_network.json if present."""
+        """Load graph state from local concept_network.json or knowledge_graph.json if present."""
         if not self.vault_dir:
             return
-        net_file = self.vault_dir / "concept_network.json"
-        if net_file.exists():
+        for filename in ("concept_network.json", "knowledge_graph.json"):
+            net_file = self.vault_dir / filename
+            if not net_file.exists():
+                continue
             try:
                 with open(net_file, "r", encoding="utf-8") as f:
                     data = json.load(f)
-                for node in data.get("nodes", []):
-                    name = node.get("name")
+                nodes = data.get("nodes", []) or data.get("entities", [])
+                for node in nodes:
+                    name = node.get("name") or node.get("id")
                     if name:
-                        self.nx_graph.add_node(name, **{k: v for k, v in node.items() if k != "name"})
-                for rel in data.get("relationships", []):
+                        attrs = {k: v for k, v in node.items() if k not in ("name", "id")}
+                        self.nx_graph.add_node(name, **attrs)
+                rels = data.get("relationships") or data.get("edges") or []
+                for rel in rels:
                     src = rel.get("source")
                     tgt = rel.get("target")
                     if src and tgt:
-                        self.nx_graph.add_edge(src, tgt, **{k: v for k, v in rel.items() if k not in ("source", "target")})
+                        attrs = {k: v for k, v in rel.items() if k not in ("source", "target")}
+                        attrs.setdefault("relation", "RELATES_TO")
+                        self.nx_graph.add_edge(src, tgt, **attrs)
+                return
             except Exception as e:
-                logger.debug(f"Could not load existing concept_network.json: {e}")
+                logger.debug(f"Could not load existing {filename}: {e}")
 
     def close(self) -> None:
         """Close Neo4j driver connection."""

@@ -9,7 +9,7 @@ from who.agent.sdk import (
     list_targets,
 )
 
-__version__ = "1.0.0"
+__version__ = "1.0.1"
 __author__ = "Mucteba Özdemir"
 
 __all__ = [

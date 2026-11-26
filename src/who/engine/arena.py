@@ -35,14 +35,14 @@ class SwarmArena:
         self.participant_names = [p.strip() for p in participant_names if p.strip()]
         self.topic = topic
         self.rounds = max(1, min(rounds, 5))
-        self.output_dir = output_dir or Path("profiles/arena_debates")
+        self.output_dir = output_dir or (settings.profiles_dir / "arena_debates")
         self.participants_data: Dict[str, Dict[str, Any]] = {}
         self.feature_extractor = FeatureExtractor()
 
     def load_participants(self) -> Dict[str, Dict[str, Any]]:
         """Load character.json, mindset summary, features.json, and graph physics for all participants."""
         for name in self.participant_names:
-            dirs = settings.get_target_dirs(name)
+            dirs = settings.get_target_dirs(name, create=False)
             char_file = dirs.vault_dir / "character.json"
             mindset_file = dirs.vault_dir / "mindset_summary.md"
             features_file = dirs.learned_skills_dir / "features.json"

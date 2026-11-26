@@ -19,7 +19,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import List, Optional
 from dotenv import load_dotenv
 
 # Load .env file BEFORE any provider or module is imported (prefer current working directory, then package root)!
@@ -115,8 +115,8 @@ class Settings(BaseModel):
     strict_epistemic_mode: bool = Field(default_factory=lambda: os.getenv("STRICT_EPISTEMIC_MODE", "true").lower() in ("true", "1", "yes"))
     debug: bool = Field(default_factory=lambda: os.getenv("DEBUG", "false").lower() in ("true", "1", "yes"))
 
-    def get_target_dirs(self, target_name: str) -> TargetDirectories:
-        """Resolve and ensure standard profile directory structure for a target."""
+    def get_target_dirs(self, target_name: str, create: bool = True) -> TargetDirectories:
+        """Resolve and optionally create standard profile directory structure for a target."""
         slug = sanitize_slug(target_name)
         base = self.profiles_dir / slug
         raw_data = base / "raw_data"
@@ -132,7 +132,8 @@ class Settings(BaseModel):
             vault_dir=vault,
             chroma_dir=chroma,
         )
-        td.ensure_exists()
+        if create:
+            td.ensure_exists()
         return td
 
 

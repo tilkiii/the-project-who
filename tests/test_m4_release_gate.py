@@ -31,17 +31,17 @@ runner = CliRunner()
 
 
 def test_v1_0_0_version_consistency():
-    """Verify package metadata, CLI --version flag, and MCP server handshake all report 1.0.0."""
-    assert who.__version__ == "1.0.0"
+    """Verify package metadata, CLI --version flag, and MCP server handshake all report 1.0.1."""
+    assert who.__version__ == "1.0.1"
 
     mcp = MCPServer()
     init_resp = mcp.handle_request({"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {}})
     assert init_resp is not None
-    assert init_resp["result"]["serverInfo"]["version"] == "1.0.0"
+    assert init_resp["result"]["serverInfo"]["version"] == who.__version__
 
     res = runner.invoke(app, ["--version"])
     assert res.exit_code == 0
-    assert "1.0.0" in res.output
+    assert who.__version__ in res.output
 
 
 def _seed_sample_target(name: str = "Gate Target") -> Any:

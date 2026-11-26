@@ -12,7 +12,7 @@ import re
 from typing import Any, Dict, List, Optional
 
 from who.utils.logger import get_logger
-from who.utils.text_cleaner import clean_text, redact_pii
+from who.utils.text_cleaner import redact_pii
 
 logger = get_logger("who.harvest.dialogue")
 

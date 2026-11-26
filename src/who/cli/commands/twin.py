@@ -75,8 +75,8 @@ def explain(
     target: str = typer.Option(..., "--target", "-t", help="Target individual name"),
     claim: str = typer.Option(..., "--claim", "-c", help="Claim to trace and verify"),
 ) -> None:
-    """Trace any claim back to primary quotes, Neo4j graph paths, and confidence scores."""
-    dirs = settings.get_target_dirs(target)
+    """Trace any claim back to primary quotes, knowledge graph paths, and confidence scores."""
+    dirs = settings.get_target_dirs(target, create=False)
     engine = ExplainabilityEngine(target, dirs)
     res = engine.explain_claim(claim)
 
@@ -105,7 +105,7 @@ def psych_insights(
 ) -> None:
     """Generate behavioral report citing both target quotes AND academic paper DOIs."""
     print_banner()
-    dirs = settings.get_target_dirs(target)
+    dirs = settings.get_target_dirs(target, create=False)
     reporter = PsychInsights(target, dirs)
     report = reporter.generate_report()
 
@@ -163,7 +163,7 @@ def ask(
     prompt: str = typer.Option(..., "--prompt", "-p", help="Question to ask about the target"),
 ) -> None:
     """Evidence-backed Q&A answering questions about the target using Graph + Vector memory."""
-    dirs = settings.get_target_dirs(target)
+    dirs = settings.get_target_dirs(target, create=False)
     oracle = Oracle(target, dirs)
     res = oracle.ask(prompt)
 
@@ -184,7 +184,7 @@ def simulate(
     iterations: int = typer.Option(25, "--iterations", "-n", help="Number of Monte Carlo stochastic iterations (10-100)"),
 ) -> None:
     """Simulate plausible reactions and counter-moves under explicit scenario assumptions."""
-    dirs = settings.get_target_dirs(target)
+    dirs = settings.get_target_dirs(target, create=False)
     sim = Simulator(target, dirs)
 
     if monte_carlo:
@@ -288,7 +288,7 @@ def compose(
     context: Optional[str] = typer.Option(None, "--context", help="Additional context"),
 ) -> None:
     """Generate hyper-tailored outreach letters with adversarial rejection stress-testing."""
-    dirs = settings.get_target_dirs(target)
+    dirs = settings.get_target_dirs(target, create=False)
     composer = Composer(target, dirs)
     res = composer.compose_outreach(goal, context=context)
 
@@ -304,7 +304,7 @@ def chat(
 ) -> None:
     """Interactive CLI digital twin chat with tone toggling."""
     print_banner()
-    dirs = settings.get_target_dirs(target)
+    dirs = settings.get_target_dirs(target, create=False)
     twin = TwinChat(target, dirs, mode=mode)
 
     console.print(f"[bold green]Starting Digital Twin Interactive Session for:[/bold green] [bold cyan]{target}[/bold cyan]")

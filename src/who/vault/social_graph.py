@@ -7,9 +7,10 @@ generating standalone network data.
 from __future__ import annotations
 
 from datetime import datetime, timezone
+import html
 import json
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Optional, Set
 
 from who.config import settings
 from who.utils.logger import get_logger
@@ -22,9 +23,9 @@ class SocialGraphAnalyzer:
 
     def __init__(self, target_names: List[str], output_dir: Optional[Path] = None):
         self.target_names = [t.strip() for t in target_names if t.strip()]
-        self.output_dir = output_dir or Path("profiles/social_graphs")
+        self.output_dir = output_dir or (settings.profiles_dir / "social_graphs")
 
-    def build_multi_target_network(self) -> Dict[str, Any]:
+    def build_multi_target_network(self, export_html: bool = True) -> Dict[str, Any]:
         """Merge individual target knowledge graphs into a unified multi-target social network."""
         logger.info(f"Building unified social graph across {len(self.target_names)} targets: {self.target_names}")
 
@@ -33,7 +34,7 @@ class SocialGraphAnalyzer:
         target_concept_map: Dict[str, Set[str]] = {}
 
         for t_name in self.target_names:
-            dirs = settings.get_target_dirs(t_name)
+            dirs = settings.get_target_dirs(t_name, create=False)
             merged_nodes[t_name] = {
                 "id": t_name,
                 "label": t_name,
@@ -43,28 +44,31 @@ class SocialGraphAnalyzer:
             }
             target_concept_map[t_name] = set()
 
-            # Load concept network or graph store
-            concept_file = dirs.vault_dir / "concept_network.json"
-            if concept_file.exists():
+            # Load concept network or fallback knowledge graph
+            graph_file = dirs.vault_dir / "concept_network.json"
+            if not graph_file.exists():
+                graph_file = dirs.vault_dir / "knowledge_graph.json"
+            if graph_file.exists():
                 try:
-                    with open(concept_file, "r", encoding="utf-8") as f:
+                    with open(graph_file, "r", encoding="utf-8") as f:
                         c_data = json.load(f)
                         raw_entities = c_data.get("nodes", []) or c_data.get("entities", [])
                         for entity in raw_entities:
-                            eid = entity.get("name", "").strip()
+                            eid = str(entity.get("name") or entity.get("id") or "").strip()
                             if not eid:
                                 continue
                             if eid not in merged_nodes:
                                 merged_nodes[eid] = {
                                     "id": eid,
                                     "label": eid,
-                                    "type": entity.get("type", "Concept"),
+                                    "type": entity.get("type") or entity.get("label", "Concept"),
                                     "group": 2,
                                     "radius": 10,
                                 }
                             target_concept_map[t_name].add(eid)
 
-                        for rel in c_data.get("relationships", []):
+                        rels = c_data.get("relationships") or c_data.get("edges") or []
+                        for rel in rels:
                             src_node = rel.get("source")
                             tgt_node = rel.get("target")
                             if src_node and tgt_node:
@@ -80,7 +84,7 @@ class SocialGraphAnalyzer:
                                     "quote": rel.get("quote", ""),
                                 })
                 except Exception as e:
-                    logger.debug(f"Failed loading concept network for {t_name}: {e}")
+                    logger.debug(f"Failed loading graph file for {t_name}: {e}")
 
         # Compute Cross-Target Shared Affiliations & Bridges
         shared_bridges: List[Dict[str, Any]] = []
@@ -129,8 +133,8 @@ class SocialGraphAnalyzer:
             "analyzed_at": datetime.now(timezone.utc).isoformat(),
         }
 
-        # Generate D3 HTML Visualizer
-        html_content = self._render_d3_html(network_payload)
+        # Generate D3 HTML Visualizer only when requested
+        html_content = self._render_d3_html(network_payload) if export_html else None
         self._persist_network(network_payload, html_content)
 
         return network_payload
@@ -148,8 +152,16 @@ class SocialGraphAnalyzer:
             "nodes": network_data["nodes"],
             "links": valid_links,
         }, ensure_ascii=False)
+        data_json = (
+            data_json
+            .replace("<", "\\u003c")
+            .replace(">", "\\u003e")
+            .replace("</", "<\\/")
+            .replace("\u2028", "\\u2028")
+            .replace("\u2029", "\\u2029")
+        )
 
-        targets_str = ", ".join(self.target_names)
+        targets_str = html.escape(", ".join(self.target_names), quote=True)
 
         return f"""<!DOCTYPE html>
 <html lang="en">
@@ -253,8 +265,10 @@ class SocialGraphAnalyzer:
       .attr("stroke", "#ffffff")
       .attr("stroke-width", d => d.type === "TargetPerson" ? 2.5 : 1)
       .on("mouseover", (event, d) => {{
-        tooltip.style("visibility", "visible")
-          .html("<strong>" + d.label + "</strong><br>Type: " + d.type);
+        tooltip.style("visibility", "visible").text("");
+        tooltip.append("strong").text(String(d.label || ""));
+        tooltip.append("br");
+        tooltip.append("span").text("Type: " + String(d.type || "Concept"));
       }})
       .on("mousemove", (event) => {{
         tooltip.style("top", (event.pageY + 10) + "px").style("left", (event.pageX + 10) + "px");
@@ -281,17 +295,19 @@ class SocialGraphAnalyzer:
 </body>
 </html>"""
 
-    def _persist_network(self, network_data: Dict[str, Any], html_content: str) -> None:
-        """Persist JSON and interactive HTML report to social graphs directory."""
+    def _persist_network(self, network_data: Dict[str, Any], html_content: Optional[str] = None) -> None:
+        """Persist JSON and optional interactive HTML report to social graphs directory."""
         self.output_dir.mkdir(parents=True, exist_ok=True)
         safe_prefix = "_".join("".join(c if c.isalnum() else "" for c in t) for t in self.target_names[:3])
         out_json = self.output_dir / f"social_network_{safe_prefix}.json"
-        out_html = self.output_dir / f"social_network_{safe_prefix}.html"
 
         with open(out_json, "w", encoding="utf-8") as f:
             json.dump(network_data, f, indent=2, ensure_ascii=False)
 
-        with open(out_html, "w", encoding="utf-8") as f:
-            f.write(html_content)
-
-        logger.info(f"Saved Social Network Intelligence to {out_json} and interactive visualizer to {out_html}")
+        if html_content is not None:
+            out_html = self.output_dir / f"social_network_{safe_prefix}.html"
+            with open(out_html, "w", encoding="utf-8") as f:
+                f.write(html_content)
+            logger.info(f"Saved Social Network Intelligence to {out_json} and interactive visualizer to {out_html}")
+        else:
+            logger.info(f"Saved Social Network Intelligence JSON to {out_json}")

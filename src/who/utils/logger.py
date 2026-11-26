@@ -6,7 +6,7 @@ Enforces epistemic formatting and probabilistic evidence presentation.
 from __future__ import annotations
 
 import logging
-from typing import Any, List, Optional
+from typing import List, Optional
 from rich.console import Console
 from rich.logging import RichHandler
 from rich.panel import Panel
@@ -14,14 +14,15 @@ from rich.table import Table
 from rich.text import Text
 
 console = Console()
+err_console = Console(stderr=True)
 
 
 def get_logger(name: str = "who") -> logging.Logger:
-    """Return a configured logger with RichHandler."""
+    """Return a configured logger with RichHandler bound to stderr."""
     logger = logging.getLogger(name)
     if not logger.handlers:
         handler = RichHandler(
-            console=console,
+            console=err_console,
             rich_tracebacks=True,
             show_time=True,
             show_path=False,

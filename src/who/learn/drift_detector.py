@@ -12,8 +12,7 @@ from __future__ import annotations
 
 import json
 import math
-from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Optional, Set
 
 from who.config import call_llm
 from who.learn.feature_extractor import FeatureExtractor
@@ -56,18 +55,20 @@ class TemporalDriftDetector:
             except Exception:
                 pass
 
-        graph_file = self.dirs.vault_dir / "knowledge_graph.json"
         graph_concepts: Set[str] = set()
-        if graph_file.exists():
-            try:
-                with open(graph_file, "r", encoding="utf-8") as f:
-                    graph_data = json.load(f)
-                    for node in graph_data.get("nodes", []):
-                        label = node.get("label") or node.get("id") or ""
-                        if label:
-                            graph_concepts.add(label.lower().strip())
-            except Exception:
-                pass
+        for fname in ("knowledge_graph.json", "concept_network.json"):
+            graph_file = self.dirs.vault_dir / fname
+            if graph_file.exists():
+                try:
+                    with open(graph_file, "r", encoding="utf-8") as f:
+                        graph_data = json.load(f)
+                        for node in graph_data.get("nodes", []) or graph_data.get("entities", []):
+                            concept_name = node.get("name") or node.get("id") or node.get("label") or ""
+                            clean_c = str(concept_name).strip().lower()
+                            if clean_c and clean_c != self.target_name.lower():
+                                graph_concepts.add(clean_c)
+                except Exception:
+                    pass
 
         epistemic = baseline_features.get("epistemic_markers", {})
         manip = baseline_features.get("epistemic_manipulation_index", {})

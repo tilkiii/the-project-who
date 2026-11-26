@@ -56,7 +56,7 @@ class DocumentIngestor:
                 with open(path, "r", encoding="utf-8", errors="replace") as f:
                     content_markdown = f.read()
 
-        clean_md = clean_text(content_markdown)
+        clean_md = clean_text(content_markdown) if content_markdown.strip() else ""
         record = {
             "file_name": path.name,
             "source_path": str(path.absolute()),
@@ -64,10 +64,13 @@ class DocumentIngestor:
             "content": clean_md,
             "source_type": f"document_{doc_type.lstrip('.')}",
             "speaker": "TARGET_PRIMARY",
+            "status": "OK" if clean_md else "EXTRACTION_FAILED",
         }
 
-        if self.output_dir:
+        if self.output_dir and clean_md:
             self._save_record(record, path.name)
+        elif not clean_md:
+            logger.warning(f"Extraction yielded no text for '{path.name}'; skipping save without placeholder text.")
 
         return record
 
@@ -103,10 +106,10 @@ class DocumentIngestor:
                     texts = [node.text for node in p.findall(".//w:t", ns) if node.text]
                     if texts:
                         paragraphs.append("".join(texts))
-                return f"# {path.stem}\n\n" + "\n\n".join(paragraphs)
+                return f"# {path.stem}\n\n" + "\n\n".join(paragraphs) if paragraphs else ""
         except Exception as e:
             logger.debug(f"DOCX fallback extraction error: {e}")
-            return f"# Document {path.name}\n\n[Content extraction failed]"
+            return ""
 
     def _parse_pdf_fallback(self, path: Path) -> str:
         """Fallback PDF parser using pypdf/pymupdf or binary stream text extraction."""
@@ -114,7 +117,8 @@ class DocumentIngestor:
             import pypdf
             reader = pypdf.PdfReader(str(path))
             pages = [page.extract_text() or "" for page in reader.pages]
-            return f"# {path.stem}\n\n" + "\n\n---\n\n".join(pages)
+            joined = "\n\n---\n\n".join(p for p in pages if p.strip())
+            return f"# {path.stem}\n\n{joined}" if joined else ""
         except Exception:
             # Simple binary text scrape fallback
             try:
@@ -122,10 +126,10 @@ class DocumentIngestor:
                     raw = f.read().decode("latin1", errors="ignore")
                     import re
                     matches = re.findall(r"\(([\w\s.,;:!?-]{4,})\)", raw)
-                    return f"# {path.stem}\n\n" + " ".join(matches)
+                    return f"# {path.stem}\n\n" + " ".join(matches) if matches else ""
             except Exception as e:
                 logger.debug(f"PDF fallback extraction error: {e}")
-                return f"# PDF Document {path.name}\n\n[Content extraction failed]"
+                return ""
 
     def _parse_pptx_fallback(self, path: Path) -> str:
         """Fallback PPTX parser using zipfile xml extraction."""
@@ -142,10 +146,10 @@ class DocumentIngestor:
                     texts = [node.text for node in root.findall(".//a:t", ns) if node.text]
                     if texts:
                         slides_text.append("\n".join(texts))
-                return f"# Presentation: {path.stem}\n\n" + "\n\n---\n\n".join(slides_text)
+                return f"# Presentation: {path.stem}\n\n" + "\n\n---\n\n".join(slides_text) if slides_text else ""
         except Exception as e:
             logger.debug(f"PPTX fallback extraction error: {e}")
-            return f"# PPTX {path.name}\n\n[Content extraction failed]"
+            return ""
 
     def _save_record(self, record: Dict[str, Any], identifier: str) -> None:
         """Persist ingested document markdown to disk."""

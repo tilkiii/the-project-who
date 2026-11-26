@@ -43,6 +43,7 @@ class WebHarvester:
             logger.debug(f"crawl4ai not available or encountered error ({e}), falling back to httpx+BeautifulSoup")
 
         # Fallback to httpx + BeautifulSoup
+        scrape_failed = False
         if not content_markdown:
             try:
                 headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
@@ -56,12 +57,16 @@ class WebHarvester:
                         title = soup.title.string.strip() if soup.title and soup.title.string else url
                         # Extract article or body paragraphs
                         paragraphs = [p.get_text().strip() for p in soup.find_all(["p", "h1", "h2", "h3", "h4", "li"]) if p.get_text().strip()]
-                        content_markdown = f"# {title}\n\n" + "\n\n".join(paragraphs)
+                        content_markdown = f"# {title}\n\n" + "\n\n".join(paragraphs) if paragraphs else ""
+                    else:
+                        scrape_failed = True
+                        logger.warning(f"Web scrape returned HTTP {resp.status_code} for {url}; skipping save.")
             except Exception as e:
+                scrape_failed = True
                 logger.error(f"Failed to scrape URL {url}: {e}")
-                content_markdown = f"# Scrape Failure\n\nCould not fetch content from {url}."
+                content_markdown = ""
 
-        clean_md = clean_text(content_markdown)
+        clean_md = "" if scrape_failed else clean_text(content_markdown)
         doc_record = {
             "source_url": url,
             "title": title or url,
@@ -69,9 +74,10 @@ class WebHarvester:
             "content": clean_md,
             "source_type": "web_article",
             "speaker": "TARGET_PRIMARY",
+            "status": "OK" if clean_md and not scrape_failed else "FAILED",
         }
 
-        if self.output_dir:
+        if self.output_dir and clean_md and not scrape_failed:
             self._save_record(doc_record, url)
 
         return doc_record

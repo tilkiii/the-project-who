@@ -360,6 +360,8 @@ class FeatureExtractor:
         documents: Optional[List[Dict[str, Any]]] = None,
     ) -> Dict[str, Any]:
         """Compute comprehensive linguistic, Bayesian psychometric, CAPS, and Revealed Preference metrics."""
+        if isinstance(texts, str):
+            texts = [texts]
         combined_text = " ".join(texts)
         if not combined_text.strip():
             return self._empty_feature_set()

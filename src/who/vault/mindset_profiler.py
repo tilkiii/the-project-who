@@ -11,7 +11,6 @@ import json
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from who.config import call_llm
 from who.utils.logger import get_logger
 
 logger = get_logger("who.vault.mindset")
@@ -40,8 +39,14 @@ class MindsetProfiler:
         cal_ratio = behavioral.get("calibration_ratio", 1.0)
         rules = mapping_skill.get("generation_rules", [])
 
-        # Top concepts from graph metrics
+        # Top concepts from graph metrics & real corpus quotes
         top_concepts = [c.get("node") for c in graph_metrics.get("top_influential_concepts", [])[:6] if c.get("node") != self.target_name]
+        cleaned_quotes = [q.strip() for q in sample_quotes if q and len(q.strip()) > 20][:6]
+        sample_reply = (
+            f'Based on documented corpus statements: "{cleaned_quotes[0][:240]}"'
+            if cleaned_quotes
+            else f"Observed corpus focuses on {top_concepts[0] if top_concepts else 'evidence-grounded evaluation'} (limited primary sample)."
+        )
 
         # 1. Generate ElizaOS Compliant character.json
         character_data = {
@@ -58,7 +63,7 @@ class MindsetProfiler:
                 "Frames all complex assertions with quantified uncertainty and primary evidence citations.",
             ],
             "lore": [
-                f"Analyzed across multimodal footprint, academic papers, and direct dialogue records.",
+                f"Analyzed across primary corpus documents, extracted quotes, and dialogue records.",
                 f"Core intellectual anchors: {', '.join(top_concepts) if top_concepts else 'empirical systems'}.",
                 f"Linguistic calibration ratio: {cal_ratio}.",
             ],
@@ -68,15 +73,12 @@ class MindsetProfiler:
                     {
                         "user": self.target_name,
                         "content": {
-                            "text": f"Based on observed evidence, the data suggests a plausible alignment with {top_concepts[0] if top_concepts else 'systematic verification'}. Confidence Score: 85%."
+                            "text": sample_reply
                         }
                     }
                 ]
             ],
-            "postExamples": [
-                f"Rigorous analysis requires decoupling assertions from dogma. The data suggests plausible alignment with empirical models.",
-                f"Evaluating systems under uncertainty: confidence scores reflect evidence depth, not rhetorical conviction."
-            ],
+            "postExamples": cleaned_quotes,
             "topics": top_concepts or ["systems", "research", "methodology"],
             "style": {
                 "all": [

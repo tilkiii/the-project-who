@@ -15,7 +15,6 @@ import random
 from typing import Any, Dict, List, Optional, Tuple
 import networkx as nx
 
-from who.config import settings
 from who.utils.logger import get_logger
 from who.vault.graph_store import GraphStore
 

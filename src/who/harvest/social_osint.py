@@ -8,7 +8,6 @@ from __future__ import annotations
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 import json
-from pathlib import Path
 import re
 from typing import Any, Dict, List, Optional
 import urllib.request
@@ -16,7 +15,7 @@ import urllib.error
 
 from who.config import settings
 from who.utils.logger import get_logger
-from who.utils.text_cleaner import clean_text
+from who.utils.text_cleaner import clean_text, sanitize_slug
 
 logger = get_logger("who.harvest.social")
 
@@ -287,10 +286,13 @@ class SocialOSINTHunter:
         return self.discovered_profiles
 
     def _ingest_discovered_dossier(self, username: str, profiles: List[Dict[str, Any]]) -> None:
-        """Persist structured OSINT social dossier directly into target raw data directory."""
-        self.dirs.raw_data_dir.mkdir(parents=True, exist_ok=True)
-        filename = f"social_osint_dossier_{username}.md"
-        out_file = self.dirs.raw_data_dir / filename
+        """Persist structured OSINT social dossier safely inside target raw data directory."""
+        raw_root = self.dirs.raw_data_dir.resolve()
+        raw_root.mkdir(parents=True, exist_ok=True)
+        safe_user = sanitize_slug(username) or "unknown"
+        out_file = (raw_root / f"social_osint_dossier_{safe_user}.md").resolve()
+        if not out_file.is_relative_to(raw_root):
+            raise ValueError(f"Unsafe dossier output path blocked for username {username!r}")
 
         lines = [
             f"# 🌐 Social Footprint OSINT Dossier: {self.target_name}",

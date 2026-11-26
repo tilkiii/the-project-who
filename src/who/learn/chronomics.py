@@ -10,7 +10,7 @@ from datetime import datetime, time
 import json
 from pathlib import Path
 import re
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 from who.utils.logger import get_logger
 

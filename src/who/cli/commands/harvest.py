@@ -21,6 +21,7 @@ from who.harvest.web_harvester import WebHarvester
 from who.harvest.live_monitor import LiveMonitor
 from who.harvest.social_osint import SocialOSINTHunter
 from who.utils.logger import console, print_banner
+from who.utils.text_cleaner import sanitize_slug
 
 
 def harvest(
@@ -41,7 +42,7 @@ def harvest(
     console.print(f"[bold green]Starting Multimodal Harvest for:[/bold green] [bold cyan]{target}[/bold cyan]")
     console.print(f"[dim]Profile storage directory: {dirs.base_dir}[/dim]\n")
 
-    harvested_records: List[str] = []
+    harvested_records: List[tuple] = []
 
     # 1. Harvest URLs
     if urls:
@@ -53,11 +54,17 @@ def harvest(
         for u in url_list:
             if any(vid in u.lower() for vid in ["youtube.com", "youtu.be", "vimeo.com", "spotify.com"]):
                 media_res = media_harvester.download_audio(u)
-                harvested_records.append(f"Media Audio: {media_res.get('title', u)}")
+                if media_res.get("audio_file_path"):
+                    harvested_records.append((f"Media Audio (metadata only; transcription in v2.0): {media_res.get('title', u)}", "[green]✓ DOWNLOADED[/green]"))
+                else:
+                    harvested_records.append((f"Media Audio: {u}", "[red]✗ FAILED[/red]"))
             else:
                 web_res = web_harvester.harvest_urls([u])
                 for wr in web_res:
-                    harvested_records.append(f"Web/Article: {wr.get('title', u)}")
+                    if wr.get("status") == "FAILED" or not (wr.get("content") or "").strip():
+                        harvested_records.append((f"Web/Article: {wr.get('source_url', u)}", "[red]✗ FAILED[/red]"))
+                    else:
+                        harvested_records.append((f"Web/Article: {wr.get('title', u)}", "[green]✓ INGESTED[/green]"))
 
     # 2. Ingest Documents & OCR
     if docs_dir:
@@ -68,12 +75,15 @@ def harvest(
 
         doc_res = doc_ingestor.ingest_directory(d_path)
         for dr in doc_res:
-            harvested_records.append(f"Document ({dr.get('doc_type')}): {dr.get('file_name')}")
+            if dr.get("status") == "EXTRACTION_FAILED" or not (dr.get("content") or "").strip():
+                harvested_records.append((f"Document ({dr.get('doc_type')}): {dr.get('file_name')}", "[red]✗ FAILED[/red]"))
+            else:
+                harvested_records.append((f"Document ({dr.get('doc_type')}): {dr.get('file_name')}", "[green]✓ INGESTED[/green]"))
 
         ocr_res = ocr_processor.process_directory(d_path)
         for orc in ocr_res:
             if orc.get("ocr_available") and orc.get("content"):
-                harvested_records.append(f"OCR Scan: {orc.get('image_name')}")
+                harvested_records.append((f"OCR Scan: {orc.get('image_name')}", "[green]✓ INGESTED[/green]"))
             elif orc.get("status") == "OCR_ENGINE_UNAVAILABLE":
                 console.print(f"[dim]Skipped image OCR for '{orc.get('image_name')}' (no OCR engine installed).[/dim]")
 
@@ -83,7 +93,7 @@ def harvest(
         console.print(f"[*] Parsing direct dialogue logs from: {c_path}...")
         dialogue_harvester = DialogueHarvester(output_dir=dirs.raw_data_dir, target_alias=target_alias or target)
         pairs = dialogue_harvester.parse_file(c_path)
-        harvested_records.append(f"Dialogue Logs: {len(pairs)} target-response turns from {c_path.name}")
+        harvested_records.append((f"Dialogue Logs: {len(pairs)} target-response turns from {c_path.name}", "[green]✓ INGESTED[/green]"))
 
     # 4. Optional Academic Author Footprint (opt-in via --author-papers for academic targets only)
     if author_papers:
@@ -91,23 +101,20 @@ def harvest(
         academic_harvester = AcademicHarvester(output_dir=dirs.raw_data_dir)
         pubs = academic_harvester.search_author_publications(target, max_results=5)
         for p in pubs:
-            harvested_records.append(f"Academic Publication: {p.get('title')}")
+            harvested_records.append((f"Academic Publication: {p.get('title')}", "[green]✓ INGESTED[/green]"))
 
-    # Ensure at least one baseline document exists if no inputs were given
     if not harvested_records and not list(dirs.raw_data_dir.glob("*.md")):
-        baseline_file = dirs.raw_data_dir / "baseline_overview.md"
-        with open(baseline_file, "w", encoding="utf-8") as f:
-            f.write(f"# Public Dossier: {target}\n\n[TARGET_PRIMARY]: Dedicated to empirical research, systematic analysis, and probabilistic reasoning under uncertainty.")
-        harvested_records.append(f"Baseline Corpus Dossier for {target}")
+        console.print("[yellow]No primary corpus documents were ingested. Provide --docs-dir, --urls, --chat-logs, or --author-papers.[/yellow]\n")
+        return
 
     # Render summary table
     table = Table(title=f"Harvest Results: {target}", show_header=True, header_style="bold cyan")
     table.add_column("Index", width=6)
     table.add_column("Asset Harvested", style="white")
-    table.add_column("Status", style="green")
+    table.add_column("Status", style="white")
 
-    for idx, rec in enumerate(harvested_records, 1):
-        table.add_row(str(idx), rec, "✓ INGESTED")
+    for idx, (rec, status_label) in enumerate(harvested_records, 1):
+        table.add_row(str(idx), rec, status_label)
 
     console.print(table)
     console.print(f"[bold green]Harvest completed successfully.[/bold green] Next step: [cyan]who learn --target \"{target}\"[/cyan]\n")
@@ -140,7 +147,8 @@ def hunt(
                 p.get("bio_snippet", "")[:45] + ("..." if len(p.get("bio_snippet", "")) > 45 else ""),
             )
         console.print(table)
-        console.print(f"\n[green]Dossier ingested to:[/green] [cyan]{dirs.raw_data_dir / f'social_osint_dossier_{username}.md'}[/cyan]\n")
+        safe_user = sanitize_slug(username) or "unknown"
+        console.print(f"\n[green]Dossier ingested to:[/green] [cyan]{dirs.raw_data_dir / f'social_osint_dossier_{safe_user}.md'}[/cyan]\n")
     else:
         console.print(f"[yellow]No active profiles discovered for @{username} across queried platforms.[/yellow]\n")
 
@@ -213,7 +221,7 @@ def monitor(
         console.print(f"[dim italic]{drift_res.get('epistemic_qualification')}[/dim italic]\n")
         return
 
-    if simulate_feed or not feed_items:
+    if simulate_feed:
         sim_dt = datetime.now()
         feed_items.append({
             "title": f"Live Capture: {target} nocturnal discourse",
@@ -222,7 +230,11 @@ def monitor(
             "timestamp": sim_dt.replace(hour=2, minute=15).isoformat(),
             "source_type": "simulated_live_feed",
         })
-        console.print("[dim]Analyzing active live stream candidate...[/dim]\n")
+        console.print("[dim]Analyzing simulated live stream candidate...[/dim]\n")
+
+    if not feed_items:
+        console.print("[yellow]No live feed items retrieved. Provide --sources <url> or --simulate-feed for a dry-run check.[/yellow]\n")
+        return
 
     anomalies = monitor_engine.detect_anomalies(feed_items)
 

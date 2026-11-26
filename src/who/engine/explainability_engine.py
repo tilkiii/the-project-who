@@ -7,11 +7,11 @@ Strictly neutralizes deterministic psychological assertions.
 from __future__ import annotations
 
 import json
-from pathlib import Path
 import re
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 from who.utils.logger import get_logger
+from who.utils.text_cleaner import search_raw_corpus_paragraphs
 from who.vault.graph_store import GraphStore
 from who.vault.vector_embedder import VectorEmbedder
 
@@ -37,8 +37,10 @@ class ExplainabilityEngine:
         # 1. Epistemic Terminology Replacement
         calibrated_claim = self.enforce_probabilistic_phrasing(claim)
 
-        # 2. Vector search for primary quote verification
+        # 2. Vector search for primary quote verification (with raw_data lexical fallback)
         vector_matches = self.vector_store.search_similar(claim, top_k=5)
+        if not any(m.get("similarity_score", 0.0) >= 0.40 for m in vector_matches) and self.dirs.raw_data_dir.exists():
+            vector_matches = search_raw_corpus_paragraphs(self.dirs.raw_data_dir, claim, top_k=5)
         supporting_quotes = []
         sources = []
         for m in vector_matches:
@@ -141,7 +143,7 @@ class ExplainabilityEngine:
     def _find_graph_paths(self, claim: str) -> List[List[str]]:
         """Search the graph for entities mentioned in claim and trace connections."""
         paths = []
-        words = [w.lower() for w in re.findall(r"\b[a-zA-Z]{4,}\b", claim)]
+        words = [w.lower() for w in re.findall(r"\b\w{4,}\b", claim)]
         nodes = self.graph_store.get_all_nodes()
         matching_nodes = []
 
@@ -151,17 +153,22 @@ class ExplainabilityEngine:
                 matching_nodes.append(n_name)
 
         g = self.graph_store.nx_graph
+        undir = g.to_undirected()
         for target_node in matching_nodes[:3]:
             if target_node in g:
                 if self.target_name in g and target_node != self.target_name:
                     import networkx as nx
                     try:
-                        p = nx.shortest_path(g.to_undirected(), source=self.target_name, target=target_node)
+                        p = nx.shortest_path(undir, source=self.target_name, target=target_node)
                         paths.append(p)
                     except Exception:
                         paths.append([self.target_name, target_node])
                 else:
-                    paths.append([target_node])
+                    neighbors = list(undir.neighbors(target_node))
+                    if neighbors:
+                        paths.append([target_node, neighbors[0]])
+                    else:
+                        paths.append([target_node])
 
         return paths
 

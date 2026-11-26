@@ -5,12 +5,11 @@ Answers complex queries backed by Neo4j graph relationships, vector quotes, and 
 
 from __future__ import annotations
 
-import json
-from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict
 
-from who.config import call_llm, settings
+from who.config import call_llm
 from who.utils.logger import get_logger
+from who.utils.text_cleaner import search_raw_corpus_paragraphs
 from who.vault.graph_store import GraphStore
 from who.vault.vector_embedder import VectorEmbedder
 
@@ -30,10 +29,13 @@ class Oracle:
         """Answer query about the target with strict evidence citations and confidence scoring."""
         logger.info(f"Oracle processing query for {self.target_name}: '{query}'")
 
-        # 1. Retrieve vector chunks
+        # 1. Retrieve vector chunks (with raw_data lexical fallback when unindexed)
         vector_results = self.vector_store.search_similar(query, top_k=4)
         quotes = [v["text"] for v in vector_results if v.get("text")]
-        sources = list(set(v.get("metadata", {}).get("source_id", "corpus") for v in vector_results))
+        if not quotes and self.dirs.raw_data_dir.exists():
+            vector_results = search_raw_corpus_paragraphs(self.dirs.raw_data_dir, query, top_k=4)
+            quotes = [v["text"] for v in vector_results if v.get("text")]
+        sources = list(dict.fromkeys(v.get("metadata", {}).get("source_id", "corpus") for v in vector_results if v.get("text")))
 
         # 2. Retrieve graph relationships matching query terms
         graph_rels = []
@@ -69,8 +71,11 @@ class Oracle:
 
         raw_answer = call_llm(user_prompt, system_prompt=system_prompt, temperature=0.2)
 
-        # Calculate quantified confidence score
-        confidence_score = min(0.95, 0.55 + (len(quotes) * 0.1) + (len(graph_rels) * 0.05))
+        # Calculate quantified confidence score honestly (0.0 when no evidence matched)
+        if not quotes and not graph_rels:
+            confidence_score = 0.0
+        else:
+            confidence_score = min(0.95, 0.25 + (len(quotes) * 0.15) + (len(graph_rels) * 0.10))
 
         return {
             "target_name": self.target_name,
