@@ -31,16 +31,34 @@ class DialogueHarvester:
         self.auto_redact_pii = auto_redact_pii
 
     def is_target_speaker(self, speaker_name: str) -> bool:
-        """Heuristically verify if speaker name corresponds to the target."""
+        """Verify whether speaker name matches the target without substring collisions (e.g. 'Ece' vs 'Ecem')."""
         if not speaker_name:
             return False
         spk = speaker_name.lower().strip()
-        return self.target_alias in spk or spk in self.target_alias or "me" == spk or "primary" in spk
+        alias = self.target_alias.strip()
+        if spk in ("me", "target_primary") or "primary" in spk:
+            return True
+        if not alias:
+            return False
+        if spk == alias:
+            return True
+        if len(alias) >= 2 and re.search(rf"(?<!\w){re.escape(alias)}(?!\w)", spk):
+            return True
+        if " " in alias:
+            first_tok = alias.split()[0]
+            if len(first_tok) >= 3 and spk == first_tok:
+                return True
+        return False
+
+    @staticmethod
+    def _strip_invisible_marks(line: str) -> str:
+        """Strip UTF-8 BOM and Unicode bidirectional formatting marks common in iOS WhatsApp exports."""
+        return re.sub(r"^[\ufeff\u200e\u200f\u202a-\u202e\u2066-\u2069]+", "", line).strip()
 
     def parse_whatsapp(self, file_path: Path | str) -> List[Dict[str, Any]]:
         """Parse WhatsApp chat export (.txt)."""
         path = Path(file_path)
-        with open(path, "r", encoding="utf-8", errors="replace") as f:
+        with open(path, "r", encoding="utf-8-sig", errors="replace") as f:
             lines = f.readlines()
 
         # Regex patterns for WhatsApp:
@@ -50,7 +68,9 @@ class DialogueHarvester:
 
         turns: List[Dict[str, str]] = []
         for line in lines:
-            line_str = line.strip()
+            line_str = self._strip_invisible_marks(line)
+            if not line_str:
+                continue
             m = p1.match(line_str)
             if m:
                 timestamp, speaker, text = m.group(1), m.group(2).strip(), m.group(3).strip()
@@ -64,7 +84,7 @@ class DialogueHarvester:
     def parse_telegram(self, file_path: Path | str) -> List[Dict[str, Any]]:
         """Parse Telegram chat history exported as JSON."""
         path = Path(file_path)
-        with open(path, "r", encoding="utf-8", errors="replace") as f:
+        with open(path, "r", encoding="utf-8-sig", errors="replace") as f:
             data = json.load(f)
 
         messages = data.get("messages", [])
@@ -99,7 +119,7 @@ class DialogueHarvester:
     def parse_vtt(self, file_path: Path | str) -> List[Dict[str, Any]]:
         """Parse Zoom, Teams, or WebVTT transcript (.vtt or .txt)."""
         path = Path(file_path)
-        with open(path, "r", encoding="utf-8", errors="replace") as f:
+        with open(path, "r", encoding="utf-8-sig", errors="replace") as f:
             content = f.read()
 
         # WebVTT timestamp pattern: 00:00:00.000 --> 00:00:04.000
@@ -124,12 +144,13 @@ class DialogueHarvester:
     def parse_email_thread(self, file_path: Path | str) -> List[Dict[str, Any]]:
         """Parse email thread text files."""
         path = Path(file_path)
-        with open(path, "r", encoding="utf-8", errors="replace") as f:
+        with open(path, "r", encoding="utf-8-sig", errors="replace") as f:
             content = f.read()
 
-        # Split emails on "From:" or "Subject:" lines
+        # Split emails on "From:" lines
         email_blocks = re.split(r"(?m)^From:\s*", content)
         turns: List[Dict[str, str]] = []
+        header_pat = re.compile(r"^(?:To|Cc|Bcc|Date|Sent|Subject|Reply-To|Message-ID):\s*", re.IGNORECASE)
 
         for block in email_blocks:
             if not block.strip():
@@ -137,15 +158,20 @@ class DialogueHarvester:
             lines = block.strip().split("\n")
             speaker_line = lines[0].strip()
             speaker = re.sub(r"<[^>]+>", "", speaker_line).strip()
-            # Find body
+            # Consume RFC-like headers until blank line or first non-header line
             body_lines = []
             is_body = False
             for l in lines[1:]:
+                stripped = l.strip()
                 if is_body:
-                    if not l.startswith(">"):  # Ignore quoted reply headers
+                    if not stripped.startswith(">"):  # Ignore quoted reply headers
                         body_lines.append(l)
-                elif l.strip() == "" or l.startswith("Subject:"):
+                elif stripped == "":
                     is_body = True
+                elif not header_pat.match(stripped):
+                    is_body = True
+                    if not stripped.startswith(">"):
+                        body_lines.append(l)
             text = "\n".join(body_lines).strip()
             if text:
                 turns.append({"timestamp": "", "speaker": speaker, "text": text})
@@ -162,11 +188,11 @@ class DialogueHarvester:
             return self.parse_vtt(path)
         else:
             # Check content preview
-            with open(path, "r", encoding="utf-8", errors="replace") as f:
-                head = f.read(500)
+            with open(path, "r", encoding="utf-8-sig", errors="replace") as f:
+                head = f.read(800)
             if "WEBVTT" in head:
                 return self.parse_vtt(path)
-            elif "From:" in head and "To:" in head:
+            elif re.search(r"(?m)^From:\s*", head) and re.search(r"(?m)^(?:Subject|To|Date|Sent):\s*", head):
                 return self.parse_email_thread(path)
             else:
                 return self.parse_whatsapp(path)
@@ -197,7 +223,11 @@ class DialogueHarvester:
                         "source_type": source_type,
                     })
 
-        # Save pairs and diarized markdown if output_dir is configured
+        # Save pairs and diarized markdown if turns exist and output_dir is configured
+        if not turns:
+            logger.warning(f"No dialogue turns extracted from '{stem}' ({source_type}); skipping empty export.")
+            return []
+
         if self.output_dir:
             self.output_dir.mkdir(parents=True, exist_ok=True)
             # 1. Save diarized markdown
@@ -208,7 +238,7 @@ class DialogueHarvester:
             # 2. Save dialogue pairs JSON
             pairs_path = self.output_dir / f"dialogue_pairs_{stem}.json"
             with open(pairs_path, "w", encoding="utf-8") as f:
-                json.dump(pairs, f, indent=2)
+                json.dump(pairs, f, indent=2, ensure_ascii=False)
 
             logger.info(f"Processed {len(turns)} turns and {len(pairs)} target response pairs from {stem}.")
 

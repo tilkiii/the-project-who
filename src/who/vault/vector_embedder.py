@@ -58,7 +58,7 @@ class VectorEmbedder:
         for idx, doc in enumerate(documents):
             source_type = doc.get("source_type", "document")
             speaker = doc.get("speaker", "TARGET_PRIMARY")
-            source_id = doc.get("source_url") or doc.get("file_name") or f"doc_{idx}"
+            source_id = doc.get("source_url") or doc.get("file_name") or doc.get("source_id") or f"doc_{idx}"
             content = doc.get("content", "")
 
             # Chunk document
@@ -184,7 +184,7 @@ class VectorEmbedder:
         idx_file = self.chroma_dir / "local_vector_index.json"
         try:
             with open(idx_file, "w", encoding="utf-8") as f:
-                json.dump(self.local_chunks, f, indent=2)
+                json.dump(self.local_chunks, f, indent=2, ensure_ascii=False)
         except Exception as e:
             logger.debug(f"Could not persist local vector index: {e}")
 

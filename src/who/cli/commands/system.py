@@ -171,28 +171,50 @@ def purge(
 ) -> None:
     """Safely delete a target profile and its local corpus and vault data."""
     profiles_dir = Path(settings.profiles_dir)
-    slug = sanitize_slug(target)
+    profiles_root = profiles_dir.resolve()
+    raw_target = target.strip()
+    if not raw_target or raw_target in (".", ".."):
+        console.print("[bold red]Error:[/bold red] Invalid target path outside profiles directory.")
+        raise typer.Exit(1)
 
-    # Find matching directory
-    target_dir = profiles_dir / slug
-    if not target_dir.exists():
-        # Check direct name
-        target_dir = profiles_dir / target
-        if not target_dir.exists():
-            console.print(f"[bold red]Error:[/bold red] Target profile '[cyan]{target}[/cyan]' not found in {profiles_dir}.")
-            raise typer.Exit(1)
+    slug = sanitize_slug(raw_target)
+
+    # Reject explicit path traversal attempts before checking any fallback path
+    has_path_sep = ("/" in raw_target or "\\" in raw_target or ".." in raw_target)
+    candidate_slug_dir = profiles_dir / slug
+    if candidate_slug_dir.exists() and not has_path_sep:
+        target_dir = candidate_slug_dir
+    elif has_path_sep:
+        console.print("[bold red]Error:[/bold red] Invalid target path outside profiles directory.")
+        raise typer.Exit(1)
+    else:
+        target_dir = profiles_dir / raw_target
+
+    try:
+        resolved_target = target_dir.resolve()
+    except OSError as exc:
+        console.print(f"[bold red]Error:[/bold red] Invalid target path: {exc}")
+        raise typer.Exit(1)
+
+    if resolved_target == profiles_root or not resolved_target.is_relative_to(profiles_root):
+        console.print("[bold red]Error:[/bold red] Invalid target path outside profiles directory.")
+        raise typer.Exit(1)
+
+    if not resolved_target.exists() or not resolved_target.is_dir():
+        console.print(f"[bold red]Error:[/bold red] Target profile '[cyan]{target}[/cyan]' not found in {profiles_dir}.")
+        raise typer.Exit(1)
 
     if not force:
-        confirm = typer.confirm(f"Are you sure you want to PERMANENTLY purge profile '{target_dir.name}'? This cannot be undone.")
+        confirm = typer.confirm(f"Are you sure you want to PERMANENTLY purge profile '{resolved_target.name}'? This cannot be undone.")
         if not confirm:
             console.print("[dim]Purge cancelled by user.[/dim]")
             raise typer.Exit(0)
 
     try:
-        shutil.rmtree(target_dir)
+        shutil.rmtree(resolved_target)
         console.print(Panel(
-            f"[bold green]✔ Successfully purged target profile:[/bold green] [bold cyan]{target_dir.name}[/bold cyan]\n"
-            f"[dim]Directory removed: {target_dir}[/dim]",
+            f"[bold green]✔ Successfully purged target profile:[/bold green] [bold cyan]{resolved_target.name}[/bold cyan]\n"
+            f"[dim]Directory removed: {resolved_target}[/dim]",
             title="[bold red]Target Profile Purged[/bold red]",
             border_style="red",
         ))

@@ -60,10 +60,24 @@ class TargetDirectories(BaseModel):
         return self
 
 
+def _default_profiles_dir() -> Path:
+    """Resolve profiles directory cleanly from PROFILES_DIR, CWD, or editable repo root."""
+    env_dir = (os.getenv("PROFILES_DIR") or "").strip()
+    if env_dir:
+        return Path(env_dir)
+    cwd_profiles = Path("profiles")
+    if cwd_profiles.exists():
+        return cwd_profiles
+    pkg_profiles = Path(__file__).resolve().parent.parent.parent / "profiles"
+    if pkg_profiles.exists():
+        return pkg_profiles
+    return cwd_profiles
+
+
 class Settings(BaseModel):
     """Global configuration settings for who??."""
 
-    profiles_dir: Path = Field(default_factory=lambda: Path(os.getenv("PROFILES_DIR", "profiles")))
+    profiles_dir: Path = Field(default_factory=_default_profiles_dir)
 
     # Selected provider override (gemini, openai, anthropic, groq, deepseek, ollama, etc.)
     provider_override: Optional[str] = Field(default_factory=lambda: os.getenv("WHO_PROVIDER") or os.getenv("LLM_PROVIDER"))

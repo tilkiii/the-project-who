@@ -90,10 +90,14 @@ def harvest(
     # 3. Harvest Dialogue Logs
     if chat_logs:
         c_path = Path(chat_logs)
+        if not c_path.exists() or not c_path.is_file():
+            console.print(f"[bold red]Error:[/bold red] Chat log file not found: [cyan]{c_path}[/cyan]")
+            raise typer.Exit(1)
         console.print(f"[*] Parsing direct dialogue logs from: {c_path}...")
         dialogue_harvester = DialogueHarvester(output_dir=dirs.raw_data_dir, target_alias=target_alias or target)
         pairs = dialogue_harvester.parse_file(c_path)
-        harvested_records.append((f"Dialogue Logs: {len(pairs)} target-response turns from {c_path.name}", "[green]✓ INGESTED[/green]"))
+        pair_status = "[green]✓ INGESTED[/green]" if pairs else "[yellow]! 0 PAIRS[/yellow]"
+        harvested_records.append((f"Dialogue Logs: {len(pairs)} target-response turns from {c_path.name}", pair_status))
 
     # 4. Optional Academic Author Footprint (opt-in via --author-papers for academic targets only)
     if author_papers:
@@ -161,11 +165,17 @@ def monitor(
 ) -> None:
     """Scan live external feeds and detect real-time circadian, dogmatic, or cognitive anomalies."""
     print_banner()
-    dirs = settings.get_target_dirs(target)
+    dirs = settings.get_target_dirs(target, create=False)
+    url_list = [u.strip() for u in sources.split(",") if u.strip()] if sources else []
+    if drift and not dirs.base_dir.exists() and not url_list:
+        console.print(f"[bold red]Error:[/bold red] Target profile '{target}' not found. Run [cyan]who harvest[/cyan] or provide --sources.")
+        raise typer.Exit(1)
+    if url_list or simulate_feed:
+        dirs.ensure_exists()
+
     console.print(f"[bold green]Starting Live OSINT Monitor for:[/bold green] [bold cyan]{target}[/bold cyan]\n")
 
     monitor_engine = LiveMonitor(target, dirs)
-    url_list = [u.strip() for u in sources.split(",") if u.strip()] if sources else []
 
     feed_items = []
     if url_list:

@@ -137,12 +137,10 @@ class PsychInsights:
         cal_ratio = epistemic.get("epistemic_calibration_ratio", 1.0)
         ttr = features.get("corpus_stats", {}).get("type_token_ratio", 0.5)
 
-        # 5. Extract Canonical Innovational Statements
+        # 5. Extract Canonical Statements without fabricating default percentages when features are absent
         # a. Chronomics
-        chron_decay = chronomics.get("circadian_drift_summary", {}).get("epistemic_filter_decay_pct", 14)
-        chronomics_stmt = chronomics.get(
-            "probabilistic_statement",
-            f"Circadian Drift: Based on observed corpus timestamps, nocturnal epistemic calibration shifts by {abs(chron_decay)}% compared to daytime.",
+        chronomics_stmt = chronomics.get("probabilistic_statement") or (
+            "Circadian Drift: No timestamped circadian feature data available yet (run 'who learn' with timestamped logs)."
         )
 
         # b. Cognitive Dissonance
@@ -159,10 +157,8 @@ class PsychInsights:
             )
 
         # c. Epistemic Manipulation Index
-        manip_score_pct = manipulation.get("score_pct", "18%")
-        manipulation_stmt = manipulation.get(
-            "probabilistic_statement",
-            f"Epistemic Manipulation Index: Absolutist unsubstantiated framing tendency estimated at {manip_score_pct}.",
+        manipulation_stmt = manipulation.get("probabilistic_statement") or (
+            "Epistemic Manipulation Index: Not yet computed from corpus features (run 'who learn')."
         )
 
         system_prompt = (

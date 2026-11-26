@@ -29,19 +29,32 @@ def list_targets() -> List[Dict[str, Any]]:
 
     targets = []
     for item in sorted(profiles_dir.iterdir()):
-        if item.is_dir() and item.name not in ("social_graphs", "arena_debates", "__pycache__"):
+        if item.is_dir() and not item.name.startswith(".") and item.name not in ("social_graphs", "arena_debates", "__pycache__"):
             raw_dir = item / "raw_data"
             vault_dir = item / "vault"
             skills_dir = item / "learned_skills"
 
-            raw_count = len(list(raw_dir.glob("*.md"))) if raw_dir.exists() else 0
+            raw_count = (
+                len(list(raw_dir.glob("*.md")) + list(raw_dir.glob("*.txt")))
+                if raw_dir.exists()
+                else 0
+            )
             has_mindset = (vault_dir / "mindset_summary.md").exists()
             has_graph = (vault_dir / "knowledge_graph.json").exists() or (vault_dir / "concept_network.json").exists()
             has_skills = (skills_dir / "generated_mapping_skill.json").exists()
 
+            display_name = item.name.replace("_", " ").title()
+            char_file = vault_dir / "character.json"
+            if char_file.exists():
+                try:
+                    char_data = json.loads(char_file.read_text(encoding="utf-8"))
+                    display_name = char_data.get("name") or display_name
+                except Exception:
+                    pass
+
             targets.append({
                 "slug": item.name,
-                "name": item.name.replace("_", " ").title(),
+                "name": display_name,
                 "raw_documents_count": raw_count,
                 "is_ready": bool(has_mindset and has_graph),
                 "has_skills": has_skills,

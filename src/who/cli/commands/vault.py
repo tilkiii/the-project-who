@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+import re
 from typing import Optional
 import typer
 from rich.panel import Panel
@@ -18,6 +19,7 @@ from who.learn.prompt_optimizer import PromptOptimizer
 from who.learn.skill_synthesizer import SkillSynthesizer
 from who.learn.topic_mapper import TopicMapper
 from who.utils.logger import console, print_banner
+from who.utils.text_cleaner import is_boilerplate_or_junk
 from who.vault.graph_analytics import GraphAnalytics
 from who.vault.graph_builder import GraphBuilder
 from who.vault.graph_store import GraphStore
@@ -30,14 +32,17 @@ def learn(
 ) -> None:
     """Analyze target features, model topic trajectories, and synthesize scientific skills."""
     print_banner()
-    dirs = settings.get_target_dirs(target)
-    console.print(f"[bold green]Executing Autonomous Learning & Optimization for:[/bold green] [bold cyan]{target}[/bold cyan]\n")
-
-    # Load all raw documents
-    doc_files = list(dirs.raw_data_dir.glob("*.md")) + list(dirs.raw_data_dir.glob("*.txt"))
+    dirs = settings.get_target_dirs(target, create=False)
+    doc_files = (
+        list(dirs.raw_data_dir.glob("*.md")) + list(dirs.raw_data_dir.glob("*.txt"))
+        if dirs.raw_data_dir.exists()
+        else []
+    )
     if not doc_files:
         console.print("[bold red]No raw data found in profile.[/bold red] Run [cyan]who harvest[/cyan] first.")
         raise typer.Exit(1)
+    dirs.ensure_exists()
+    console.print(f"[bold green]Executing Autonomous Learning & Optimization for:[/bold green] [bold cyan]{target}[/bold cyan]\n")
 
     docs = []
     texts = []
@@ -228,26 +233,38 @@ def topics(
 def build_vault(
     target: str = typer.Option(..., "--target", "-t", help="Target individual name"),
 ) -> None:
-    """Construct Knowledge Graph in Neo4j, execute GDS, embed vectors, and synthesize mindset."""
+    """Construct Knowledge Graph, execute graph analytics, embed vectors, and synthesize mindset."""
     print_banner()
-    dirs = settings.get_target_dirs(target)
-    console.print(f"[bold green]Constructing Multilayer Vault for:[/bold green] [bold cyan]{target}[/bold cyan]\n")
+    dirs = settings.get_target_dirs(target, create=False)
 
-    # Read documents
-    doc_files = list(dirs.raw_data_dir.glob("*.md")) + list(dirs.raw_data_dir.glob("*.txt"))
+    # Read documents before creating target directories on missing profiles
+    doc_files = (
+        list(dirs.raw_data_dir.glob("*.md")) + list(dirs.raw_data_dir.glob("*.txt"))
+        if dirs.raw_data_dir.exists()
+        else []
+    )
     if not doc_files:
         console.print("[bold red]No raw documents found.[/bold red] Run [cyan]who harvest[/cyan] first.")
         raise typer.Exit(1)
+    dirs.ensure_exists()
+    console.print(f"[bold green]Constructing Multilayer Vault for:[/bold green] [bold cyan]{target}[/bold cyan]\n")
 
     documents = []
     sample_quotes = []
     for df in doc_files:
         try:
             content = df.read_text(encoding="utf-8")
-            documents.append({"content": content, "source_id": df.name})
-            for line in content.split("\n"):
-                if len(line.strip()) > 30 and not line.startswith("#"):
-                    sample_quotes.append(line.strip())
+            documents.append({"content": content, "file_name": df.name, "source_id": df.name})
+            body_no_fm = re.sub(r"^---\s*\n.*?\n---\s*", "", content, flags=re.DOTALL)
+            for raw_line in body_no_fm.split("\n"):
+                line = raw_line.strip()
+                if not line or line.startswith("#") or line == "---":
+                    continue
+                if "[INTERLOCUTOR_CONTEXT]" in line.upper():
+                    continue
+                line = re.sub(r"^(?:\[[^\]]+\]\s*)*\[TARGET_PRIMARY\]:\s*", "", line).strip()
+                if len(line) > 30 and not is_boilerplate_or_junk(line):
+                    sample_quotes.append(line)
         except Exception:
             pass
 
@@ -256,20 +273,22 @@ def build_vault(
     gb = GraphBuilder(target)
     graph_elements = gb.extract_from_corpus(documents)
 
-    # 2. Persist in Neo4j and Local Graph Store
-    console.print("[*] Persisting and indexing nodes in Neo4j graph store...")
+    # 2. Persist in Graph Store (Neo4j or Local NetworkX)
     gs = GraphStore(target, vault_dir=dirs.vault_dir)
+    graph_backend = "Neo4j Graph Store" if gs.connected_to_neo4j else "Local NetworkX Graph Store"
+    console.print(f"[*] Persisting and indexing nodes in {graph_backend}...")
     gs.store_graph(graph_elements.get("entities", []), graph_elements.get("relationships", []))
 
     # 3. Graph Data Science (GDS) Analytics
-    console.print("[*] Running Neo4j GDS PageRank, centrality, and community detection...")
+    console.print("[*] Running PageRank, centrality, community detection, and Ising analytics...")
     ga = GraphAnalytics(gs, vault_dir=dirs.vault_dir)
     graph_metrics = ga.run_analytics()
 
-    # 4. Embed into ChromaDB Vector Memory
-    console.print("[*] Embedding text chunks into ChromaDB vector memory...")
+    # 4. Embed into Vector Memory (ChromaDB or Local Cosine Fallback)
     ve = VectorEmbedder(target, chroma_dir=dirs.chroma_dir)
     total_chunks = ve.add_documents(documents)
+    vector_backend = "ChromaDB" if ve.collection is not None else "Local Cosine Vector Index"
+    console.print(f"[*] Embedded {total_chunks} text chunks into {vector_backend}...")
 
     # 5. Synthesize Mindset Profile & ElizaOS character.json
     console.print("[*] Synthesizing character.json (ElizaOS standard) and mindset profile...")
@@ -302,8 +321,8 @@ def build_vault(
     console.print(
         Panel(
             f"[bold green]Vault Built Successfully for {target}![/bold green]\n\n"
-            f"• Knowledge Graph: [cyan]{graph_metrics.get('total_nodes')} nodes[/cyan], [cyan]{graph_metrics.get('total_relationships')} relationships[/cyan]\n"
-            f"• Vector Chunks: [cyan]{total_chunks} embedded in ChromaDB[/cyan]\n"
+            f"• Knowledge Graph ({graph_backend}): [cyan]{graph_metrics.get('total_nodes')} nodes[/cyan], [cyan]{graph_metrics.get('total_relationships')} relationships[/cyan]\n"
+            f"• Vector Chunks ({vector_backend}): [cyan]{total_chunks} chunks indexed[/cyan]\n"
             f"• Artifacts Generated: character.json, mindset_summary.md, graph_metrics.json, cognitive_evidence_report.md\n"
             f"• Location: [dim]{dirs.vault_dir}[/dim]",
             border_style="green",
@@ -327,7 +346,7 @@ def graph(
         metrics = json.load(f)
 
     # Render top influential concepts
-    table = Table(title=f"Neo4j GDS Graph Analytics: {target}", header_style="bold cyan")
+    table = Table(title=f"Knowledge Graph Analytics (GDS): {target}", header_style="bold cyan")
     table.add_column("Concept / Entity", style="bold white")
     table.add_column("Type", style="dim")
     table.add_column("PageRank", style="green")
@@ -407,13 +426,19 @@ def graph_export(
     """Export the complete Knowledge Graph to a JSON file."""
     dirs = settings.get_target_dirs(target, create=False)
     gs = GraphStore(target, vault_dir=dirs.vault_dir)
-    data = gs.export_graph_json()
+    if not dirs.vault_dir.exists() and len(gs.get_all_nodes()) == 0:
+        gs.close()
+        console.print(f"[bold red]Knowledge Graph not found for '{target}'.[/bold red] Run [cyan]who build-vault[/cyan] first.")
+        raise typer.Exit(1)
+
+    data = gs.export_graph_json(write_to_vault=(output is None))
     gs.close()
 
     dest = Path(output) if output else dirs.vault_dir / "concept_network.json"
     if output:
+        dest.parent.mkdir(parents=True, exist_ok=True)
         with open(dest, "w", encoding="utf-8") as f:
-            json.dump(data, f, indent=2)
+            json.dump(data, f, indent=2, ensure_ascii=False)
 
     console.print(f"[bold green]Knowledge Graph exported to:[/bold green] {dest} ({len(data.get('nodes', []))} nodes, {len(data.get('relationships', []))} edges)")
 
@@ -467,26 +492,37 @@ def research(
         console.print("[yellow]No academic literature discovered matching query criteria.[/yellow]\n")
         return
 
-    # Render results table
+    # Render results table (responsive ratio widths so 80-col terminals never clip right columns)
     table = Table(title=f"📚 Peer-Reviewed Literature & Statistical Findings: {query_topic}", header_style="bold green")
-    table.add_column("Index", width=6)
-    table.add_column("Study Title", style="bold white", width=34)
-    table.add_column("Source", style="cyan", width=12)
-    table.add_column("Year", style="dim", width=8)
-    table.add_column("Identifier / DOI", style="magenta", width=22)
-    table.add_column("Effect Size (r)", style="green", width=14)
-    table.add_column("Agent Scientific Reasoning", style="dim")
+    table.add_column("#", width=3)
+    table.add_column("Study Title", style="bold white", ratio=3)
+    table.add_column("Source", style="cyan", ratio=1)
+    table.add_column("DOI / ID", style="magenta", ratio=2)
+    table.add_column("Evidence Tier", style="blue", ratio=2)
+    table.add_column("Effect (r)", style="green", ratio=2)
+    table.add_column("Reasoning", style="dim", ratio=3)
 
     for idx, p in enumerate(papers, 1):
         metrics = p.get("statistical_metrics", {})
+        ev_tier = (
+            p.get("evidence_type")
+            or metrics.get("evidence_type")
+            or ("REFERENCE_BASELINE_PRIOR" if p.get("is_reference_prior") else "QUALITATIVE_ABSTRACT_MATCH")
+        )
         r_val = metrics.get("correlation_coefficient_r")
-        r_str = f"r={r_val}" if r_val is not None else "Empirical"
+        if r_val is not None:
+            r_str = f"r={r_val}"
+        elif ev_tier == "REFERENCE_BASELINE_PRIOR":
+            r_str = "Ref Prior"
+        else:
+            r_str = "Qual. N/A"
+        source_lbl = f"{p.get('repository', '')} ({p.get('year', '2024')})"
         table.add_row(
             str(idx),
             p.get("title", "")[:42] + ("..." if len(p.get("title", "")) > 42 else ""),
-            p.get("repository", ""),
-            str(p.get("year", "2024")),
-            p.get("doi", "")[:20],
+            source_lbl,
+            p.get("doi", "")[:22],
+            ev_tier,
             r_str,
             p.get("agent_reasoning_note", "")[:60] + "...",
         )

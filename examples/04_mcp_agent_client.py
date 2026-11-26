@@ -6,6 +6,7 @@ can interact with `who??` as a standard JSON-RPC 2.0 MCP server.
 """
 
 import json
+import sys
 from who.mcp_server import MCPServer
 
 
@@ -20,6 +21,8 @@ def run_rpc(server: MCPServer, request_id: int, method: str, params: dict) -> di
 
 
 def main():
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     print("=== Initializing who?? MCP Server ===")
     server = MCPServer()
 

@@ -256,20 +256,46 @@ class MCPServer:
         self.running = True
 
     def run(self) -> None:
-        """Main stdio loop reading JSON-RPC requests."""
+        """Main stdio loop reading JSON-RPC requests (supports NDJSON, Content-Length, and UTF-8 BOM)."""
+        for stream in (sys.stdin, sys.stdout):
+            if hasattr(stream, "reconfigure"):
+                try:
+                    stream.reconfigure(encoding="utf-8", errors="replace")
+                except Exception:
+                    pass
+
+        bin_stdin = getattr(sys.stdin, "buffer", None)
         while self.running:
             try:
-                line = sys.stdin.readline()
-                if not line:
-                    break
-                line = line.strip()
+                if bin_stdin is not None:
+                    raw_line = bin_stdin.readline()
+                    if not raw_line:
+                        break
+                    line = raw_line.decode("utf-8", errors="replace").lstrip("\ufeff").strip()
+                else:
+                    line = sys.stdin.readline()
+                    if not line:
+                        break
+                    line = line.lstrip("\ufeff").strip()
+
                 if not line:
                     continue
 
                 if line.lower().startswith("content-length:"):
-                    length = int(line.split(":")[1].strip())
-                    sys.stdin.readline()
-                    body = sys.stdin.read(length)
+                    length = int(line.split(":", 1)[1].strip())
+                    # Consume any additional framing headers (e.g. Content-Type) until blank separator line
+                    while True:
+                        if bin_stdin is not None:
+                            hdr = bin_stdin.readline().decode("utf-8", errors="replace").strip()
+                        else:
+                            hdr = sys.stdin.readline().strip()
+                        if not hdr:
+                            break
+                    if bin_stdin is not None:
+                        body = bin_stdin.read(length).decode("utf-8", errors="replace")
+                    else:
+                        body = sys.stdin.read(length)
+                    body = body.lstrip("\ufeff").strip()
                     req = json.loads(body)
                 else:
                     req = json.loads(line)

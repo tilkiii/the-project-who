@@ -10,6 +10,7 @@ import json
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from who import __version__
 from who.utils.logger import get_logger
 
 logger = get_logger("who.learn.skill_synthesizer")
@@ -88,7 +89,7 @@ class SkillSynthesizer:
 
         skill_payload = {
             "target_name": target_name,
-            "version": "4.0.0",
+            "version": __version__,
             "epistemic_framework": "Probabilistic Reasoning & Quantified Uncertainty",
             "behavioral_profile": {
                 "cognitive_style": cognitive_style,
@@ -126,7 +127,7 @@ class SkillSynthesizer:
             self.output_dir.mkdir(parents=True, exist_ok=True)
             out_file = self.output_dir / "generated_mapping_skill.json"
             with open(out_file, "w", encoding="utf-8") as f:
-                json.dump(skill_payload, f, indent=2)
+                json.dump(skill_payload, f, indent=2, ensure_ascii=False)
             logger.info(f"Saved generated_mapping_skill.json to {out_file}")
 
         return skill_payload

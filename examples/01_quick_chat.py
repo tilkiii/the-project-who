@@ -5,10 +5,13 @@ Demonstrates how to initialize a CognitiveTwin instance, inspect its
 calibrated personality and guardrails, and execute an interactive query.
 """
 
+import sys
 from who import CognitiveTwin, list_targets
 
 
 def main():
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     print("=== Available Targets in Local Vault ===")
     targets = list_targets()
     for t in targets:

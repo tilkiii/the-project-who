@@ -46,6 +46,8 @@ class DocumentIngestor:
             if doc_type in (".txt", ".md", ".csv", ".json"):
                 with open(path, "r", encoding="utf-8", errors="replace") as f:
                     content_markdown = f.read()
+            elif doc_type in (".html", ".htm"):
+                content_markdown = self._parse_html_fallback(path)
             elif doc_type == ".docx":
                 content_markdown = self._parse_docx_fallback(path)
             elif doc_type == ".pdf":
@@ -111,8 +113,30 @@ class DocumentIngestor:
             logger.debug(f"DOCX fallback extraction error: {e}")
             return ""
 
+    def _parse_html_fallback(self, path: Path) -> str:
+        """Fallback HTML parser stripping scripts/styles/navigation and keeping readable text."""
+        try:
+            from bs4 import BeautifulSoup
+            raw_html = path.read_text(encoding="utf-8", errors="replace")
+            soup = BeautifulSoup(raw_html, "html.parser")
+            for tag in soup(["script", "style", "noscript", "nav", "footer", "header"]):
+                tag.decompose()
+            title = soup.title.string.strip() if soup.title and soup.title.string else path.stem
+            blocks = [
+                el.get_text(" ", strip=True)
+                for el in soup.find_all(["h1", "h2", "h3", "h4", "p", "li"])
+                if el.get_text(" ", strip=True)
+            ]
+            if not blocks:
+                body_text = soup.get_text("\n", strip=True)
+                return f"# {title}\n\n{body_text}" if body_text else ""
+            return f"# {title}\n\n" + "\n\n".join(blocks)
+        except Exception as e:
+            logger.debug(f"HTML fallback extraction error: {e}")
+            return ""
+
     def _parse_pdf_fallback(self, path: Path) -> str:
-        """Fallback PDF parser using pypdf/pymupdf or binary stream text extraction."""
+        """Fallback PDF parser using pypdf/pymupdf or filtered uncompressed stream text extraction."""
         try:
             import pypdf
             reader = pypdf.PdfReader(str(path))
@@ -120,13 +144,27 @@ class DocumentIngestor:
             joined = "\n\n---\n\n".join(p for p in pages if p.strip())
             return f"# {path.stem}\n\n{joined}" if joined else ""
         except Exception:
-            # Simple binary text scrape fallback
+            # Filtered binary text scrape fallback (never emit PDF metadata like /Producer)
             try:
+                import re
                 with open(path, "rb") as f:
                     raw = f.read().decode("latin1", errors="ignore")
-                    import re
-                    matches = re.findall(r"\(([\w\s.,;:!?-]{4,})\)", raw)
-                    return f"# {path.stem}\n\n" + " ".join(matches) if matches else ""
+                stripped = re.sub(
+                    r"/(?:Producer|Creator|Author|CreationDate|ModDate|Title|Subject|Keywords|Trapped)\s*\([^)]*\)",
+                    " ",
+                    raw,
+                    flags=re.IGNORECASE,
+                )
+                meta_markers = ("adobe", "indesign", "acrobat", "pdfium", "quartz", "microsoft word", "libreoffice")
+                candidates: List[str] = []
+                for m in re.findall(r"\(([\w\s.,;:!?-]{4,})\)", stripped):
+                    low = m.strip().lower()
+                    if low.startswith("d:") or any(k in low for k in meta_markers):
+                        continue
+                    candidates.append(m.strip())
+                joined = " ".join(candidates).strip()
+                alpha_words = re.findall(r"[A-Za-z]{3,}", joined)
+                return f"# {path.stem}\n\n{joined}" if len(alpha_words) >= 3 else ""
             except Exception as e:
                 logger.debug(f"PDF fallback extraction error: {e}")
                 return ""

@@ -27,7 +27,11 @@ def evaluate_profile(
 ) -> None:
     """Run empirical evaluation of retrieval quality, profile consistency, and Temporal Holdout Brier Score."""
     print_banner()
-    dirs = settings.get_target_dirs(target)
+    dirs = settings.get_target_dirs(target, create=False)
+    if not dirs.base_dir.exists():
+        console.print(f"[bold red]Error:[/bold red] Target profile '{target}' not found. Run [cyan]who harvest[/cyan] first.")
+        raise typer.Exit(1)
+
     evaluator = ProfileEvaluator(target, dirs)
     results = evaluator.evaluate_profile()
 
@@ -42,29 +46,35 @@ def evaluate_profile(
 
     table.add_row(
         "Citation Validity",
-        f"{int(metrics.get('citation_validity', {}).get('score', 0) * 100)}%",
+        f"{int((metrics.get('citation_validity', {}).get('score') or 0) * 100)}%",
         f"Verified in corpus: {metrics.get('citation_validity', {}).get('verified_in_corpus')} / {metrics.get('citation_validity', {}).get('quotes_checked')}",
     )
     table.add_row(
         "Profile Consistency",
-        f"{int(metrics.get('profile_consistency', {}).get('score', 0) * 100)}%",
+        f"{int((metrics.get('profile_consistency', {}).get('score') or 0) * 100)}%",
         "Cross-layer verification across skill, mindset, and graph",
     )
     table.add_row(
         "Retrieval Quality",
-        f"{int(metrics.get('retrieval_quality', {}).get('score', 0) * 100)}%",
+        f"{int((metrics.get('retrieval_quality', {}).get('score') or 0) * 100)}%",
         f"Indexed vector chunks: {metrics.get('retrieval_quality', {}).get('chunks_indexed')}",
     )
     table.add_row(
         "Hallucination Rate",
-        f"{round(metrics.get('hallucination_rate', {}).get('score', 0) * 100, 1)}%",
+        f"{round((metrics.get('hallucination_rate', {}).get('score') or 0) * 100, 1)}%",
         f"Status: {metrics.get('hallucination_rate', {}).get('status')}",
     )
     if bt:
+        brier_val = bt.get("brier_score")
+        acc_val = bt.get("holdout_accuracy_pct")
+        conf_val = bt.get("empirical_confidence_score")
+        brier_str = f"BS={brier_val}" if brier_val is not None else "N/A"
+        acc_str = f"{acc_val}%" if acc_val is not None else "N/A"
+        conf_str = f"{int(conf_val * 100)}%" if conf_val is not None else "N/A"
         table.add_row(
             "Temporal Holdout Brier Score",
-            f"BS={bt.get('brier_score', 0.20)}",
-            f"Out-of-sample Accuracy: {bt.get('holdout_accuracy_pct', 80.0)}% • Confidence: {int(bt.get('empirical_confidence_score', 0.8)*100)}% ({bt.get('calibration_tier')})",
+            brier_str,
+            f"Out-of-sample Accuracy: {acc_str} • Confidence: {conf_str} ({bt.get('calibration_tier')})",
         )
 
     console.print(table)
@@ -181,9 +191,12 @@ def simulate(
     target: str = typer.Option(..., "--target", "-t", help="Target individual name"),
     scenario: str = typer.Option(..., "--scenario", "-s", help="Scenario to simulate"),
     monte_carlo: bool = typer.Option(False, "--monte-carlo", "-m", help="Run multi-iteration Monte Carlo game-theoretic simulation"),
-    iterations: int = typer.Option(25, "--iterations", "-n", help="Number of Monte Carlo stochastic iterations (10-100)"),
+    iterations: int = typer.Option(25, "--iterations", "-n", min=1, max=500, help="Number of Monte Carlo stochastic iterations (1-500)"),
 ) -> None:
     """Simulate plausible reactions and counter-moves under explicit scenario assumptions."""
+    if monte_carlo and iterations < 1:
+        console.print(f"[bold red]Error:[/bold red] --iterations must be >= 1, got {iterations}.")
+        raise typer.Exit(1)
     dirs = settings.get_target_dirs(target, create=False)
     sim = Simulator(target, dirs)
 

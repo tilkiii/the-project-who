@@ -10,12 +10,29 @@ import unicodedata
 from typing import Any, Dict, List, Tuple
 
 
+_TURKISH_SLUG_TRANS = str.maketrans({
+    "ı": "i",
+    "İ": "I",
+    "ğ": "g",
+    "Ğ": "G",
+    "ş": "s",
+    "Ş": "S",
+    "ç": "c",
+    "Ç": "C",
+    "ö": "o",
+    "Ö": "O",
+    "ü": "u",
+    "Ü": "U",
+})
+
+
 def sanitize_slug(name: str) -> str:
     """Convert any target name or string into a filesystem and URL-safe slug."""
     if not name:
         return "unnamed_target"
+    text = name.translate(_TURKISH_SLUG_TRANS)
     # Normalize unicode
-    text = unicodedata.normalize("NFKD", name)
+    text = unicodedata.normalize("NFKD", text)
     text = text.encode("ascii", "ignore").decode("ascii")
     # Lowercase and replace non-alphanumeric with underscores
     text = re.sub(r"[^\w\s-]", "", text).strip().lower()

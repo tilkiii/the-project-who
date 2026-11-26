@@ -45,32 +45,93 @@ class OfflineProvider(BaseLLMProvider):
         max_tokens: int = 2048,
     ) -> str:
         p_lower = prompt.lower()
+        sys_lower = (system_prompt or "").lower()
 
-        # Structured JSON extraction tasks
-        if "extract entities" in p_lower or ("entity" in p_lower and "json" in p_lower):
+        # 1. Structured JSON extraction tasks
+        if "extract entities" in p_lower or ("entity" in p_lower and "json" in p_lower and "debate topic:" not in p_lower):
             # Return empty sets so GraphBuilder deterministically extracts real entities/quotes from the corpus text.
             return '{"entities": [], "relationships": []}'
-        elif "character.json" in p_lower or "elizaos" in p_lower:
+        if "character.json" in p_lower or "elizaos" in p_lower:
             return (
                 '{"name": "Target Model", "bio": ["Evidence-focused researcher with high empirical standards"], '
                 '"lore": ["Known for rigorous analysis and probabilistic reasoning"], '
                 '"style": {"all": ["probabilistic", "evidence-based"], "chat": ["direct", "analytical"]}}'
             )
-        elif (
-            ("mindset_summary" in p_lower or "cognitive" in p_lower)
-            and "question:" not in p_lower
-            and "scenario" not in p_lower
-            and "simulate" not in p_lower
-        ):
+        if "correlation_coefficient_r" in p_lower and "return only a json array" in p_lower:
+            return "[]"
+        if "consensus_divergence_pct" in p_lower and "full debate transcript" in p_lower:
+            # Allow SwarmArena to compute Coupled Ising analytical synthesis cleanly
+            return "{}"
+
+        # 2. Longitudinal Cognitive Drift Synthesis (who monitor --drift)
+        if "longitudinal drift audit:" in p_lower:
+            phase_m = re.search(r"Epistemic Phase Shift:\s*(.+?)(?:\n|$)", prompt)
+            ou_m = re.search(r"Ornstein-Uhlenbeck Dynamical Regime:\s*(.+?)(?:\n|$)", prompt)
+            cal_m = re.search(r"Δ Calibration Ratio:\s*(.+?)(?:\n|$)", prompt)
+            dog_m = re.search(r"Δ Dogmatic Density:\s*(.+?)(?:\n|$)", prompt)
+            ttr_m = re.search(r"Δ Lexical Diversity \(TTR\):\s*(.+?)(?:\n|$)", prompt)
+            stab_m = re.search(r"Concept Stability:\s*(.+?)(?:\n|$)", prompt)
+            surge_m = re.search(r"Newly Surging Concepts:\s*(.+?)(?:\n|$)", prompt)
+
+            phase_val = phase_m.group(1).strip() if phase_m else "STABLE_EQUILIBRIUM"
+            ou_val = ou_m.group(1).strip() if ou_m else "MEAN_REVERTING"
+            cal_val = cal_m.group(1).strip() if cal_m else "0.0"
+            dog_val = dog_m.group(1).strip() if dog_m else "0.0"
+            ttr_val = ttr_m.group(1).strip() if ttr_m else "0.0"
+            stab_val = stab_m.group(1).strip() if stab_m else "N/A"
+            surge_val = surge_m.group(1).strip() if surge_m else "[]"
+
+            retrain = (
+                "Recommended: re-run 'who learn' and 'who build-vault' as new primary records accumulate."
+                if not phase_val.startswith("STABLE_EQUILIBRIUM")
+                else "No urgent boundary retraining required; continue periodic corpus monitoring."
+            )
             return (
-                "# Cognitive & Mindset Profile\n\n"
-                "## 1. Core Reasoning Heuristics\n"
-                "Based on observed evidence from primary corpus, the data suggests a plausible alignment "
-                "with probabilistic epistemic frameworks.\n\n"
-                "Confidence Score: 85% (Derived from primary corpus analysis)."
+                "1. **Epistemic Trajectory & Phase-Space Analysis:** "
+                f"{phase_val}. Ornstein-Uhlenbeck regime: {ou_val}.\n"
+                "2. **Observed Metric Deltas:** "
+                f"Calibration={cal_val}; Dogmatic Density={dog_val}; Lexical Diversity (TTR)={ttr_val}; "
+                f"Concept Stability={stab_val}; Surging Concepts={surge_val}.\n"
+                f"3. **Digital Twin Calibration Guidance:** {retrain}\n\n"
+                "(Offline mode: Configure an API key in .env for full model generation.)"
             )
 
-        # Interactive Twin Chat conversational fallback
+        # 3. PsychInsights Behavioral Science Report
+        if "canonical psychoinformatic findings:" in p_lower:
+            tgt_m = re.search(r"intelligence engine for\s+([^\n\.]+)", sys_lower, re.IGNORECASE)
+            tgt = tgt_m.group(1).strip() if tgt_m else "Target"
+            cal_m = re.search(r"Epistemic Calibration Ratio:\s*([0-9.]+)", prompt)
+            ttr_m = re.search(r"Lexical Density \(TTR\):\s*([0-9.]+)", prompt)
+            chron_m = re.search(r"CANONICAL PSYCHOINFORMATIC FINDINGS:\s*\n-\s*(.+?)\n-\s*(.+?)\n-\s*(.+?)(?:\n|$)", prompt)
+            c_line = chron_m.group(1).strip() if chron_m else "Circadian data evaluated."
+            d_line = chron_m.group(2).strip() if chron_m else "Graph coherence evaluated."
+            m_line = chron_m.group(3).strip() if chron_m else "Epistemic manipulation index evaluated."
+            return (
+                f"# Scientific Behavioral Report: {tgt}\n\n"
+                "## 1. Cognitive Architecture & Reasoning Stance\n"
+                f"Based on observed corpus signals, {tgt} exhibits an epistemic calibration ratio of "
+                f"`{cal_m.group(1) if cal_m else 'N/A'}` and lexical diversity (TTR) of `{ttr_m.group(1) if ttr_m else 'N/A'}`.\n\n"
+                f"## 2. Cognitive Chronomics\n- {c_line}\n\n"
+                f"## 3. Graph-Driven Cognitive Dissonance\n- {d_line}\n\n"
+                f"## 4. Epistemic Manipulation Assessment\n- {m_line}\n\n"
+                "(Offline mode: Configure an API key in .env for full model generation.)"
+            )
+
+        # 4. Multi-Agent Swarm Arena Turn
+        if "debate topic:" in p_lower and "your identity & cognitive anchors:" in p_lower:
+            topic_m = re.search(r"DEBATE TOPIC:\s*(.+?)(?:\n|$)", prompt)
+            spk_m = re.search(r"It is your turn to speak \(([^)]+)\)", prompt)
+            concepts_m = re.search(r"Core Concepts:\s*(.+?)(?:\n|$)", prompt)
+            topic_str = topic_m.group(1).strip() if topic_m else "this proposition"
+            spk_str = spk_m.group(1).strip() if spk_m else "Participant"
+            concepts_str = (concepts_m.group(1).strip() if concepts_m else "") or "empirical verification and clear governance"
+            return (
+                f"Speaking as {spk_str} on '{topic_str}': based on my documented focus areas ({concepts_str}), "
+                "I evaluate this proposition probabilistically rather than dogmatically. Proposals should provide "
+                "verifiable evidence, preserve bounded autonomy against asymmetric lock-in, and clarify downside accountability."
+            )
+
+        # 5. Interactive Twin Chat conversational fallback
         combined_ctx = f"{system_prompt or ''}\n{prompt}"
         user_chat_match = re.search(r"(?:USER|Kullanıcı):\s*(.+?)(?:\n|$)", prompt, re.IGNORECASE)
         target_name_match = (
@@ -79,7 +140,11 @@ class OfflineProvider(BaseLLMProvider):
         )
         twin_name = target_name_match.group(1).strip() if target_name_match else "Digital Twin"
 
-        if user_chat_match and "SCENARIO PROPOSITION" not in prompt:
+        is_live_chat = user_chat_match and (
+            "scenario proposition" not in p_lower
+            and ("digital twin of " in sys_lower or "bilişsel dijital ikizisin" in sys_lower or "\nreply:" in p_lower or f"{twin_name.lower()} reply:" in p_lower)
+        )
+        if is_live_chat:
             user_msg = user_chat_match.group(1).strip()
             from who.utils.text_cleaner import is_boilerplate_or_junk
             raw_quotes = re.findall(r'(?:Quotation|Alıntı):\s*"([^"]{20,})"', prompt)
@@ -96,7 +161,7 @@ class OfflineProvider(BaseLLMProvider):
             lines.append("\n(Offline mode: Configure an API key in .env for full model generation.)")
             return "\n".join(lines)
 
-        # Outreach Composer fallback (Initial Draft / Adversarial Critique / Final Refinement)
+        # 6. Outreach Composer fallback (Initial Draft / Adversarial Critique / Final Refinement)
         if "write an outreach message/email to" in p_lower:
             tgt_m = re.search(r"write an outreach message/email to[ \t]+([^\r\n\.]+)", prompt, re.IGNORECASE)
             goal_m = re.search(r"GOAL:[ \t]*([^\r\n]*)", prompt)
@@ -136,7 +201,7 @@ class OfflineProvider(BaseLLMProvider):
                 "(Offline mode: Configure an API key in .env for full model generation.)"
             )
 
-        # Monte Carlo Game-Theoretic synthesis fallback
+        # 7. Monte Carlo Game-Theoretic synthesis fallback
         if "monte carlo & boltzmann-gibbs results" in p_lower:
             mc_scenario = re.search(r'SCENARIO:\s*"?(.+?)"?\s*(?:\n|$)', prompt)
             dom_match = re.search(r"Dominant Nash Equilibrium Branch:\s*(.+?)(?:\n|$)", prompt)
@@ -168,7 +233,21 @@ class OfflineProvider(BaseLLMProvider):
             mc_lines.append("\n(Offline mode: Configure an API key in .env for full model generation.)")
             return "\n".join(mc_lines)
 
-        # Oracle Q&A or Scenario simulation fallback
+        # 8. Explicit Mindset Summary fallback (ONLY when explicitly requested)
+        if (
+            ("mindset_summary" in p_lower or "generate a mindset profile" in p_lower)
+            and "question:" not in p_lower
+            and "scenario" not in p_lower
+        ):
+            return (
+                "# Cognitive & Mindset Profile\n\n"
+                "## 1. Core Reasoning Heuristics\n"
+                "Based on observed evidence from primary corpus, the data suggests a plausible alignment "
+                "with probabilistic epistemic frameworks.\n\n"
+                "Confidence Score: 85% (Derived from primary corpus analysis)."
+            )
+
+        # 9. Oracle Q&A or Scenario simulation fallback
         question_match = re.search(r"(?:QUESTION|SORU):\s*(.+?)(?:\n|$)", prompt, re.IGNORECASE)
         scenario_match = re.search(r'SCENARIO PROPOSITION:\s*["\']?(.+?)["\']?\n', prompt, re.IGNORECASE)
         is_scenario = bool(scenario_match)
@@ -199,7 +278,7 @@ class OfflineProvider(BaseLLMProvider):
             lines.append(
                 "\n**2. Likely Counter-Considerations:** Epistemic caution is expected regarding speculative "
                 "or unverified framing.\n"
-                "**3. Confidence Score:** 76% (Estimated from corpus coverage)"
+                "**3. Calibration Note:** Confidence and Brier metrics are reported from active empirical calibration bounds."
             )
         else:
             if usable_quotes:

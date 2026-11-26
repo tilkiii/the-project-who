@@ -6,6 +6,7 @@ Every relationship is backed by primary source quotes and confidence scores.
 
 from __future__ import annotations
 
+from collections import Counter
 import json
 import re
 from typing import Any, Dict, List, Optional
@@ -18,6 +19,20 @@ logger = get_logger("who.vault.builder")
 
 AFFIRMATIVE_RELATIONS = {"ADVOCATES", "DEVELOPS", "SUPPORTS", "ALIGNED_WITH", "AFFIRMS", "EMBRACES", "PRAISES"}
 OPPOSITIONAL_RELATIONS = {"CRITIQUES", "REJECTS", "DISPUTES", "CONDEMNS", "OPPOSES", "WARNS_AGAINST"}
+
+_GRAPH_JUNK_PREFIXES = ("interlocutor_context", "target_primary", "redacted_", "diarized dialogue")
+_GRAPH_STOPWORDS = {
+    "usually", "probably", "measured", "should", "could", "would", "however", "therefore",
+    "furthermore", "moreover", "nevertheless", "nonetheless", "because", "although", "though",
+    "before", "after", "when", "where", "what", "which", "whom", "whose", "this", "that",
+    "these", "those", "there", "their", "they", "them", "with", "from", "into", "about",
+    "over", "under", "every", "some", "many", "most", "more", "very", "just", "only",
+    "also", "even", "still", "here", "then", "thus", "while", "since", "users", "public",
+    "abstract", "summary", "overview", "introduction", "conclusion", "section", "document",
+    "peki", "fakat", "ancak", "lakin", "çünkü", "şimdi", "burada", "bence", "eğer", "yani",
+    "belki", "hatta", "üstelik", "ayrıca", "bunun", "şunun", "diğer", "bütün", "tüm", "bazı",
+    "hiçbir", "açık", "yeni", "örneğin", "özellikle",
+}
 
 
 class GraphBuilder:
@@ -171,8 +186,8 @@ class GraphBuilder:
                     seen_pairs.add(pair_key)
                     d_score = 0.88
                     dissonance_edges.append({
-                        "source": concept,
-                        "target": concept,
+                        "source": f"{concept} (Affirmative Stance)",
+                        "target": f"{concept} (Critical Stance)",
                         "relation": "CONTRADICTS",
                         "weight": d_score,
                         "dissonance_score": d_score,
@@ -221,15 +236,57 @@ class GraphBuilder:
         logger.info(f"Detected {len(dissonance_edges)} Cognitive Dissonance [CONTRADICTS] graph edges.")
         return dissonance_edges
 
+    @staticmethod
+    def _strip_corpus_scaffolding(text: str) -> str:
+        """Remove YAML frontmatter, diarization tags, PII tokens, and interlocutor turns before concept extraction."""
+        cleaned = re.sub(r"^---\s*\n.*?\n---\s*", "", text, flags=re.DOTALL)
+        kept_lines: List[str] = []
+        for raw_line in cleaned.splitlines():
+            line = raw_line.strip()
+            if not line:
+                kept_lines.append("")
+                continue
+            if line.lower().startswith("# diarized dialogue:"):
+                continue
+            if "[INTERLOCUTOR_CONTEXT]" in line.upper():
+                continue
+            line = re.sub(r"^(?:\[[^\]]+\]\s*)*\[TARGET_PRIMARY\]:\s*", "", line)
+            line = re.sub(r"\[REDACTED_[A-Z_]+\]", " ", line)
+            line = line.lstrip("#").strip()
+            if line:
+                kept_lines.append(line)
+        return "\n".join(kept_lines)
+
     def _heuristic_graph_extraction(self, text: str, source_id: str) -> Dict[str, Any]:
-        """Extract conceptual patterns using linguistic heuristics."""
+        """Extract conceptual patterns deterministically using cleaned linguistic heuristics."""
         entities = []
         relationships = []
 
-        # Find key technical nouns and capitalized phrases
-        candidates = re.findall(r"\b[A-ZÇĞİÖŞÜ][a-zA-ZçğıöşüÇĞİÖŞÜ0-9_-]+(?:\s+[A-ZÇĞİÖŞÜ][a-zA-ZçğıöşüÇĞİÖŞÜ0-9_-]+)?\b", text)
-        filtered = [c for c in set(candidates) if len(c) > 3 and c != self.target_name][:8]
+        cleaned_body = self._strip_corpus_scaffolding(text)
+        if not cleaned_body.strip():
+            return {"entities": [], "relationships": [], "dissonances": []}
 
+        # Use horizontal whitespace [ \t]+ so paragraph breaks never concatenate unrelated words
+        candidates = re.findall(
+            r"\b[A-ZÇĞİÖŞÜ][a-zA-ZçğıöşüÇĞİÖŞÜ0-9_-]+(?:[ \t]+[A-ZÇĞİÖŞÜ][a-zA-ZçğıöşüÇĞİÖŞÜ0-9_-]+)?\b",
+            cleaned_body,
+        )
+        counts: Counter[str] = Counter()
+        target_low = self.target_name.strip().lower()
+        for raw_cand in candidates:
+            cand = re.sub(r"[ \t]+", " ", raw_cand).strip()
+            low = cand.lower()
+            if len(cand) <= 3 or low == target_low:
+                continue
+            if any(prefix in low for prefix in _GRAPH_JUNK_PREFIXES):
+                continue
+            if " " not in cand and low in _GRAPH_STOPWORDS:
+                continue
+            counts[cand] += 1
+
+        filtered = [c for c, _ in sorted(counts.items(), key=lambda kv: (-kv[1], kv[0]))][:8]
+
+        sentences_pool = [s.strip() for s in re.split(r"(?<=[.!?])\s+|\n+", cleaned_body) if len(s.strip()) > 10]
         for cand in filtered:
             entities.append({
                 "name": cand,
@@ -237,8 +294,8 @@ class GraphBuilder:
                 "description": f"Key concept observed in {source_id}",
             })
 
-            sentences = [s.strip() for s in re.split(r"[.!?]+", text) if cand.lower() in s.lower()]
-            quote = sentences[0] if sentences else text[:80] + "..."
+            matching = [s for s in sentences_pool if cand.lower() in s.lower()]
+            quote = matching[0] if matching else cleaned_body[:100] + "..."
 
             rel_type = "ADVOCATES"
             s_lower = quote.lower()

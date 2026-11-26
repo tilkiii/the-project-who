@@ -9,6 +9,7 @@ from datetime import datetime, timezone
 import json
 import os
 from pathlib import Path
+import re
 from typing import Any, Dict, List, Optional
 import networkx as nx
 
@@ -72,6 +73,15 @@ class GraphStore:
         except Exception as e:
             logger.debug(f"Schema setup warning: {e}")
 
+    @staticmethod
+    def _sanitize_cypher_rel_type(raw_relation: Any) -> str:
+        """Sanitize relationship label so it is strictly a safe Cypher identifier."""
+        cleaned = re.sub(r"[^A-Z0-9_]", "_", str(raw_relation or "RELATES_TO").upper())
+        cleaned = re.sub(r"_+", "_", cleaned).strip("_") or "RELATES_TO"
+        if cleaned[0].isdigit():
+            cleaned = f"REL_{cleaned}"
+        return cleaned
+
     def store_graph(self, entities: List[Dict[str, Any]], relationships: List[Dict[str, Any]]) -> None:
         """Persist entities and relationships into Neo4j and local store."""
         logger.info(f"Storing {len(entities)} entities and {len(relationships)} relationships.")
@@ -132,7 +142,7 @@ class GraphStore:
 
                     # Merge relationships
                     for rel in relationships:
-                        rel_type = rel.get("relation", "RELATES_TO").upper().replace(" ", "_")
+                        rel_type = self._sanitize_cypher_rel_type(rel.get("relation", "RELATES_TO"))
                         query = f"""
                         MATCH (s:Entity {{name: $source}})
                         MATCH (t:Entity {{name: $target}})
@@ -178,7 +188,7 @@ class GraphStore:
             rels.append({"source": u, "target": v, **data})
         return rels
 
-    def export_graph_json(self) -> Dict[str, Any]:
+    def export_graph_json(self, write_to_vault: bool = True) -> Dict[str, Any]:
         """Export current graph state to concept_network.json."""
         payload = {
             "target_name": self.target_name,
@@ -186,11 +196,11 @@ class GraphStore:
             "nodes": self.get_all_nodes(),
             "relationships": self.get_all_relationships(),
         }
-        if self.vault_dir:
+        if write_to_vault and self.vault_dir:
             self.vault_dir.mkdir(parents=True, exist_ok=True)
             out_file = self.vault_dir / "concept_network.json"
             with open(out_file, "w", encoding="utf-8") as f:
-                json.dump(payload, f, indent=2)
+                json.dump(payload, f, indent=2, ensure_ascii=False)
         return payload
 
     def _load_local_graph(self) -> None:

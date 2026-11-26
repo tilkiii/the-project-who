@@ -5,10 +5,13 @@ Demonstrates how the autonomous research engine queries peer-reviewed
 databases (arXiv, PubMed, Semantic Scholar, Crossref) with 3-tier evidence separation.
 """
 
+import sys
 from who import AcademicResearcher
 
 
 def main():
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     print("=== Initializing Autonomous Academic Researcher ===")
     researcher = AcademicResearcher(target_name="Target X")
 

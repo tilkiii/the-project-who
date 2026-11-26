@@ -175,29 +175,38 @@ class CognitiveChronomics:
         day_metrics = metrics_by_window["DAY"]
         night_metrics = metrics_by_window["NIGHT"]
 
-        # If night corpus is minimal or empty, compute estimated baseline from corpus variance
         has_night_data = night_metrics["total_words"] >= 20
         has_day_data = day_metrics["total_words"] >= 20
 
-        # Calculate circadian shifts
-        # 1. Epistemic Filter Decay: drop in tentative/doubt ratio during night hours
-        day_epistemic = day_metrics["epistemic_calibration_ratio"]
-        night_epistemic = night_metrics["epistemic_calibration_ratio"] if has_night_data else max(0.1, day_epistemic * 0.72)
+        if has_night_data and has_day_data:
+            day_epistemic = day_metrics["epistemic_calibration_ratio"]
+            night_epistemic = night_metrics["epistemic_calibration_ratio"]
+            epistemic_decay_pct = round(((day_epistemic - night_epistemic) / (day_epistemic or 1.0)) * 100, 1)
 
-        epistemic_decay_pct = round(((day_epistemic - night_epistemic) / (day_epistemic or 1.0)) * 100, 1)
+            day_ttr = day_metrics["type_token_ratio"]
+            night_ttr = night_metrics["type_token_ratio"]
+            lexical_shift_pct = round(((day_ttr - night_ttr) / (day_ttr or 1.0)) * 100, 1)
 
-        # 2. Lexical Diversity (TTR) Shift
-        day_ttr = day_metrics["type_token_ratio"]
-        night_ttr = night_metrics["type_token_ratio"] if has_night_data else max(0.1, day_ttr * 0.88)
-        lexical_shift_pct = round(((day_ttr - night_ttr) / (day_ttr or 1.0)) * 100, 1)
+            day_crit = day_metrics["critical_density"]
+            night_crit = night_metrics["critical_density"]
+            critical_drift_pct = round(((night_crit - day_crit) / (day_crit or 1.0)) * 100, 1)
 
-        # 3. Sentiment & Critical Valence Drift
-        day_crit = day_metrics["critical_density"]
-        night_crit = night_metrics["critical_density"] if has_night_data else day_crit * 1.35
-        critical_drift_pct = round(((night_crit - day_crit) / (day_crit or 1.0)) * 100, 1)
-
-        # Probabilistic confidence rating based on timestamp coverage
-        timestamp_confidence = min(0.92, 0.50 + (len(segments) / 80.0) * 0.4)
+            timestamp_confidence = min(0.92, 0.50 + (len(segments) / 80.0) * 0.4)
+            probabilistic_stmt = (
+                f"Circadian Drift: Based on observed corpus timestamps, nocturnal epistemic calibration "
+                f"({'decreases' if epistemic_decay_pct >= 0 else 'increases'} by {abs(epistemic_decay_pct)}% compared to daytime). "
+                f"Lexical diversity (TTR) shifts by {abs(lexical_shift_pct)}% and critical tone density changes by "
+                f"{abs(critical_drift_pct)}% (Confidence: {int(timestamp_confidence * 100)}%)."
+            )
+        else:
+            epistemic_decay_pct = 0.0
+            lexical_shift_pct = 0.0
+            critical_drift_pct = 0.0
+            timestamp_confidence = 0.0
+            probabilistic_stmt = (
+                "Circadian Drift: Insufficient nocturnal timestamped corpus (0–5h window < 20 words) "
+                "to measure day-vs-night cognitive drift (Confidence: 0%)."
+            )
 
         report = {
             "circadian_windows_analyzed": {
@@ -219,14 +228,9 @@ class CognitiveChronomics:
                 "lexical_diversity_decay_pct": lexical_shift_pct,
                 "critical_valence_increase_pct": critical_drift_pct,
                 "confidence_score": round(timestamp_confidence, 2),
-                "has_direct_night_corpus": has_night_data,
+                "has_direct_night_corpus": has_night_data and has_day_data,
             },
-            "probabilistic_statement": (
-                f"Circadian Drift: Based on observed corpus timestamps, nocturnal epistemic calibration "
-                f"({'decreases' if epistemic_decay_pct >= 0 else 'increases'} by {abs(epistemic_decay_pct)}% compared to daytime). "
-                f"Lexical diversity (TTR) shifts by {abs(lexical_shift_pct)}% and critical tone density changes by "
-                f"{abs(critical_drift_pct)}% (Confidence: {int(timestamp_confidence * 100)}%)."
-            ),
+            "probabilistic_statement": probabilistic_stmt,
         }
 
         # Persist report if output_dir provided
@@ -234,7 +238,7 @@ class CognitiveChronomics:
             self.output_dir.mkdir(parents=True, exist_ok=True)
             out_file = self.output_dir / "chronomics.json"
             with open(out_file, "w", encoding="utf-8") as f:
-                json.dump(report, f, indent=2, default=str)
+                json.dump(report, f, indent=2, default=str, ensure_ascii=False)
             logger.info(f"Saved Cognitive Chronomics report to {out_file}")
 
         return report

@@ -77,10 +77,10 @@ class TopicMapper:
         if self.output_dir:
             self.output_dir.mkdir(parents=True, exist_ok=True)
             with open(self.output_dir / "topics.json", "w", encoding="utf-8") as f:
-                json.dump(topics_data, f, indent=2)
+                json.dump(topics_data, f, indent=2, ensure_ascii=False)
 
             with open(self.output_dir / "topic_evolution.json", "w", encoding="utf-8") as f:
-                json.dump(evolution_data, f, indent=2)
+                json.dump(evolution_data, f, indent=2, ensure_ascii=False)
 
             logger.info("Saved topics.json and topic_evolution.json successfully.")
 
@@ -89,20 +89,52 @@ class TopicMapper:
             "topic_evolution": evolution_data,
         }
 
+    @staticmethod
+    def _clean_text_for_topics(text: str) -> str:
+        """Strip YAML frontmatter, diarization headers, speaker tags, and redacted PII tokens."""
+        cleaned = re.sub(r"^---\s*\n.*?\n---\s*", "", text, flags=re.DOTALL)
+        kept: List[str] = []
+        for line in cleaned.splitlines():
+            s = line.strip()
+            if not s or s.lower().startswith("# diarized dialogue:"):
+                continue
+            if "[INTERLOCUTOR_CONTEXT]" in s.upper():
+                continue
+            s = re.sub(r"^(?:\[[^\]]+\]\s*)*\[TARGET_PRIMARY\]:\s*", "", s)
+            s = re.sub(r"\[REDACTED_[A-Z_]+\]", " ", s)
+            kept.append(s)
+        out = "\n".join(kept).strip()
+        if not out:
+            out = re.sub(r"\[/?[A-Z_]+\]", " ", cleaned)
+        return out
+
     def _fallback_topic_modeling(self, texts: List[str], nr_topics: int = 5) -> Dict[str, Any]:
-        """Term-frequency co-occurrence based clustering fallback."""
+        """Unicode-aware term-frequency co-occurrence clustering fallback (English + Turkish)."""
         stopwords = {
             "the", "a", "an", "and", "or", "but", "in", "on", "at", "to", "for", "of", "with",
             "is", "was", "are", "were", "be", "been", "being", "have", "has", "had", "do", "does",
             "did", "that", "this", "these", "those", "it", "its", "as", "by", "from", "about",
-            "can", "could", "will", "would", "should", "not", "their", "they", "we", "you", "i"
+            "can", "could", "will", "would", "should", "not", "their", "they", "we", "you", "i",
+            "also", "only", "more", "most", "some", "such", "than", "then", "when", "what", "which",
+            "into", "before", "after", "while", "first", "second", "third", "over", "under",
+            "ile", "veya", "ama", "fakat", "ancak", "çünkü", "için", "olarak", "daha", "gibi",
+            "kadar", "bence", "peki", "olan", "ilgili", "üzerinde", "hakkında", "sonra", "önce",
+            "böyle", "şekilde", "birlikte", "büyük", "küçük", "yeni", "tüm", "her", "bazı", "eğer",
+            "yani", "belki", "hatta", "diğer", "bunun", "şunun", "olmayan", "gerekir", "yapmak",
+            "diarized", "dialogue", "whatsapp", "telegram", "zoom", "teams", "file", "name",
+            "source", "type", "document", "html", "http", "https", "target", "primary",
+            "interlocutor", "context", "redacted", "email_thread",
         }
 
-        # Tokenize per document
+        # Tokenize per document using full Unicode word letters (preserves şeffaflık, ölçülebilir, kırılganlık)
         doc_tokens = []
         term_doc_count: Dict[str, int] = {}
         for text in texts:
-            toks = [w.lower() for w in re.findall(r"\b[a-zA-Z]{4,}\b", text) if w.lower() not in stopwords]
+            cleaned = self._clean_text_for_topics(text).replace("İ", "i").replace("I", "ı").lower()
+            raw_words = re.findall(r"\b[^\W\d_]{4,}\b", cleaned, re.UNICODE)
+            # Normalize Turkish dotted/dotless ambiguity for ASCII tokens while keeping genuine Turkish letters
+            toks = [w.replace("ı", "i") if w.isascii() else w for w in raw_words]
+            toks = [w for w in toks if w not in stopwords and not w.startswith("doc_") and len(w) >= 4]
             doc_tokens.append(toks)
             for t in set(toks):
                 term_doc_count[t] = term_doc_count.get(t, 0) + 1
@@ -115,7 +147,9 @@ class TopicMapper:
                 idf = math.log((1 + num_docs) / (1 + df))
                 score = df * idf
                 top_terms.append((term, score))
-        top_terms.sort(key=lambda x: x[1], reverse=True)
+        if not top_terms:
+            top_terms = [(term, float(df)) for term, df in term_doc_count.items()]
+        top_terms.sort(key=lambda x: (-x[1], x[0]))
 
         selected_seeds = [t[0] for t in top_terms[:nr_topics]]
         if not selected_seeds:

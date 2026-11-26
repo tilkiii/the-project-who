@@ -12,10 +12,13 @@ Maps the resulting decision space into 4 canonical game-theoretic branches:
 4. DEADLOCK_WALKAWAY (Unilateral walkaway / BATNA exercise)
 """
 
+import sys
 from who import CognitiveTwin
 
 
 def main():
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     target_name = "Target X"
     twin = CognitiveTwin(target_name)
 

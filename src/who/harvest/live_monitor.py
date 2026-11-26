@@ -13,6 +13,7 @@ import re
 from typing import Any, Dict, List, Optional
 import urllib.request
 
+from who import __version__
 from who.learn.chronomics import CognitiveChronomics
 from who.learn.feature_extractor import FeatureExtractor
 from who.utils.logger import get_logger
@@ -55,7 +56,7 @@ class LiveMonitor:
             try:
                 req = urllib.request.Request(
                     url,
-                    headers={"User-Agent": "who-OSINT-Engine/4.0 (+https://github.com/tilkiii/the-project-who)"},
+                    headers={"User-Agent": f"who-OSINT-Engine/{__version__} (+https://github.com/tilkiii/the-project-who)"},
                 )
                 with urllib.request.urlopen(req, timeout=10) as response:
                     raw_bytes = response.read()

@@ -7,6 +7,7 @@ sample sizes (N), and methodologies, dynamically updating and Bayesian-calibrati
 
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor
 import datetime
 from datetime import timezone
 import json
@@ -15,9 +16,11 @@ import os
 from pathlib import Path
 import re
 from typing import Any, Dict, List, Optional, Tuple
+from urllib.parse import quote_plus
 import xml.etree.ElementTree as ET
 import httpx
 
+from who import __version__
 from who.config import call_llm
 from who.learn.boundary_synthesizer import BoundarySynthesizer
 from who.learn.scientific_referee import ScientificReferee
@@ -137,7 +140,8 @@ class AutonomousAcademicResearcher:
 
         # 3. Circadian Epistemic Decay (Chronomics Anomaly)
         filter_decay = chronomics.get("epistemic_filter_decay_pct", 0.0)
-        if abs(filter_decay) >= 15.0:
+        has_direct_night = chronomics.get("has_direct_night_corpus", True)
+        if has_direct_night and abs(filter_decay) >= 15.0:
             anomalies.append({
                 "marker": "circadian_cognitive_drift_night",
                 "observed_value": f"Night filter decay: {filter_decay}%",
@@ -314,8 +318,8 @@ class AutonomousAcademicResearcher:
         """Query arXiv API via HTTPS with automatic redirect handling."""
         papers: List[Dict[str, Any]] = []
         try:
-            url = f"https://export.arxiv.org/api/query?search_query=all:{query}&start=0&max_results={max_results}"
-            with httpx.Client(timeout=8.0, follow_redirects=True) as client:
+            url = f"https://export.arxiv.org/api/query?search_query=all:{quote_plus(query)}&start=0&max_results={max_results}"
+            with httpx.Client(timeout=5.0, follow_redirects=True) as client:
                 resp = client.get(url)
                 if resp.status_code == 200:
                     root = ET.fromstring(resp.text)
@@ -330,12 +334,18 @@ class AutonomousAcademicResearcher:
                         summary = summary_el.text.strip().replace("\n", " ") if summary_el is not None and summary_el.text else ""
                         paper_url = id_el.text if id_el is not None and id_el.text else ""
                         pub_year = pub_el.text[:4] if pub_el is not None and pub_el.text else "2024"
+                        authors: List[str] = []
+                        for author_el in entry.findall("atom:author", ns):
+                            name_el = author_el.find("atom:name", ns)
+                            if name_el is not None and name_el.text and name_el.text.strip():
+                                authors.append(name_el.text.strip())
 
                         # Extract clean arxiv identifier for DOI mapping
                         arxiv_id = paper_url.split("/abs/")[-1] if "/abs/" in paper_url else paper_url
 
                         papers.append({
                             "title": title,
+                            "authors": authors,
                             "year": pub_year,
                             "doi_or_url": paper_url,
                             "doi": f"arXiv:{arxiv_id}",
@@ -352,9 +362,9 @@ class AutonomousAcademicResearcher:
         """Query NCBI PubMed E-utilities for peer-reviewed clinical and behavioral studies."""
         papers: List[Dict[str, Any]] = []
         try:
-            with httpx.Client(timeout=9.0, follow_redirects=True) as client:
+            with httpx.Client(timeout=5.0, follow_redirects=True) as client:
                 # 1. ESearch for PMIDs
-                esearch_url = f"https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&term={query}&retmode=json&retmax={max_results}"
+                esearch_url = f"https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&term={quote_plus(query)}&retmode=json&retmax={max_results}"
                 resp = client.get(esearch_url)
                 if resp.status_code == 200:
                     id_list = resp.json().get("esearchresult", {}).get("idlist", [])
@@ -371,6 +381,18 @@ class AutonomousAcademicResearcher:
                                 doi_el = article.find('.//ArticleId[@IdType="doi"]')
                                 pubdate_el = article.find(".//JournalIssue/PubDate/Year")
 
+                                authors: List[str] = []
+                                for a_el in article.findall(".//AuthorList/Author"):
+                                    coll = a_el.find("CollectiveName")
+                                    if coll is not None and coll.text and coll.text.strip():
+                                        authors.append(coll.text.strip())
+                                        continue
+                                    fore = (a_el.findtext("ForeName") or "").strip()
+                                    last = (a_el.findtext("LastName") or "").strip()
+                                    full = f"{fore} {last}".strip()
+                                    if full:
+                                        authors.append(full)
+
                                 pmid = pmid_el.text if pmid_el is not None else ""
                                 title = title_el.text if title_el is not None and title_el.text else "PubMed Study"
                                 abstract = abstract_el.text if abstract_el is not None and abstract_el.text else "Peer-reviewed biomedical and behavioral assessment index."
@@ -380,6 +402,7 @@ class AutonomousAcademicResearcher:
 
                                 papers.append({
                                     "title": title,
+                                    "authors": authors,
                                     "year": year,
                                     "doi_or_url": doi_url or (f"https://pubmed.ncbi.nlm.nih.gov/{pmid}/" if pmid else ""),
                                     "doi": doi_str,
@@ -396,13 +419,13 @@ class AutonomousAcademicResearcher:
         """Query Semantic Scholar Graph API for academic citations and abstracts."""
         papers: List[Dict[str, Any]] = []
         try:
-            url = f"https://api.semanticscholar.org/graph/v1/paper/search?query={query}&limit={max_results}&fields=title,abstract,year,citationCount,externalIds,url"
-            headers = {"User-Agent": "who-academic-agent/4.0.0 (mailto:research@who-osint.org)"}
+            url = f"https://api.semanticscholar.org/graph/v1/paper/search?query={quote_plus(query)}&limit={max_results}&fields=title,abstract,year,citationCount,externalIds,url,authors"
+            headers = {"User-Agent": f"who-academic-agent/{__version__} (mailto:research@who-osint.org)"}
             api_key = os.getenv("SEMANTIC_SCHOLAR_API_KEY")
             if api_key:
                 headers["x-api-key"] = api_key
 
-            with httpx.Client(timeout=8.0, headers=headers) as client:
+            with httpx.Client(timeout=5.0, headers=headers) as client:
                 resp = client.get(url)
                 if resp.status_code == 200:
                     data = resp.json().get("data", [])
@@ -411,9 +434,15 @@ class AutonomousAcademicResearcher:
                         doi_val = ext.get("DOI") or ext.get("ArXiv") or ext.get("PubMed")
                         doi_str = f"DOI:{doi_val}" if doi_val else ""
                         url_val = p.get("url") or (f"https://doi.org/{doi_val}" if doi_val else "")
+                        authors = [
+                            str(a.get("name", "")).strip()
+                            for a in (p.get("authors") or [])
+                            if isinstance(a, dict) and a.get("name")
+                        ]
 
                         papers.append({
                             "title": p.get("title", "Untitled Semantic Scholar Paper"),
+                            "authors": authors,
                             "year": str(p.get("year", 2024)),
                             "doi_or_url": url_val,
                             "doi": doi_str,
@@ -430,8 +459,8 @@ class AutonomousAcademicResearcher:
         """Query Crossref API as a resilient open scientific fallback."""
         papers: List[Dict[str, Any]] = []
         try:
-            url = f"https://api.crossref.org/works?query={query}&rows={max_results}&select=DOI,title,abstract,issued,is-referenced-by-count,URL"
-            with httpx.Client(timeout=8.0, follow_redirects=True) as client:
+            url = f"https://api.crossref.org/works?query={quote_plus(query)}&rows={max_results}&select=DOI,title,abstract,issued,is-referenced-by-count,URL,author"
+            with httpx.Client(timeout=5.0, follow_redirects=True) as client:
                 resp = client.get(url)
                 if resp.status_code == 200:
                     items = resp.json().get("message", {}).get("items", [])
@@ -442,9 +471,15 @@ class AutonomousAcademicResearcher:
                         year_parts = it.get("issued", {}).get("date-parts", [[2024]])
                         year = str(year_parts[0][0]) if year_parts and year_parts[0] else "2024"
                         citations = it.get("is-referenced-by-count")
+                        authors = [
+                            f"{a.get('given', '')} {a.get('family', '')}".strip()
+                            for a in (it.get("author") or [])
+                            if isinstance(a, dict) and (a.get("family") or a.get("given"))
+                        ]
 
                         papers.append({
                             "title": title,
+                            "authors": authors,
                             "year": year,
                             "doi_or_url": it.get("URL") or (f"https://doi.org/{doi}" if doi else ""),
                             "doi": f"DOI:{doi}" if doi else "",
@@ -1162,24 +1197,30 @@ class AutonomousAcademicResearcher:
         anomalies = self.detect_behavioral_anomalies(features, topics)
         query_objects = self.generate_scientific_queries(anomalies)
 
-        # 2. Live Literature Harvesting across APIs
+        # 2. Live Literature Harvesting across APIs (bounded + concurrent to prevent CLI hangs)
+        focused_queries: List[str] = [
+            q_obj["queries"][0]
+            for q_obj in query_objects[:3]
+            if q_obj.get("queries")
+        ]
         discovered_papers: List[Dict[str, Any]] = []
 
-        for q_obj in query_objects:
-            for q_str in q_obj.get("queries", []):
-                arxiv_hits = self.query_arxiv(q_str, max_results=max_papers_per_query)
-                discovered_papers.extend(arxiv_hits)
-
-                pubmed_hits = self.query_pubmed(q_str, max_results=max_papers_per_query)
-                discovered_papers.extend(pubmed_hits)
-
-                # Query Semantic Scholar or Crossref
+        if focused_queries:
+            def _fetch_s2_or_crossref(q_str: str) -> List[Dict[str, Any]]:
                 s2_hits = self.query_semantic_scholar(q_str, max_results=max_papers_per_query)
-                if s2_hits:
-                    discovered_papers.extend(s2_hits)
-                else:
-                    crossref_hits = self.query_crossref(q_str, max_results=max_papers_per_query)
-                    discovered_papers.extend(crossref_hits)
+                return s2_hits if s2_hits else self.query_crossref(q_str, max_results=max_papers_per_query)
+
+            with ThreadPoolExecutor(max_workers=min(6, max(1, len(focused_queries) * 3))) as pool:
+                tasks = []
+                for q_str in focused_queries:
+                    tasks.append(pool.submit(self.query_arxiv, q_str, max_results=max_papers_per_query))
+                    tasks.append(pool.submit(self.query_pubmed, q_str, max_results=max_papers_per_query))
+                    tasks.append(pool.submit(_fetch_s2_or_crossref, q_str))
+                for fut in tasks:
+                    try:
+                        discovered_papers.extend(fut.result() or [])
+                    except Exception as exc:
+                        logger.debug(f"Concurrent academic query failed: {exc}")
 
         # Deduplicate papers by title
         seen_titles = set()
@@ -1272,7 +1313,7 @@ class AutonomousAcademicResearcher:
             lit_file = self.output_dir / "retrieved_academic_literature.json"
             try:
                 with open(lit_file, "w", encoding="utf-8") as f:
-                    json.dump(deduped_papers, f, indent=2)
+                    json.dump(deduped_papers, f, indent=2, ensure_ascii=False)
                 logger.info(f"Retrieved, evaluated, and saved {len(deduped_papers)} papers to {lit_file}")
             except Exception as e:
                 logger.debug(f"Could not persist retrieved_academic_literature.json: {e}")
@@ -1304,14 +1345,26 @@ class AutonomousAcademicResearcher:
         sources_normalized = [s.strip().lower() for s in sources]
         discovered_papers: List[Dict[str, Any]] = []
 
+        repo_calls = []
         if "arxiv" in sources_normalized:
-            discovered_papers.extend(self.query_arxiv(topic, max_results=limit))
+            repo_calls.append(lambda: self.query_arxiv(topic, max_results=limit))
         if "pubmed" in sources_normalized:
-            discovered_papers.extend(self.query_pubmed(topic, max_results=limit))
+            repo_calls.append(lambda: self.query_pubmed(topic, max_results=limit))
         if "semantic_scholar" in sources_normalized or "semanticscholar" in sources_normalized:
-            discovered_papers.extend(self.query_semantic_scholar(topic, max_results=limit))
+            repo_calls.append(lambda: self.query_semantic_scholar(topic, max_results=limit))
         if "crossref" in sources_normalized:
-            discovered_papers.extend(self.query_crossref(topic, max_results=limit))
+            repo_calls.append(lambda: self.query_crossref(topic, max_results=limit))
+
+        if len(repo_calls) > 1:
+            with ThreadPoolExecutor(max_workers=len(repo_calls)) as pool:
+                futs = [pool.submit(fn) for fn in repo_calls]
+                for fut in futs:
+                    try:
+                        discovered_papers.extend(fut.result() or [])
+                    except Exception as exc:
+                        logger.debug(f"Topic repository query failed: {exc}")
+        elif repo_calls:
+            discovered_papers.extend(repo_calls[0]() or [])
 
         # Deduplicate papers by title
         seen_titles = set()

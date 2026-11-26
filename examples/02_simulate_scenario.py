@@ -6,10 +6,13 @@ cognitive model to predict counter-moves, strategic stance, and calibrated risk.
 """
 
 import json
+import sys
 from who import CognitiveTwin
 
 
 def main():
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     target_name = "Target X"
     twin = CognitiveTwin(target_name)
 

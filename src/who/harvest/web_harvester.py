@@ -10,6 +10,7 @@ from datetime import datetime, timezone
 import hashlib
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+from urllib.parse import urlparse
 import httpx
 from bs4 import BeautifulSoup
 
@@ -111,11 +112,23 @@ class WebHarvester:
             logger.error(f"Failed to parse RSS feed {feed_url}: {e}")
         return records
 
+    @staticmethod
+    def _is_feed_url(url: str) -> bool:
+        """Detect explicit RSS/Atom feed endpoints without misclassifying URLs like '/blog/ai-feedback-loops'."""
+        parsed = urlparse(url.strip().lower())
+        path = parsed.path or ""
+        if path.endswith((".xml", ".rss", ".atom")):
+            return True
+        segments = [seg for seg in path.split("/") if seg]
+        if any(seg in ("rss", "feed", "feeds", "atom") for seg in segments):
+            return True
+        return "format=rss" in (parsed.query or "") or "format=atom" in (parsed.query or "")
+
     def harvest_urls(self, urls: List[str]) -> List[Dict[str, Any]]:
         """Synchronous wrapper to scrape a batch of URLs."""
         results = []
         for url in urls:
-            if "rss" in url.lower() or "feed" in url.lower() or url.endswith(".xml"):
+            if self._is_feed_url(url):
                 results.extend(self.parse_rss_feed(url))
             else:
                 try:

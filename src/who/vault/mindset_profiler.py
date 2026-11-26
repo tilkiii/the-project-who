@@ -9,8 +9,10 @@ from __future__ import annotations
 from datetime import datetime, timezone
 import json
 from pathlib import Path
+import re
 from typing import Any, Dict, List, Optional
 
+from who import __version__
 from who.utils.logger import get_logger
 
 logger = get_logger("who.vault.mindset")
@@ -39,9 +41,20 @@ class MindsetProfiler:
         cal_ratio = behavioral.get("calibration_ratio", 1.0)
         rules = mapping_skill.get("generation_rules", [])
 
-        # Top concepts from graph metrics & real corpus quotes
+        # Top concepts from graph metrics & real target quotes (never interlocutor turns)
         top_concepts = [c.get("node") for c in graph_metrics.get("top_influential_concepts", [])[:6] if c.get("node") != self.target_name]
-        cleaned_quotes = [q.strip() for q in sample_quotes if q and len(q.strip()) > 20][:6]
+        cleaned_quotes: List[str] = []
+        for raw_q in sample_quotes:
+            q = (raw_q or "").strip()
+            if not q or q.startswith("---") or q.lower().startswith(("file_name:", "source_type:", "source_url:", "title:")):
+                continue
+            if "[INTERLOCUTOR_CONTEXT]" in q.upper():
+                continue
+            q = re.sub(r"^(?:\[[^\]]+\]\s*)*\[TARGET_PRIMARY\]:\s*", "", q).strip()
+            if len(q) > 20 and q not in cleaned_quotes:
+                cleaned_quotes.append(q)
+            if len(cleaned_quotes) >= 6:
+                break
         sample_reply = (
             f'Based on documented corpus statements: "{cleaned_quotes[0][:240]}"'
             if cleaned_quotes
@@ -160,7 +173,7 @@ class MindsetProfiler:
                 except Exception:
                     pass
             with open(self.vault_dir / "character.json", "w", encoding="utf-8") as f:
-                json.dump(character_data, f, indent=2)
+                json.dump(character_data, f, indent=2, ensure_ascii=False)
 
             with open(self.vault_dir / "mindset_summary.md", "w", encoding="utf-8") as f:
                 f.write(mindset_markdown)
@@ -203,11 +216,10 @@ class MindsetProfiler:
         # 1. Cognitive Chronomics
         chronomics = features.get("chronomics", {})
         chron_drift = chronomics.get("circadian_drift_summary", {})
-        chron_decay = chron_drift.get("epistemic_filter_decay_pct", 14)
-        chron_lex = chron_drift.get("lexical_diversity_decay_pct", 8)
-        chron_stmt = chronomics.get(
-            "probabilistic_statement",
-            f"Circadian Drift: Based on observed corpus timestamps, nocturnal epistemic calibration shifts by {abs(chron_decay)}% compared to daytime.",
+        chron_decay = chron_drift.get("epistemic_filter_decay_pct", 0.0)
+        chron_lex = chron_drift.get("lexical_diversity_decay_pct", 0.0)
+        chron_stmt = chronomics.get("probabilistic_statement") or (
+            "Circadian Drift: No timestamped circadian feature data available yet (run 'who learn' with timestamped logs)."
         )
 
         # 2. Cognitive Dissonance
@@ -231,17 +243,16 @@ class MindsetProfiler:
 
         # 3. Epistemic Manipulation Index
         manipulation = features.get("epistemic_manipulation_index", {})
-        manip_score_pct = manipulation.get("score_pct", "18%")
-        manip_tier = manipulation.get("risk_tier", "LOW / CALIBRATED (EMPIRICALLY_CALIBRATED)")
-        manip_dogmatic = manipulation.get("dogmatic_density_per_k", 2.1)
-        manip_evidence = manipulation.get("evidence_density_per_k", 11.4)
-        manip_stmt = manipulation.get(
-            "probabilistic_statement",
-            f"Epistemic Manipulation Index: Absolutist unsubstantiated framing tendency estimated at {manip_score_pct}.",
+        manip_score_pct = manipulation.get("score_pct", "N/A")
+        manip_tier = manipulation.get("risk_tier", "NOT_COMPUTED")
+        manip_dogmatic = manipulation.get("dogmatic_density_per_k", 0.0)
+        manip_evidence = manipulation.get("evidence_density_per_k", 0.0)
+        manip_stmt = manipulation.get("probabilistic_statement") or (
+            "Epistemic Manipulation Index: Not yet computed from corpus features (run 'who learn')."
         )
 
         return f"""# Evidence-Based Cognitive & Mindset Profile: {self.target_name}
-*Generated on {timestamp} by who?? v4.0.0*
+*Generated on {timestamp} by who?? v{__version__}*
 
 > [!NOTE]
 > This behavioral model adheres strictly to probabilistic reasoning and quantified uncertainty.
