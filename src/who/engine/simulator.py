@@ -187,6 +187,127 @@ class Simulator:
 
         return mindset_text, skill_data, features_data, graph_metrics
 
+    def _load_knowledge_graph(self) -> Dict[str, Any]:
+        """Load and normalize nodes/edges from local concept_network.json and knowledge_graph.json."""
+        nodes_by_lower: Dict[str, Dict[str, Any]] = {}
+        edges: List[Dict[str, Any]] = []
+        seen_edges = set()
+        loaded_files: List[str] = []
+
+        if not self.dirs or not hasattr(self.dirs, "vault_dir"):
+            return {"nodes": [], "edges": [], "loaded_files": []}
+
+        for filename in ("concept_network.json", "knowledge_graph.json"):
+            path = self.dirs.vault_dir / filename
+            if not path.exists():
+                continue
+            try:
+                data = json.loads(path.read_text(encoding="utf-8"))
+                loaded_files.append(filename)
+            except Exception:
+                continue
+
+            for raw_n in data.get("nodes", []):
+                if isinstance(raw_n, dict):
+                    n_name = str(raw_n.get("name") or raw_n.get("id") or "").strip()
+                    if n_name:
+                        key = n_name.lower()
+                        if key not in nodes_by_lower:
+                            nodes_by_lower[key] = {"name": n_name, **raw_n}
+                elif isinstance(raw_n, str) and raw_n.strip():
+                    n_name = raw_n.strip()
+                    key = n_name.lower()
+                    if key not in nodes_by_lower:
+                        nodes_by_lower[key] = {"name": n_name}
+
+            raw_edges = data.get("relationships") or data.get("edges") or data.get("links") or []
+            for raw_e in raw_edges:
+                if not isinstance(raw_e, dict):
+                    continue
+                src = str(raw_e.get("source") or "").strip()
+                tgt = str(raw_e.get("target") or "").strip()
+                rel = str(raw_e.get("relation") or "RELATES_TO").strip().upper()
+                if src and tgt:
+                    ek = (src.lower(), tgt.lower(), rel)
+                    if ek not in seen_edges:
+                        seen_edges.add(ek)
+                        edges.append({
+                            "source": src,
+                            "target": tgt,
+                            "relation": rel,
+                            "weight": float(raw_e.get("weight", 0.8) or 0.8),
+                        })
+
+        return {
+            "nodes": list(nodes_by_lower.values()),
+            "edges": edges,
+            "loaded_files": loaded_files,
+        }
+
+    @staticmethod
+    def _resolve_param_with_provenance(
+        skill_section: Dict[str, Any],
+        feature_section: Dict[str, Any],
+        key: str,
+        default_val: float,
+    ) -> Tuple[float, str]:
+        """Resolve numeric parameter preferring observed skill/features with explicit provenance tracking."""
+        if isinstance(skill_section, dict) and skill_section.get(key) is not None:
+            try:
+                return float(skill_section[key]), "observed_skill"
+            except (ValueError, TypeError):
+                pass
+        if isinstance(feature_section, dict) and feature_section.get(key) is not None:
+            try:
+                return float(feature_section[key]), "observed_features.json"
+            except (ValueError, TypeError):
+                pass
+        return float(default_val), "default_prior_fallback"
+
+    @staticmethod
+    def _build_model_transparency(
+        *,
+        features_data: Dict[str, Any],
+        knowledge_graph: Dict[str, Any],
+        field_analysis: Dict[str, Any],
+        has_mindset: bool,
+        has_skill: bool,
+        parameter_provenance: Dict[str, str],
+    ) -> Dict[str, Any]:
+        """Construct transparent provenance and non-predictive disclaimer metadata."""
+        total_words = int(features_data.get("corpus_stats", {}).get("total_words", 0) or 0)
+        kg_nodes = knowledge_graph.get("nodes", []) if isinstance(knowledge_graph, dict) else []
+        kg_edges = knowledge_graph.get("edges", []) if isinstance(knowledge_graph, dict) else []
+        observed_sources: List[str] = []
+        if total_words > 0:
+            observed_sources.append("features.json")
+        if has_skill:
+            observed_sources.append("generated_mapping_skill.json")
+        if has_mindset:
+            observed_sources.append("mindset_summary.md")
+        for fn in knowledge_graph.get("loaded_files", []):
+            if fn not in observed_sources:
+                observed_sources.append(fn)
+
+        corpus_grounded = bool(total_words > 0 or len(kg_nodes) > 0 or has_mindset or has_skill)
+        return {
+            "model_type": "corpus_conditioned_scenario_model",
+            "is_trained_behavioral_predictor": False,
+            "corpus_grounded": corpus_grounded,
+            "corpus_word_count": total_words,
+            "knowledge_graph_nodes_loaded": len(kg_nodes),
+            "knowledge_graph_edges_loaded": len(kg_edges),
+            "matched_knowledge_graph_anchors": field_analysis.get("matched_knowledge_graph_anchors", []),
+            "corpus_field_source": field_analysis.get("corpus_field_source", "default_prior_fallback"),
+            "observed_sources_used": observed_sources,
+            "parameter_provenance": parameter_provenance,
+            "disclaimer": (
+                "Outputs reflect a corpus-conditioned analytical scenario model driven by observed lexical "
+                "indicators, knowledge-graph topology, and heuristic game-theoretic payoffs — NOT a trained "
+                "empirical behavioral predictor."
+            ),
+        }
+
     def _compute_inverse_temperature_beta(
         self,
         need_for_closure: float,
@@ -343,6 +464,7 @@ class Simulator:
         scenario: str,
         features_data: Dict[str, Any],
         graph_metrics: Dict[str, Any],
+        knowledge_graph: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """
         Project the scenario text x onto:
@@ -597,7 +719,7 @@ class Simulator:
         commitment_alignment_score = round(max(-1.0, min(1.0, commitment_alignment_score)), 4)
         red_line_violation_score = round(max(0.0, min(1.0, red_line_violation_score)), 4)
 
-        # Build canonical 6-node cognitive Ising concept graph (or blend with vault concept graph if present)
+        # Build canonical 6-node cognitive Ising concept graph conditioned on observed features & knowledge graph
         ising_data = graph_metrics.get("cognitive_dissonance", {}).get("ising_spin_glass_physics", {})
         vault_h = ising_data.get("corpus_external_fields_h", {})
         vault_m = ising_data.get("node_salience_m", {})
@@ -611,14 +733,53 @@ class Simulator:
             "institutional_governance_parity",
             "closure_and_execution_readiness",
         ]
-        h_corpus = {
-            "autonomy_and_rights_retention": 0.55,
-            "epistemic_transparency_and_audit": 0.45,
-            "cooperative_mutual_reciprocity": 0.30,
-            "downside_loss_and_risk_shield": 0.50,
-            "institutional_governance_parity": 0.40,
-            "closure_and_execution_readiness": 0.15,
-        }
+        has_observed_features = bool(
+            isinstance(features_data, dict)
+            and features_data.get("corpus_stats", {}).get("total_words", 0) > 0
+        )
+        if has_observed_features:
+            pref_sec = features_data.get("stated_vs_revealed_preference", {})
+            rev_coop = float(pref_sec.get("revealed_cooperation_polarity", 0.50))
+            stated_coop = float(pref_sec.get("stated_cooperation_polarity", 0.50))
+            mach_est = float(features_data.get("machiavellianism_index", {}).get("estimated_score", 0.35))
+            cal_ratio = float(features_data.get("epistemic_markers", {}).get("epistemic_calibration_ratio", 1.0))
+            manip_est = float(features_data.get("epistemic_manipulation_index", {}).get("score", 0.15))
+            loss_est = float(features_data.get("loss_aversion_index", {}).get("estimated_score", 1.50))
+            closure_est = float(features_data.get("need_for_closure_index", {}).get("estimated_score", 0.50))
+            dom_moral = str(features_data.get("moral_foundations_profile", {}).get("dominant_foundation", ""))
+
+            raw_h_corpus = {
+                "autonomy_and_rights_retention": (
+                    0.55
+                    + 0.50 * (0.50 - rev_coop)
+                    + 0.25 * (mach_est - 0.35)
+                    + (0.15 if ("INDIVIDUALIZING" in dom_moral or "BİREY" in dom_moral) else 0.0)
+                ),
+                "epistemic_transparency_and_audit": (
+                    0.35 + 0.25 * min(1.5, cal_ratio - 1.0) - 0.40 * (manip_est - 0.20)
+                ),
+                "cooperative_mutual_reciprocity": (
+                    0.25 + 0.85 * ((rev_coop + stated_coop) * 0.5 - 0.50) - 0.45 * (mach_est - 0.35)
+                ),
+                "downside_loss_and_risk_shield": 0.35 + 0.55 * ((loss_est - 1.50) / 0.85),
+                "institutional_governance_parity": (
+                    0.35
+                    + (0.25 if ("BINDING" in dom_moral or "OTORİTE" in dom_moral) else 0.0)
+                    + 0.30 * (rev_coop - 0.50)
+                ),
+                "closure_and_execution_readiness": 0.15 + 0.65 * (closure_est - 0.50),
+            }
+            h_corpus = {k: round(max(-1.0, min(1.0, v)), 4) for k, v in raw_h_corpus.items()}
+        else:
+            h_corpus = {
+                "autonomy_and_rights_retention": 0.55,
+                "epistemic_transparency_and_audit": 0.45,
+                "cooperative_mutual_reciprocity": 0.30,
+                "downside_loss_and_risk_shield": 0.50,
+                "institutional_governance_parity": 0.40,
+                "closure_and_execution_readiness": 0.15,
+            }
+
         if vault_h:
             mean_vh = sum(float(v) for v in vault_h.values()) / max(1, len(vault_h))
             for k in h_corpus:
@@ -637,17 +798,75 @@ class Simulator:
             for k in salience_m:
                 salience_m[k] = round(0.80 * salience_m[k] + 0.20 * mean_vm, 4)
 
+        # Knowledge Graph anchor matching against scenario proposition
+        kg_nodes = knowledge_graph.get("nodes", []) if isinstance(knowledge_graph, dict) else []
+        kg_edges = knowledge_graph.get("edges", []) if isinstance(knowledge_graph, dict) else []
+        positive_rels = {"ADVOCATES", "SUPPORTS", "CHAMPIONS", "REQUIRES", "PRODUCES", "INFORMS", "STRUCTURES", "USES"}
+        negative_rels = {"CRITIQUES", "OPPOSES", "REJECTS", "CONTRADICTS"}
+
+        matched_kg_anchors: List[str] = []
+        matched_kg_lowers = set()
+        for raw_n in kg_nodes:
+            n_name = str(raw_n.get("name") or raw_n.get("id") or "").strip() if isinstance(raw_n, dict) else str(raw_n).strip()
+            if len(n_name) >= 4 and n_name.lower() in s_lower:
+                if n_name.lower() not in matched_kg_lowers:
+                    matched_kg_lowers.add(n_name.lower())
+                    matched_kg_anchors.append(n_name)
+
+        kg_support_hits = 0
+        kg_opposition_hits = 0
+        if matched_kg_lowers and kg_edges:
+            counted_edges = set()
+            for edge in kg_edges:
+                if not isinstance(edge, dict):
+                    continue
+                src_l = str(edge.get("source") or "").strip().lower()
+                tgt_l = str(edge.get("target") or "").strip().lower()
+                rel_u = str(edge.get("relation") or "").strip().upper()
+                ek = (src_l, tgt_l, rel_u)
+                if ek in counted_edges:
+                    continue
+                if src_l in matched_kg_lowers or tgt_l in matched_kg_lowers:
+                    counted_edges.add(ek)
+                    if rel_u in positive_rels:
+                        kg_support_hits += 1
+                    elif rel_u in negative_rels:
+                        kg_opposition_hits += 1
+
+        kg_alignment_bias = round(min(0.45, 0.15 * kg_support_hits), 4)
+        kg_tension_bias = round(min(0.50, 0.20 * kg_opposition_hits), 4)
+
         # Scenario-induced external field perturbation h_i(x)
         h_scenario = {
-            "autonomy_and_rights_retention": round(0.85 * (preserve_hits - violation_hits), 4),
-            "epistemic_transparency_and_audit": round(0.75 * (trans_hits - opacity_hits) + 0.30 * (preserve_hits - violation_hits), 4),
-            "cooperative_mutual_reciprocity": round(0.65 * (preserve_hits - violation_hits) - 0.35 * urgency_hits, 4),
-            "downside_loss_and_risk_shield": round(0.80 * (violation_hits - preserve_hits) + 0.50 * opacity_hits, 4),
-            "institutional_governance_parity": round(0.60 * (preserve_hits - violation_hits) + 0.40 * (trans_hits - opacity_hits), 4),
+            "autonomy_and_rights_retention": round(
+                0.85 * (preserve_hits - violation_hits) + 0.25 * (kg_opposition_hits - 0.5 * kg_support_hits), 4
+            ),
+            "epistemic_transparency_and_audit": round(
+                0.75 * (trans_hits - opacity_hits) + 0.30 * (preserve_hits - violation_hits), 4
+            ),
+            "cooperative_mutual_reciprocity": round(
+                0.65 * (preserve_hits - violation_hits) - 0.35 * urgency_hits + 0.20 * (kg_support_hits - kg_opposition_hits), 4
+            ),
+            "downside_loss_and_risk_shield": round(
+                0.80 * (violation_hits - preserve_hits) + 0.50 * opacity_hits + 0.30 * kg_opposition_hits - 0.15 * kg_support_hits, 4
+            ),
+            "institutional_governance_parity": round(
+                0.60 * (preserve_hits - violation_hits) + 0.40 * (trans_hits - opacity_hits) + 0.30 * (kg_support_hits - kg_opposition_hits), 4
+            ),
             "closure_and_execution_readiness": round(0.45 * preserve_hits - 0.50 * violation_hits - 0.30 * urgency_hits, 4),
         }
         for k in h_scenario:
             h_scenario[k] = round(max(-1.5, min(1.5, h_scenario[k])), 4)
+
+        has_observed_kg = len(kg_nodes) > 0
+        if has_observed_features and has_observed_kg:
+            corpus_field_source = "observed_features_and_graph"
+        elif has_observed_features:
+            corpus_field_source = "observed_features"
+        elif has_observed_kg:
+            corpus_field_source = "observed_knowledge_graph"
+        else:
+            corpus_field_source = "default_prior_fallback"
 
         frust_phi = float(ising_data.get("structural_frustration_index", 0.25))
         if vault_j and frust_phi == 0.0:
@@ -678,6 +897,10 @@ class Simulator:
             "red_line_violation_score": red_line_violation_score,
             "commitment_alignment_score": commitment_alignment_score,
             "triggered_commitments": triggered_commitments,
+            "matched_knowledge_graph_anchors": matched_kg_anchors,
+            "kg_alignment_bias": kg_alignment_bias,
+            "kg_tension_bias": kg_tension_bias,
+            "corpus_field_source": corpus_field_source,
             "canonical_nodes": canonical_nodes,
             "corpus_external_fields_h": h_corpus,
             "scenario_external_fields_h_x": h_scenario,
@@ -1039,12 +1262,14 @@ class Simulator:
     def simulate_scenario(self, scenario: str) -> Dict[str, Any]:
         """
         Simulate plausible target reaction, decision heuristics, and potential counter-moves (Single-Pass),
-        grounded in CAPS situational context, Stated vs. Revealed preference, Boltzmann-Gibbs temperature,
-        and Brier-calibrated confidence.
+        conditioned on observed corpus features, knowledge graph topology, CAPS context, Stated vs. Revealed
+        preference, Boltzmann-Gibbs temperature, and Brier-calibrated confidence.
         """
         logger.info(f"Simulating reaction for {self.target_name} on scenario: '{scenario[:60]}...'")
         mindset_text, skill_data, features_data, graph_metrics = self._load_profile_context()
+        knowledge_graph = self._load_knowledge_graph()
         b_prof = skill_data.get("behavioral_profile", {})
+        psychometrics = b_prof.get("extended_psychometrics", {})
         cog_style = b_prof.get("cognitive_style", "Empirical")
 
         caps_matrix = (
@@ -1058,11 +1283,47 @@ class Simulator:
             or {}
         )
 
-        caps_context = self._detect_situational_context(scenario, caps_matrix)
-        dual_layer = self._build_dual_layer_prediction(pref_data, dominant_branch="REJECT_AND_COUNTER")
+        loss_aversion, loss_prov = self._resolve_param_with_provenance(
+            psychometrics.get("loss_aversion", {}),
+            features_data.get("loss_aversion_index", {}),
+            "estimated_score",
+            1.85,
+        )
+        need_for_closure, closure_prov = self._resolve_param_with_provenance(
+            psychometrics.get("need_for_closure", {}),
+            features_data.get("need_for_closure_index", {}),
+            "estimated_score",
+            0.50,
+        )
+        volatility, vol_prov = self._resolve_param_with_provenance(
+            psychometrics.get("affective_volatility", {}),
+            features_data.get("affective_volatility_index", {}),
+            "volatility_score",
+            0.20,
+        )
 
-        need_for_closure = float(features_data.get("need_for_closure_index", {}).get("estimated_score", 0.50))
-        volatility = float(features_data.get("affective_volatility_index", {}).get("volatility_score", 0.20))
+        field_analysis = self._evaluate_scenario_external_fields_and_commitments(
+            scenario=scenario,
+            features_data=features_data,
+            graph_metrics=graph_metrics,
+            knowledge_graph=knowledge_graph,
+        )
+        red_line_viol = float(field_analysis.get("red_line_violation_score", 0.0))
+        clause_pol = float(field_analysis.get("clause_polarity", 0.0))
+        net_kg = float(field_analysis.get("kg_alignment_bias", 0.0)) - float(field_analysis.get("kg_tension_bias", 0.0))
+
+        if red_line_viol >= 0.65 and loss_aversion >= 1.80:
+            inferred_dominant_branch = "DEADLOCK_WALKAWAY"
+        elif (clause_pol + net_kg) >= 0.25 and red_line_viol < 0.20:
+            inferred_dominant_branch = "SUBGAME_EQUILIBRIUM_ACCEPT"
+        elif (clause_pol + net_kg) > 0.05 and loss_aversion < 1.60:
+            inferred_dominant_branch = "STRATEGIC_CONCESSION"
+        else:
+            inferred_dominant_branch = "REJECT_AND_COUNTER"
+
+        caps_context = self._detect_situational_context(scenario, caps_matrix)
+        dual_layer = self._build_dual_layer_prediction(pref_data, dominant_branch=inferred_dominant_branch)
+
         frustration_phi = float(
             graph_metrics.get("cognitive_dissonance", {})
             .get("ising_spin_glass_physics", {})
@@ -1074,6 +1335,9 @@ class Simulator:
             active_context=caps_context["active_context"],
             frustration_index=frustration_phi,
         )
+
+        matched_kg_anchors = field_analysis.get("matched_knowledge_graph_anchors", [])
+        anchors_str = ", ".join(matched_kg_anchors[:6]) if matched_kg_anchors else "None matched in local graph"
 
         system_prompt = (
             f"You are the Behavioral Simulation Engine for {self.target_name}.\n"
@@ -1090,6 +1354,7 @@ class Simulator:
             f"SCENARIO PROPOSITION:\n\"{scenario}\"\n\n"
             f"ACTIVE SITUATIONAL CONTEXT (CAPS): {caps_context['active_context']}\n"
             f"BOLTZMANN INVERSE COGNITIVE TEMPERATURE (β=1/T): {beta}\n"
+            f"MATCHED KNOWLEDGE GRAPH ANCHORS: {anchors_str}\n"
             f"STATED VS REVEALED PREFERENCE VERDICT: {dual_layer['divergence_verdict']} "
             f"(Divergence Index: {dual_layer['preference_divergence_index']})\n"
             f"OBSERVED COGNITIVE PROFILE:\n{mindset_text[:1000]}\n\n"
@@ -1112,14 +1377,44 @@ class Simulator:
             has_mindset=bool(mindset_text),
         )
 
+        parameter_provenance = {
+            "loss_aversion": loss_prov,
+            "need_for_closure": closure_prov,
+            "affective_volatility": vol_prov,
+            "caps_contextual_matrix": "observed_caps_matrix" if caps_matrix.get("contexts") else "default_prior_fallback",
+            "knowledge_graph": (
+                f"observed_graph ({len(knowledge_graph.get('nodes', []))} nodes)"
+                if knowledge_graph.get("nodes")
+                else "default_prior_fallback"
+            ),
+            "mindset_summary": "observed_mindset_summary.md" if bool(mindset_text) else "default_prior_fallback",
+        }
+        model_transparency = self._build_model_transparency(
+            features_data=features_data,
+            knowledge_graph=knowledge_graph,
+            field_analysis=field_analysis,
+            has_mindset=bool(mindset_text),
+            has_skill=bool(skill_data),
+            parameter_provenance=parameter_provenance,
+        )
+
         return {
             "target_name": self.target_name,
             "scenario": scenario,
+            "inferred_dominant_branch": inferred_dominant_branch,
             "simulation_analysis": simulation_output,
             "confidence_score": confidence,
             "cognitive_style_assumed": cog_style,
             "caps_situational_context": caps_context,
             "dual_layer_prediction": dual_layer,
+            "scenario_field_and_commitments": {
+                "clause_polarity": field_analysis["clause_polarity"],
+                "red_line_violation_score": field_analysis["red_line_violation_score"],
+                "commitment_alignment_score": field_analysis["commitment_alignment_score"],
+                "matched_knowledge_graph_anchors": matched_kg_anchors,
+                "kg_alignment_bias": field_analysis["kg_alignment_bias"],
+                "kg_tension_bias": field_analysis["kg_tension_bias"],
+            },
             "statistical_mechanics": {
                 "inverse_temperature_beta": beta,
                 "cognitive_temperature_T": round(1.0 / beta, 4),
@@ -1131,10 +1426,12 @@ class Simulator:
                 "stylometric_jsd": referee_audit.get("stylometric_jsd", 0.05),
                 "stylometric_fidelity_score": referee_audit.get("stylometric_fidelity_score", 0.80),
             },
+            "model_transparency": model_transparency,
             "evidence_ledger": referee_audit.get("evidence_ledger", []),
             "epistemic_qualification": (
-                "Simulated under explicit CAPS situational assumptions, Boltzmann-Gibbs temperature calibration, "
-                "and out-of-sample Brier verification. Not a deterministic prediction."
+                "Corpus-conditioned scenario model (not a trained empirical behavioral predictor), evaluated "
+                "under explicit CAPS situational assumptions, Boltzmann-Gibbs temperature calibration, and out-of-sample "
+                "Brier verification."
             ),
         }
 
@@ -1155,35 +1452,36 @@ class Simulator:
             raise ValueError(f"iterations must be a positive integer >= 1, got {iterations!r}")
         logger.info(f"Executing Monte Carlo scenario simulation for {self.target_name} (N={iterations})...")
         mindset_text, skill_data, features_data, graph_metrics = self._load_profile_context()
+        knowledge_graph = self._load_knowledge_graph()
 
-        # Extract target psychometrics
+        # Extract target psychometrics with explicit provenance
         b_prof = skill_data.get("behavioral_profile", {})
         psychometrics = b_prof.get("extended_psychometrics", {})
         cog_style = b_prof.get("cognitive_style", "Empirical")
 
-        loss_aversion = float(
-            psychometrics.get("loss_aversion", {}).get(
-                "estimated_score",
-                features_data.get("loss_aversion_index", {}).get("estimated_score", 1.85),
-            )
+        loss_aversion, loss_prov = self._resolve_param_with_provenance(
+            psychometrics.get("loss_aversion", {}),
+            features_data.get("loss_aversion_index", {}),
+            "estimated_score",
+            1.85,
         )
-        machiavellianism = float(
-            psychometrics.get("machiavellianism", {}).get(
-                "estimated_score",
-                features_data.get("machiavellianism_index", {}).get("estimated_score", 0.35),
-            )
+        machiavellianism, mach_prov = self._resolve_param_with_provenance(
+            psychometrics.get("machiavellianism", {}),
+            features_data.get("machiavellianism_index", {}),
+            "estimated_score",
+            0.35,
         )
-        need_for_closure = float(
-            psychometrics.get("need_for_closure", {}).get(
-                "estimated_score",
-                features_data.get("need_for_closure_index", {}).get("estimated_score", 0.50),
-            )
+        need_for_closure, closure_prov = self._resolve_param_with_provenance(
+            psychometrics.get("need_for_closure", {}),
+            features_data.get("need_for_closure_index", {}),
+            "estimated_score",
+            0.50,
         )
-        volatility = float(
-            psychometrics.get("affective_volatility", {}).get(
-                "volatility_score",
-                features_data.get("affective_volatility_index", {}).get("volatility_score", 0.20),
-            )
+        volatility, vol_prov = self._resolve_param_with_provenance(
+            psychometrics.get("affective_volatility", {}),
+            features_data.get("affective_volatility_index", {}),
+            "volatility_score",
+            0.20,
         )
 
         caps_matrix = (
@@ -1219,16 +1517,19 @@ class Simulator:
         if ctx_metrics.get("segment_count", 0) >= 2 and ctx_metrics.get("contextual_loss_aversion"):
             loss_aversion = round(0.7 * loss_aversion + 0.3 * float(ctx_metrics["contextual_loss_aversion"]), 2)
 
-        # Evaluate Scenario-Induced External Fields h_i(x) and Conditional Commitments / Red-Lines
+        # Evaluate Scenario-Induced External Fields h_i(x), Knowledge Graph anchors, and Conditional Commitments
         field_analysis = self._evaluate_scenario_external_fields_and_commitments(
             scenario=scenario,
             features_data=features_data,
             graph_metrics=graph_metrics,
+            knowledge_graph=knowledge_graph,
         )
         cov_shifts = field_analysis["covariate_shifts"]
         clause_pol = float(field_analysis["clause_polarity"])
         red_line_viol = float(field_analysis["red_line_violation_score"])
         comm_align = float(field_analysis["commitment_alignment_score"])
+        kg_align_bias = float(field_analysis.get("kg_alignment_bias", 0.0))
+        kg_tens_bias = float(field_analysis.get("kg_tension_bias", 0.0))
 
         # Extract Ising Spin-Glass frustration from concept graph if available
         ising_data = graph_metrics.get("cognitive_dissonance", {}).get("ising_spin_glass_physics", {})
@@ -1316,12 +1617,12 @@ class Simulator:
                 field_analysis=field_analysis,
             )
 
-            # M4 (Full Canonical Model): Joint Gibbs + Conditional Commitment & Lexicographic Red-Line Guard
+            # M4 (Full Canonical Model): Joint Gibbs + Conditional Commitment & Lexicographic Red-Line Guard + KG Anchors
             u_m4 = {
-                BRANCH_ACCEPT: u_m2[BRANCH_ACCEPT] + (0.45 * comm_align) - (0.85 * loss_aversion * red_line_viol),
-                BRANCH_COUNTER: u_m2[BRANCH_COUNTER] + (0.40 * red_line_viol) - (0.15 * comm_align),
-                BRANCH_CONCESSION: u_m2[BRANCH_CONCESSION] + (0.15 * comm_align) - (0.55 * red_line_viol),
-                BRANCH_DEADLOCK: u_m2[BRANCH_DEADLOCK] + (0.50 * loss_aversion * red_line_viol) - (0.30 * comm_align),
+                BRANCH_ACCEPT: u_m2[BRANCH_ACCEPT] + (0.45 * comm_align) - (0.85 * loss_aversion * red_line_viol) + kg_align_bias - (0.65 * kg_tens_bias),
+                BRANCH_COUNTER: u_m2[BRANCH_COUNTER] + (0.40 * red_line_viol) - (0.15 * comm_align) + (0.55 * kg_tens_bias) - (0.20 * kg_align_bias),
+                BRANCH_CONCESSION: u_m2[BRANCH_CONCESSION] + (0.15 * comm_align) - (0.55 * red_line_viol) + (0.20 * kg_align_bias) - (0.35 * kg_tens_bias),
+                BRANCH_DEADLOCK: u_m2[BRANCH_DEADLOCK] + (0.50 * loss_aversion * red_line_viol) - (0.30 * comm_align) + (0.45 * kg_tens_bias) - (0.25 * kg_align_bias),
             }
             bg_state = self._compute_centered_joint_gibbs_coupling(
                 base_utilities=u_m4,
@@ -1442,6 +1743,9 @@ class Simulator:
                 f"When leverage exceeds 0.70, the target's autonomy preservation overrides concessions."
             )
 
+        matched_kg_anchors = field_analysis.get("matched_knowledge_graph_anchors", [])
+        anchors_str = ", ".join(matched_kg_anchors[:6]) if matched_kg_anchors else "None matched in local graph"
+
         system_prompt = (
             f"You are the Game Theory and Behavioral Strategy Analyst for {self.target_name}.\n"
             "Summarize the Monte Carlo simulation results using game-theoretic and statistical decision reasoning, "
@@ -1451,6 +1755,7 @@ class Simulator:
         user_prompt = (
             f"SCENARIO: \"{scenario}\"\n\n"
             f"ACTIVE CAPS CONTEXT: {active_ctx} ({caps_context['if_then_signature']})\n"
+            f"MATCHED KNOWLEDGE GRAPH ANCHORS: {anchors_str}\n"
             f"MONTE CARLO & BOLTZMANN-GIBBS RESULTS ({iterations} stochastic iterations):\n"
             f"- Outcome Distribution: {distribution}\n"
             f"- Boltzmann-Gibbs (QRE) Action Distribution: {boltzmann_distribution}\n"
@@ -1474,6 +1779,28 @@ class Simulator:
             features_data=features_data,
             stylometric_fidelity=referee_audit.get("stylometric_fidelity_score", 0.80),
             has_mindset=bool(mindset_text),
+        )
+
+        parameter_provenance = {
+            "loss_aversion": loss_prov,
+            "machiavellianism": mach_prov,
+            "need_for_closure": closure_prov,
+            "affective_volatility": vol_prov,
+            "caps_contextual_matrix": "observed_caps_matrix" if caps_matrix.get("contexts") else "default_prior_fallback",
+            "knowledge_graph": (
+                f"observed_graph ({len(knowledge_graph.get('nodes', []))} nodes)"
+                if knowledge_graph.get("nodes")
+                else "default_prior_fallback"
+            ),
+            "mindset_summary": "observed_mindset_summary.md" if bool(mindset_text) else "default_prior_fallback",
+        }
+        model_transparency = self._build_model_transparency(
+            features_data=features_data,
+            knowledge_graph=knowledge_graph,
+            field_analysis=field_analysis,
+            has_mindset=bool(mindset_text),
+            has_skill=bool(skill_data),
+            parameter_provenance=parameter_provenance,
         )
 
         return {
@@ -1521,6 +1848,9 @@ class Simulator:
                 "red_line_violation_score": field_analysis["red_line_violation_score"],
                 "commitment_alignment_score": field_analysis["commitment_alignment_score"],
                 "triggered_commitments": field_analysis["triggered_commitments"],
+                "matched_knowledge_graph_anchors": matched_kg_anchors,
+                "kg_alignment_bias": kg_align_bias,
+                "kg_tension_bias": kg_tens_bias,
                 "corpus_external_fields_h": field_analysis["corpus_external_fields_h"],
                 "scenario_external_fields_h_x": field_analysis["scenario_external_fields_h_x"],
                 "total_external_fields_h_total": field_analysis["total_external_fields_h_total"],
@@ -1541,6 +1871,7 @@ class Simulator:
                 "stylometric_jsd": referee_audit.get("stylometric_jsd", 0.05),
                 "stylometric_fidelity_score": referee_audit.get("stylometric_fidelity_score", 0.80),
             },
+            "model_transparency": model_transparency,
             "evidence_ledger": referee_audit.get("evidence_ledger", []),
             "assumed_psychometrics": {
                 "loss_aversion": loss_aversion,
@@ -1550,7 +1881,8 @@ class Simulator:
             },
             "sample_iterations": iteration_records[:5],
             "epistemic_qualification": (
-                f"Monte Carlo & Joint Gibbs Boltzmann-QRE stochastic model across {iterations} perturbations conditioned on CAPS context [{active_ctx}], "
-                f"inverse temperature β={beta}, external field h_i(x), and calibrated via out-of-sample Brier verification."
+                f"Corpus-conditioned scenario model (not a trained empirical behavioral predictor) across {iterations} "
+                f"Monte Carlo & Joint Gibbs Boltzmann-QRE perturbations conditioned on CAPS context [{active_ctx}], "
+                f"inverse temperature β={beta}, external field h_i(x), and out-of-sample Brier verification."
             ),
         }

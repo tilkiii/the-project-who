@@ -17,6 +17,16 @@ from who.utils.logger import get_logger
 
 logger = get_logger("who.learn.features")
 
+MIN_WORDS_FOR_INDICATORS = 20
+MIN_WORDS_RECOMMENDED = 100
+
+_TURKISH_PRIVATIVE_SUFFIXES: Tuple[str, ...] = (
+    "siz", "sız", "suz", "süz",
+    "sizlik", "sızlık", "suzluk", "süzlük",
+    "sizce", "sızca", "sizdir", "sızdır",
+    "suzca", "süzce", "suzluğu", "süzlüğü",
+)
+
 NEGATION_TOKENS: Set[str] = {
     "not", "never", "no", "neither", "nor", "without", "hardly",
     "cannot", "cant", "can't", "dont", "don't", "doesnt", "doesn't", "didnt", "didn't",
@@ -200,6 +210,59 @@ class FeatureExtractor:
         return False
 
     @classmethod
+    def _matches_lexicon(cls, word: str, lexicon: Set[str]) -> bool:
+        """
+        Match `word` against `lexicon` using exact lookup plus bounded, privative-safe
+        English inflection and Turkish agglutinative suffix normalization.
+        """
+        if word in lexicon:
+            return True
+        if cls._is_negation_token(word) or len(word) < 5:
+            return False
+
+        # Never map privative/negated adjectives ("adaletsiz", "fearless") to positive roots
+        if word.endswith(_TURKISH_PRIVATIVE_SUFFIXES) or (len(word) > 6 and word.endswith("less")):
+            return False
+
+        # Safe English inflection normalization
+        candidates: List[str] = []
+        if word.endswith(("ies", "ied")) and len(word) > 4:
+            candidates.append(word[:-3] + "y")
+        if word.endswith("ing") and len(word) > 6:
+            stem = word[:-3]
+            candidates.append(stem)
+            candidates.append(stem + "e")
+        if word.endswith("ed") and len(word) > 5:
+            candidates.append(word[:-2])
+            candidates.append(word[:-1])
+        if word.endswith("es") and len(word) > 5:
+            candidates.append(word[:-2])
+        if word.endswith("s") and not word.endswith("ss") and len(word) > 5:
+            candidates.append(word[:-1])
+        if word.endswith("y") and len(word) > 5:
+            candidates.append(word[:-1])
+        if word.endswith("ness") and len(word) > 7:
+            candidates.append(word[:-4])
+        if word.endswith("ly") and len(word) > 6:
+            ly_base = word[:-2]
+            if len(ly_base) >= 5:
+                candidates.append(ly_base)
+
+        for base in candidates:
+            if len(base) >= 4 and base in lexicon:
+                return True
+
+        # Safe Turkish agglutinative suffix matching on content roots (len >= 5)
+        if not word.endswith(TURKISH_NEG_SUFFIXES):
+            for root in lexicon:
+                if len(root) >= 5 and not cls._is_negation_token(root) and word.startswith(root):
+                    tail = word[len(root):]
+                    if 1 <= len(tail) <= 7 and not tail.startswith(("siz", "sız", "suz", "süz")):
+                        return True
+
+        return False
+
+    @classmethod
     def _count_negation_aware(
         cls,
         words: List[str],
@@ -216,13 +279,13 @@ class FeatureExtractor:
         reversals = 0
 
         for idx, w in enumerate(words):
-            if w in primary_lexicon:
+            if cls._matches_lexicon(w, primary_lexicon):
                 if not cls._is_negation_token(w) and cls._is_negated_context(words, idx):
                     opposite_hits += 1
                     reversals += 1
                 else:
                     primary_hits += 1
-            elif w in opp_lex:
+            elif cls._matches_lexicon(w, opp_lex):
                 if not cls._is_negation_token(w) and cls._is_negated_context(words, idx):
                     primary_hits += 1
                     reversals += 1
@@ -405,6 +468,21 @@ class FeatureExtractor:
         conditional_commitments = self._extract_conditional_commitments(sentences)
 
         features = {
+            "measurement_methodology": {
+                "signal_type": "LEXICAL_BEHAVIORAL_INDICATOR",
+                "clinical_diagnostic_validity": False,
+                "corpus_word_count": total_words,
+                "min_words_for_indicators": MIN_WORDS_FOR_INDICATORS,
+                "min_words_recommended": MIN_WORDS_RECOMMENDED,
+                "corpus_sufficiency": (
+                    "SUFFICIENT" if total_words >= MIN_WORDS_RECOMMENDED
+                    else ("LOW_VOLUME" if total_words >= MIN_WORDS_FOR_INDICATORS else "INSUFFICIENT_DATA")
+                ),
+                "disclaimer": (
+                    "Lexicon-based behavioral indicators measure surface linguistic patterns, not clinical "
+                    "psychological traits. Interpret scores alongside corpus size and 95% credible intervals."
+                ),
+            },
             "corpus_stats": {
                 "total_words": total_words,
                 "total_sentences": total_sentences,
@@ -502,20 +580,36 @@ class FeatureExtractor:
         manipulation_index = round(min(1.0, max(0.0, raw_index)), 2)
 
         bayes = self._compute_bayesian_credible_interval(dogmatic_matches * 1.5, evidence_matches + 0.5, total_words)
+        hits_total = dogmatic_matches + evidence_matches
+        sufficient_signal = (hits_total >= 1 and total_words >= MIN_WORDS_FOR_INDICATORS) or (hits_total >= 2)
 
-        if manipulation_index >= 0.70:
-            risk_tier = "HIGH (HIGH_MANIPULATION_RISK)"
-            risk_desc = "Pronounced reliance on unsubstantiated, absolutist framing."
-        elif manipulation_index >= 0.40:
-            risk_tier = "MODERATE (MODERATE_DOGMATIC_TENDENCY)"
-            risk_desc = "Occasional absolutist assertions balanced by rational epistemic hedging."
+        if not sufficient_signal:
+            risk_tier = "INSUFFICIENT_DATA"
+            confidence = round(min(0.35, total_words / 200.0), 2)
+            prob_stmt = (
+                f"Epistemic Manipulation Index (Lexical Indicator): INSUFFICIENT_DATA — "
+                f"insufficient lexical signal in corpus (words={total_words}, matches={hits_total})."
+            )
         else:
-            risk_tier = "LOW / CALIBRATED (EMPIRICALLY_CALIBRATED)"
-            risk_desc = "Observed statements ground claims with probabilistic and evidence-based caution."
+            if manipulation_index >= 0.70:
+                risk_tier = "HIGH (HIGH_MANIPULATION_RISK)"
+                risk_desc = "Pronounced reliance on unsubstantiated, absolutist framing."
+            elif manipulation_index >= 0.40:
+                risk_tier = "MODERATE (MODERATE_DOGMATIC_TENDENCY)"
+                risk_desc = "Occasional absolutist assertions balanced by rational epistemic hedging."
+            else:
+                risk_tier = "LOW / CALIBRATED (EMPIRICALLY_CALIBRATED)"
+                risk_desc = "Observed statements ground claims with probabilistic and evidence-based caution."
 
-        confidence = min(0.95, 0.60 + (total_words / 1500.0) * 0.3)
+            confidence = min(0.95, 0.60 + (total_words / 1500.0) * 0.3)
+            prob_stmt = (
+                f"Epistemic Manipulation Index (Lexical Indicator): Absolutist unsubstantiated framing tendency estimated at "
+                f"{int(manipulation_index * 100)}% (±{int(bayes['uncertainty_margin']*100)}%) ({risk_desc} Confidence: {int(confidence * 100)}%)."
+            )
 
         return {
+            "measurement_type": "lexical_indicator",
+            "sufficient_signal": sufficient_signal,
             "score": manipulation_index,
             "estimated_score": manipulation_index,
             "score_pct": f"{int(manipulation_index * 100)}%",
@@ -526,10 +620,7 @@ class FeatureExtractor:
             "evidence_density_per_k": evidence_density,
             "risk_tier": risk_tier,
             "confidence_score": round(confidence, 2),
-            "probabilistic_statement": (
-                f"Epistemic Manipulation Index: Absolutist unsubstantiated framing tendency estimated at "
-                f"{int(manipulation_index * 100)}% (±{int(bayes['uncertainty_margin']*100)}%) ({risk_desc} Confidence: {int(confidence * 100)}%)."
-            ),
+            "probabilistic_statement": prob_stmt,
         }
 
     def _calculate_machiavellianism(
@@ -565,18 +656,30 @@ class FeatureExtractor:
         raw_score = (m_count * 2.2) / (m_count + c_count + 3.0)
         score = round(min(1.0, max(0.0, raw_score)), 2)
         bayes = self._compute_bayesian_credible_interval(m_count * 2.2, c_count + 1.5, total_words)
+        hits_total = m_count + c_count
+        sufficient_signal = (hits_total >= 1 and total_words >= MIN_WORDS_FOR_INDICATORS) or (hits_total >= 2)
 
-        if score >= 0.55:
-            tier = "HIGH / STRATEGIC_MACHIAVELLIAN"
-            desc = "High pragmatic utility and strategic leverage framing, prioritizing power dynamics over moral sentiment."
-        elif score >= 0.25:
-            tier = "BALANCED / BALANCED_PRAGMATIST"
-            desc = "Open to cooperation while safeguarding strategic interests and institutional rationality."
+        if not sufficient_signal:
+            tier = "INSUFFICIENT_DATA"
+            prob_stmt = (
+                f"Machiavellianism & Strategic Utility (Lexical Indicator): INSUFFICIENT_DATA — "
+                f"insufficient lexical signal in corpus (words={total_words}, matches={hits_total})."
+            )
         else:
-            tier = "LOW / COOPERATIVE_ALTRUIST"
-            desc = "High empathy, ethical commitment, and collective solidarity framing predominate."
+            if score >= 0.55:
+                tier = "HIGH / STRATEGIC_MACHIAVELLIAN"
+                desc = "High pragmatic utility and strategic leverage framing, prioritizing power dynamics over moral sentiment."
+            elif score >= 0.25:
+                tier = "BALANCED / BALANCED_PRAGMATIST"
+                desc = "Open to cooperation while safeguarding strategic interests and institutional rationality."
+            else:
+                tier = "LOW / COOPERATIVE_ALTRUIST"
+                desc = "High empathy, ethical commitment, and collective solidarity framing predominate."
+            prob_stmt = f"Machiavellianism & Strategic Utility (Lexical Indicator): {int(score * 100)}% (95% CI: {bayes['credible_interval_95']}) ({desc})."
 
         return {
+            "measurement_type": "lexical_indicator",
+            "sufficient_signal": sufficient_signal,
             "score": score,
             "estimated_score": score,
             "score_pct": f"{int(score * 100)}%",
@@ -588,9 +691,7 @@ class FeatureExtractor:
             "tier": tier,
             "machiavellian_hits": m_count,
             "cooperation_hits": c_count,
-            "probabilistic_statement": (
-                f"Machiavellianism & Strategic Utility: {int(score * 100)}% (95% CI: {bayes['credible_interval_95']}) ({desc})."
-            ),
+            "probabilistic_statement": prob_stmt,
         }
 
     def _calculate_need_for_closure(
@@ -623,18 +724,30 @@ class FeatureExtractor:
         raw_score = (cl_count * 1.8) / (cl_count + op_count + 3.0)
         score = round(min(1.0, max(0.0, raw_score)), 2)
         bayes = self._compute_bayesian_credible_interval(cl_count * 1.8, op_count + 1.5, total_words)
+        hits_total = cl_count + op_count
+        sufficient_signal = (hits_total >= 1 and total_words >= MIN_WORDS_FOR_INDICATORS) or (hits_total >= 2)
 
-        if score >= 0.65:
-            tier = "HIGH / HIGH_NEED_FOR_CLOSURE"
-            desc = "Low tolerance for ambiguity; strong preference for rapid decisive judgment and fixed rules."
-        elif score >= 0.35:
-            tier = "BALANCED / CALIBRATED_CLOSURE"
-            desc = "Maintains structural order while remaining adaptable to new evidence."
+        if not sufficient_signal:
+            tier = "INSUFFICIENT_DATA"
+            prob_stmt = (
+                f"Need for Cognitive Closure (Lexical Indicator): INSUFFICIENT_DATA — "
+                f"insufficient lexical signal in corpus (words={total_words}, matches={hits_total})."
+            )
         else:
-            tier = "OPEN / HIGH_AMBIGUITY_TOLERANCE"
-            desc = "Comfortable operating under ambiguity; exploratory and open to alternative hypotheses."
+            if score >= 0.65:
+                tier = "HIGH / HIGH_NEED_FOR_CLOSURE"
+                desc = "Low tolerance for ambiguity; strong preference for rapid decisive judgment and fixed rules."
+            elif score >= 0.35:
+                tier = "BALANCED / CALIBRATED_CLOSURE"
+                desc = "Maintains structural order while remaining adaptable to new evidence."
+            else:
+                tier = "OPEN / HIGH_AMBIGUITY_TOLERANCE"
+                desc = "Comfortable operating under ambiguity; exploratory and open to alternative hypotheses."
+            prob_stmt = f"Need for Cognitive Closure (Lexical Indicator): {int(score * 100)}% (95% CI: {bayes['credible_interval_95']}) ({desc})."
 
         return {
+            "measurement_type": "lexical_indicator",
+            "sufficient_signal": sufficient_signal,
             "score": score,
             "estimated_score": score,
             "score_pct": f"{int(score * 100)}%",
@@ -646,9 +759,7 @@ class FeatureExtractor:
             "tier": tier,
             "closure_hits": cl_count,
             "openness_hits": op_count,
-            "probabilistic_statement": (
-                f"Need for Cognitive Closure: {int(score * 100)}% (95% CI: {bayes['credible_interval_95']}) ({desc})."
-            ),
+            "probabilistic_statement": prob_stmt,
         }
 
     def _calculate_loss_aversion(
@@ -675,24 +786,36 @@ class FeatureExtractor:
             l_count, g_count, reversals = self._count_negation_aware_clauses(clauses, loss_lexicon, gain_lexicon)
         else:
             l_count, g_count, reversals = self._count_negation_aware(words, loss_lexicon, gain_lexicon)
-        ratio = round(l_count / (g_count or 1), 2)
+        hits_total = l_count + g_count
+        sufficient_signal = (hits_total >= 1 and total_words >= MIN_WORDS_FOR_INDICATORS) or (hits_total >= 2)
+        ratio = 1.0 if hits_total == 0 else round(l_count / (g_count or 1), 2)
         bayes = self._compute_bayesian_credible_interval(l_count, g_count, total_words)
         # Map posterior mean [0, 1] into Prospect Theory beta [0.80, 2.50]
         estimated_beta = round(0.80 + (bayes["posterior_mean"] * 1.70), 2)
         ci_low_beta = round(0.80 + (bayes["credible_interval_95"][0] * 1.70), 2)
         ci_high_beta = round(0.80 + (bayes["credible_interval_95"][1] * 1.70), 2)
 
-        if ratio >= 1.7:
-            orientation = "LOSS_AVERSIVE_DEFENSIVE"
-            desc = "Risk avoidance, defensive posture, and protection of existing positions predominate."
-        elif ratio >= 0.7:
-            orientation = "CALIBRATED_RISK"
-            desc = "Balanced risk appetite weighing potential losses and gains probabilistically."
+        if not sufficient_signal:
+            orientation = "INSUFFICIENT_DATA"
+            prob_stmt = (
+                f"Prospect Risk Orientation (Lexical Indicator): INSUFFICIENT_DATA — "
+                f"insufficient lexical signal in corpus (words={total_words}, matches={hits_total})."
+            )
         else:
-            orientation = "OPPORTUNITY_SEEKING"
-            desc = "High risk tolerance focused on potential growth and upside opportunities."
+            if ratio >= 1.7:
+                orientation = "LOSS_AVERSIVE_DEFENSIVE"
+                desc = "Risk avoidance, defensive posture, and protection of existing positions predominate."
+            elif ratio >= 0.7:
+                orientation = "CALIBRATED_RISK"
+                desc = "Balanced risk appetite weighing potential losses and gains probabilistically."
+            else:
+                orientation = "OPPORTUNITY_SEEKING"
+                desc = "High risk tolerance focused on potential growth and upside opportunities."
+            prob_stmt = f"Prospect Risk Orientation (Lexical Indicator): Loss/Gain ratio {ratio} (β={estimated_beta}, 95% CI: {[ci_low_beta, ci_high_beta]}) ({desc})."
 
         return {
+            "measurement_type": "lexical_indicator",
+            "sufficient_signal": sufficient_signal,
             "loss_to_gain_ratio": ratio,
             "estimated_score": estimated_beta,
             "credible_interval_95": [ci_low_beta, ci_high_beta],
@@ -703,7 +826,7 @@ class FeatureExtractor:
             "loss_hits": l_count,
             "gain_hits": g_count,
             "orientation": orientation,
-            "probabilistic_statement": f"Prospect Risk Orientation: Loss/Gain ratio {ratio} (β={estimated_beta}, 95% CI: {[ci_low_beta, ci_high_beta]}) ({desc}).",
+            "probabilistic_statement": prob_stmt,
         }
 
     def _calculate_affective_volatility(
@@ -736,18 +859,30 @@ class FeatureExtractor:
         volatility_score = round(min(1.0, (arousal_count * 2.5) / (total_words / 100.0 + calm_count + 1.0)), 2)
         composure_score = round(1.0 - volatility_score, 2)
         bayes = self._compute_bayesian_credible_interval(arousal_count * 2.0, calm_count + 2.0, total_words)
+        hits_total = arousal_count + calm_count
+        sufficient_signal = (hits_total >= 1 and total_words >= MIN_WORDS_FOR_INDICATORS) or (hits_total >= 2)
 
-        if volatility_score >= 0.50:
-            tier = "HIGH_AFFECTIVE_VOLATILITY"
-            desc = "Elevated agitation and sharp affective swings observed under pressure or crisis."
-        elif volatility_score >= 0.20:
-            tier = "BALANCED_REACTIVITY"
-            desc = "Emotional expressions stay within a context-appropriate, controllable reactivity range."
+        if not sufficient_signal:
+            tier = "INSUFFICIENT_DATA"
+            prob_stmt = (
+                f"Affective Balance & Reactivity (Lexical Indicator): INSUFFICIENT_DATA — "
+                f"insufficient lexical signal in corpus (words={total_words}, matches={hits_total})."
+            )
         else:
-            tier = "STOIC_COMPOSURE"
-            desc = "High emotional self-regulation; maintains calm, objective tone even under pressure."
+            if volatility_score >= 0.50:
+                tier = "HIGH_AFFECTIVE_VOLATILITY"
+                desc = "Elevated agitation and sharp affective swings observed under pressure or crisis."
+            elif volatility_score >= 0.20:
+                tier = "BALANCED_REACTIVITY"
+                desc = "Emotional expressions stay within a context-appropriate, controllable reactivity range."
+            else:
+                tier = "STOIC_COMPOSURE"
+                desc = "High emotional self-regulation; maintains calm, objective tone even under pressure."
+            prob_stmt = f"Affective Balance & Reactivity (Lexical Indicator): {tier} ({desc})."
 
         return {
+            "measurement_type": "lexical_indicator",
+            "sufficient_signal": sufficient_signal,
             "volatility_score": volatility_score,
             "composure_score": composure_score,
             "credible_interval_95": bayes["credible_interval_95"],
@@ -755,7 +890,7 @@ class FeatureExtractor:
             "negated_reversals_detected": reversals,
             "negated_reversals": reversals,
             "tier": tier,
-            "probabilistic_statement": f"Affective Balance & Reactivity: {tier} ({desc}).",
+            "probabilistic_statement": prob_stmt,
         }
 
     def _calculate_moral_foundations(
@@ -783,25 +918,37 @@ class FeatureExtractor:
                 words, individualizing_lexicon, binding_lexicon
             )
         bayes = self._compute_bayesian_credible_interval(ind_count, bind_count, total_words)
+        hits_total = ind_count + bind_count
+        sufficient_signal = (hits_total >= 1 and total_words >= MIN_WORDS_FOR_INDICATORS) or (hits_total >= 2)
 
-        if ind_count > bind_count * 1.5:
-            foundation = "INDIVIDUALIZING_FAIRNESS"
-            desc = "Individual rights, fairness, and care/protection principles outweigh institutional authority."
-        elif bind_count > ind_count * 1.5:
-            foundation = "BINDING_AUTHORITY"
-            desc = "Institutional loyalty, hierarchy, tradition, and order take precedence."
+        if not sufficient_signal:
+            foundation = "INSUFFICIENT_DATA"
+            prob_stmt = (
+                f"Moral Foundations Matrix (Lexical Indicator): INSUFFICIENT_DATA — "
+                f"insufficient lexical signal in corpus (words={total_words}, matches={hits_total})."
+            )
         else:
-            foundation = "BALANCED_FOUNDATIONS"
-            desc = "Balances individual fairness/care alongside institutional order and tradition."
+            if ind_count > bind_count * 1.5:
+                foundation = "INDIVIDUALIZING_FAIRNESS"
+                desc = "Individual rights, fairness, and care/protection principles outweigh institutional authority."
+            elif bind_count > ind_count * 1.5:
+                foundation = "BINDING_AUTHORITY"
+                desc = "Institutional loyalty, hierarchy, tradition, and order take precedence."
+            else:
+                foundation = "BALANCED_FOUNDATIONS"
+                desc = "Balances individual fairness/care alongside institutional order and tradition."
+            prob_stmt = f"Moral Foundations Matrix (Lexical Indicator): {foundation} ({desc})."
 
         return {
+            "measurement_type": "lexical_indicator",
+            "sufficient_signal": sufficient_signal,
             "individualizing_hits": ind_count,
             "binding_hits": bind_count,
             "credible_interval_95": bayes["credible_interval_95"],
             "negated_reversals_detected": reversals,
             "negated_reversals": reversals,
             "dominant_foundation": foundation,
-            "probabilistic_statement": f"Moral Foundations Matrix: {foundation} ({desc}).",
+            "probabilistic_statement": prob_stmt,
         }
 
     def _calculate_caps_contextual_matrix(self, sentences: List[str]) -> Dict[str, Any]:
@@ -1030,23 +1177,70 @@ class FeatureExtractor:
 
     def _empty_feature_set(self) -> Dict[str, Any]:
         return {
+            "measurement_methodology": {
+                "signal_type": "LEXICAL_BEHAVIORAL_INDICATOR",
+                "clinical_diagnostic_validity": False,
+                "corpus_word_count": 0,
+                "min_words_for_indicators": MIN_WORDS_FOR_INDICATORS,
+                "min_words_recommended": MIN_WORDS_RECOMMENDED,
+                "corpus_sufficiency": "INSUFFICIENT_DATA",
+                "disclaimer": (
+                    "Lexicon-based behavioral indicators measure surface linguistic patterns, not clinical "
+                    "psychological traits. Interpret scores alongside corpus size and 95% credible intervals."
+                ),
+            },
             "corpus_stats": {"total_words": 0, "total_sentences": 0, "type_token_ratio": 0.0, "avg_sentence_length": 0.0},
             "pronoun_ratios": {"first_person_singular_pct": 0.0, "i_to_we_ratio": 0.0},
             "epistemic_markers": {"epistemic_calibration_ratio": 1.0, "negated_reversals_detected": 0},
             "epistemic_manipulation_index": {
+                "measurement_type": "lexical_indicator",
+                "sufficient_signal": False,
                 "score": 0.0,
                 "estimated_score": 0.0,
                 "score_pct": "0%",
                 "credible_interval_95": [0.0, 0.5],
                 "uncertainty_margin": 0.25,
                 "risk_tier": "INSUFFICIENT_DATA",
-                "probabilistic_statement": "Insufficient corpus volume to compute the epistemic manipulation index."
+                "confidence_score": 0.0,
+                "probabilistic_statement": "Epistemic Manipulation Index (Lexical Indicator): INSUFFICIENT_DATA — insufficient corpus volume.",
             },
-            "machiavellianism_index": {"score": 0.0, "estimated_score": 0.0, "credible_interval_95": [0.0, 0.5], "tier": "INSUFFICIENT_DATA"},
-            "need_for_closure_index": {"score": 0.0, "estimated_score": 0.0, "credible_interval_95": [0.0, 0.5], "tier": "INSUFFICIENT_DATA"},
-            "loss_aversion_index": {"loss_to_gain_ratio": 1.0, "estimated_score": 1.5, "credible_interval_95": [1.0, 2.0], "orientation": "INSUFFICIENT_DATA"},
-            "affective_volatility_index": {"volatility_score": 0.0, "credible_interval_95": [0.0, 0.5], "tier": "INSUFFICIENT_DATA"},
-            "moral_foundations_profile": {"dominant_foundation": "INSUFFICIENT_DATA", "credible_interval_95": [0.0, 0.5]},
+            "machiavellianism_index": {
+                "measurement_type": "lexical_indicator",
+                "sufficient_signal": False,
+                "score": 0.0,
+                "estimated_score": 0.0,
+                "credible_interval_95": [0.0, 0.5],
+                "tier": "INSUFFICIENT_DATA",
+            },
+            "need_for_closure_index": {
+                "measurement_type": "lexical_indicator",
+                "sufficient_signal": False,
+                "score": 0.0,
+                "estimated_score": 0.0,
+                "credible_interval_95": [0.0, 0.5],
+                "tier": "INSUFFICIENT_DATA",
+            },
+            "loss_aversion_index": {
+                "measurement_type": "lexical_indicator",
+                "sufficient_signal": False,
+                "loss_to_gain_ratio": 1.0,
+                "estimated_score": 1.5,
+                "credible_interval_95": [1.0, 2.0],
+                "orientation": "INSUFFICIENT_DATA",
+            },
+            "affective_volatility_index": {
+                "measurement_type": "lexical_indicator",
+                "sufficient_signal": False,
+                "volatility_score": 0.0,
+                "credible_interval_95": [0.0, 0.5],
+                "tier": "INSUFFICIENT_DATA",
+            },
+            "moral_foundations_profile": {
+                "measurement_type": "lexical_indicator",
+                "sufficient_signal": False,
+                "dominant_foundation": "INSUFFICIENT_DATA",
+                "credible_interval_95": [0.0, 0.5],
+            },
             "caps_contextual_matrix": {"contextual_plasticity_index": 0.0, "contexts": {}, "if_then_signatures": []},
             "stated_vs_revealed_preference": {
                 "stated_cooperation_polarity": 0.5,

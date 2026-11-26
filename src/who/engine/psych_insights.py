@@ -64,12 +64,15 @@ class PsychInsights:
         for key, w in list(calibrated_weights.items())[:5]:
             marker = w.get("behavioral_marker", "")
             trait = w.get("correlated_psychometric", "")
-            r_val = w.get("correlation_coefficient_r", 0.35)
+            raw_r = w.get("correlation_coefficient_r")
+            r_val = raw_r if raw_r is not None else "N/A"
             conf = int(w.get("confidence_score", 0.85) * 100)
             doi = w.get("evidence_source", "")
-            doi_url = w.get("doi_url", f"https://doi.org/{doi.replace('DOI:', '')}")
+            doi_url = w.get("doi_url") or (f"https://doi.org/{doi.replace('DOI:', '')}" if doi.startswith("DOI:") else "")
             note = w.get("agent_reasoning_note", "")
-            sample_n = w.get("sample_size_total", 1000)
+            raw_n = w.get("sample_size_total")
+            sample_n = raw_n if raw_n is not None else "N/A"
+            evidence_type = w.get("evidence_type", "REFERENCE_BASELINE_PRIOR")
 
             agent_reasoning_items.append({
                 "marker": marker,
@@ -79,6 +82,7 @@ class PsychInsights:
                 "doi": doi,
                 "doi_url": doi_url,
                 "sample_size": sample_n,
+                "evidence_type": evidence_type,
                 "note": note,
             })
 
@@ -215,12 +219,15 @@ class PsychInsights:
         # Guarantee inclusion of canonical statements and academic agent notes in final markdown
         academic_segment = ""
         if agent_reasoning_items:
-            notes_block = "\n".join(
-                f"- **{it['marker']}** -> **{it['trait']}** (Correlation: `r={it['r']}`, Confidence: `{it['confidence_pct']}%`, N={it['sample_size']})\n"
-                f"  * **Evidence Source (DOI):** [{it['doi']}]({it['doi_url']})\n"
-                f"  * **{it['note']}**"
-                for it in agent_reasoning_items
-            )
+            notes_lines = []
+            for it in agent_reasoning_items:
+                r_disp = f"r={it['r']}" if it["r"] != "N/A" else "N/A"
+                notes_lines.append(
+                    f"- **{it['marker']}** -> **{it['trait']}** (Correlation: `{r_disp}`, Confidence: `{it['confidence_pct']}%`, N={it['sample_size']}, Tier: `{it['evidence_type']}`)\n"
+                    f"  * **Evidence Source (DOI):** [{it['doi']}]({it['doi_url']})\n"
+                    f"  * **{it['note']}**"
+                )
+            notes_block = "\n".join(notes_lines)
             academic_segment = (
                 f"\n\n---\n\n### 📚 Autonomous Academic Agent Calibration & Scientific Reasoning\n"
                 f"{notes_block}\n"

@@ -134,18 +134,22 @@ def psych_insights(
     weights = report.get("scientific_weights", [])
     if weights:
         w_table = Table(title=f"📚 Autonomous Academic Research Agent: Calibrated Scientific Weights ({target})", header_style="bold green")
-        w_table.add_column("Behavioral Marker", style="bold white", width=25)
-        w_table.add_column("Correlated Psychometric", style="cyan", width=24)
-        w_table.add_column("Correlation (r)", style="green", width=14)
-        w_table.add_column("Confidence", style="yellow", width=12)
-        w_table.add_column("Evidence Source (DOI)", style="magenta", width=28)
+        w_table.add_column("Behavioral Marker", style="bold white", width=22)
+        w_table.add_column("Correlated Psychometric", style="cyan", width=22)
+        w_table.add_column("Evidence Tier", style="blue", width=24)
+        w_table.add_column("Correlation (r)", style="green", width=15)
+        w_table.add_column("Confidence", style="yellow", width=10)
+        w_table.add_column("Evidence Source (DOI)", style="magenta", width=26)
         w_table.add_column("Agent Scientific Reasoning Note", style="dim")
 
         for w in weights[:6]:
+            raw_r = w.get("correlation_coefficient_r")
+            r_display = f"r={raw_r}" if raw_r is not None else "N/A"
             w_table.add_row(
                 w.get("behavioral_marker", ""),
                 w.get("correlated_psychometric", ""),
-                f"r={w.get('correlation_coefficient_r', 0.0)}",
+                w.get("evidence_type", "REFERENCE_BASELINE_PRIOR"),
+                r_display,
                 f"{int(w.get('confidence_score', 0.8) * 100)}%",
                 w.get("evidence_source", ""),
                 w.get("agent_reasoning_note", ""),
@@ -221,6 +225,9 @@ def simulate(
         dual = res.get("dual_layer_prediction", {})
         cal = res.get("calibration_metrics", {})
         stat_mech = res.get("statistical_mechanics", {})
+        transp = res.get("model_transparency", {})
+        kg_anchors = ", ".join(transp.get("matched_knowledge_graph_anchors", [])[:4]) or "None"
+        sources_str = ", ".join(transp.get("observed_sources_used", [])) or "Default priors (no corpus)"
 
         payoff_summary = (
             f"[bold white]Dominant Nash Equilibrium:[/bold white] [bold cyan]{dom}[/bold cyan] ({int(probs.get(dom, 0)*100)}% likelihood)\n"
@@ -235,6 +242,9 @@ def simulate(
             f"[dim](Divergence Δ={dual.get('preference_divergence_index', 0.0)})[/dim]\n"
             f"[bold white]Critical Sensitivity Variable:[/bold white] [bold yellow]{sens.get('key_variable')}[/bold yellow]\n"
             f"[dim]{sens.get('finding')}[/dim]\n"
+            f"[bold white]Model Type:[/bold white] Corpus-Conditioned Scenario Model (Non-Predictive) • "
+            f"[bold white]Grounded Sources:[/bold white] {sources_str}\n"
+            f"[bold white]Matched KG Anchors:[/bold white] {kg_anchors}\n"
             f"[bold white]Empirical Calibration:[/bold white] Brier Score={cal.get('brier_score', 0.20)} • "
             f"Stylometric JSD={cal.get('stylometric_jsd', 0.05)} • Confidence={int(res.get('confidence_score', 0.78)*100)}%"
         )
@@ -248,6 +258,9 @@ def simulate(
         caps = res.get("caps_situational_context", {})
         dual = res.get("dual_layer_prediction", {})
         cal = res.get("calibration_metrics", {})
+        transp = res.get("model_transparency", {})
+        kg_anchors = ", ".join(transp.get("matched_knowledge_graph_anchors", [])[:4]) or "None"
+        sources_str = ", ".join(transp.get("observed_sources_used", [])) or "Default priors (no corpus)"
         console.print(f"\n[bold cyan]Simulated Scenario:[/bold cyan] {scenario}")
         console.print(Panel(
             res.get("simulation_analysis", ""),
@@ -259,7 +272,10 @@ def simulate(
                 f"[bold yellow]CAPS Rule:[/bold yellow] {caps.get('if_then_signature', '')}\n"
                 f"[bold cyan]Stated Public Reaction:[/bold cyan] {dual.get('stated_public_reaction', {}).get('posture', '')}\n"
                 f"[bold green]Revealed Strategic Action:[/bold green] {dual.get('revealed_strategic_action', {}).get('operational_move', '')} "
-                f"(Divergence Δ={dual.get('preference_divergence_index', 0.0)})",
+                f"(Divergence Δ={dual.get('preference_divergence_index', 0.0)})\n"
+                f"[bold white]Model Type:[/bold white] Corpus-Conditioned Scenario Model (Non-Predictive) • "
+                f"[bold white]Grounded Sources:[/bold white] {sources_str}\n"
+                f"[bold white]Matched KG Anchors:[/bold white] {kg_anchors}",
                 title="[bold cyan]🎭 Stated vs. Revealed Preference & CAPS Analysis[/bold cyan]",
                 border_style="cyan",
             ))

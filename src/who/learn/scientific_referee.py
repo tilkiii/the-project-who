@@ -109,6 +109,7 @@ class ScientificReferee:
 
         r_raw = paper.get("r")
         r = self._extract_or_infer_correlation(r_raw, abstract)
+        effect_size_imputed = r is None
 
         p_raw = paper.get("p_value")
         p = self._extract_or_infer_p_value(p_raw, abstract)
@@ -121,21 +122,23 @@ class ScientificReferee:
         else:
             s_n = 12.0
 
-        abs_r = abs(r)
-        base_r_score = 20.0 * min(1.0, abs_r / 0.40)
-        if p is not None:
-            if p < 0.001:
-                sig_adj = 5.0
-            elif p < 0.01:
-                sig_adj = 3.0
-            elif p < 0.05:
-                sig_adj = 1.0
+        if r is not None:
+            abs_r = abs(r)
+            base_r_score = 20.0 * min(1.0, abs_r / 0.40)
+            if p is not None:
+                if p < 0.001:
+                    sig_adj = 5.0
+                elif p < 0.01:
+                    sig_adj = 3.0
+                elif p < 0.05:
+                    sig_adj = 1.0
+                else:
+                    sig_adj = -10.0
             else:
-                sig_adj = -10.0
+                sig_adj = 2.0
+            s_r = max(0.0, min(25.0, base_r_score + sig_adj))
         else:
-            sig_adj = 2.0
-
-        s_r = max(0.0, min(25.0, base_r_score + sig_adj))
+            s_r = 0.0
 
         s_v = 6.0
         for t1 in self.TIER1_VENUES:
@@ -151,15 +154,18 @@ class ScientificReferee:
                 if "journal" in venue or "conference" in venue or "transactions" in venue or paper.get("source") in ("pubmed", "crossref"):
                     s_v = 15.0
 
-        delta_r = abs(r - prior_mean_r)
-        if delta_r <= 0.10:
-            s_c = 20.0
-        elif delta_r <= 0.20:
-            s_c = 15.0
-        elif delta_r <= 0.35:
-            s_c = 10.0
+        if r is not None:
+            delta_r = abs(r - prior_mean_r)
+            if delta_r <= 0.10:
+                s_c = 20.0
+            elif delta_r <= 0.20:
+                s_c = 15.0
+            elif delta_r <= 0.35:
+                s_c = 10.0
+            else:
+                s_c = 4.0
         else:
-            s_c = 4.0
+            s_c = 5.0
 
         total_rigor = round(s_n + s_r + s_v + s_c, 1)
 
@@ -187,6 +193,13 @@ class ScientificReferee:
             fisher_info_i = 0.0
             asymptotic_var_z = None
 
+        if r is not None and not sample_size_imputed:
+            evidence_type = "QUANTITATIVE_EXTRACTED"
+        elif r is not None:
+            evidence_type = "QUANTITATIVE_NO_SAMPLE_SIZE"
+        else:
+            evidence_type = "QUALITATIVE_ABSTRACT_MATCH"
+
         return {
             "title": title,
             "abstract": abstract,
@@ -197,7 +210,9 @@ class ScientificReferee:
             "inferred_n": n,
             "effective_n": eff_n,
             "sample_size_imputed": sample_size_imputed,
-            "inferred_r": round(r, 3),
+            "inferred_r": round(r, 3) if r is not None else None,
+            "effect_size_imputed": effect_size_imputed,
+            "evidence_type": evidence_type,
             "inferred_p": p,
             "is_meta_analysis": is_meta_analysis,
             "fisher_information_I": fisher_info_i,
@@ -237,13 +252,17 @@ class ScientificReferee:
                 "approved_count": 0,
                 "rejected_count": 0,
                 "consensus_r": prior_mean_r,
+                "consensus_source": "REFERENCE_BASELINE_PRIOR",
+                "observed_r_studies": 0,
                 "fisher_meta_analysis": {
                     "pooled_z": round(fisher_z(prior_mean_r), 4),
                     "pooled_se_z": 0.15,
                     "ci_95_r": [round(max(-0.99, prior_mean_r - 0.15), 3), round(min(0.99, prior_mean_r + 0.15), 3)],
                     "total_fisher_information": 0.0,
                     "observed_n_studies": 0,
+                    "observed_r_studies": 0,
                     "imputed_n_studies_excluded_from_fisher": 0,
+                    "consensus_source": "REFERENCE_BASELINE_PRIOR",
                     "cochran_q": 0.0,
                     "higgins_i2_pct": 0.0,
                 },
@@ -265,7 +284,9 @@ class ScientificReferee:
         if approved:
             observed_approved = [
                 ap for ap in approved
-                if not ap.get("sample_size_imputed", False) and float(ap.get("fisher_information_I", 0.0)) > 0.0
+                if not ap.get("sample_size_imputed", False)
+                and ap.get("inferred_r") is not None
+                and float(ap.get("fisher_information_I", 0.0)) > 0.0
             ]
             imputed_excluded = len(approved) - len(observed_approved)
 
@@ -300,6 +321,8 @@ class ScientificReferee:
                 df = max(1, len(observed_approved) - 1)
                 higgins_i2 = max(0.0, ((cochran_q - df) / cochran_q) * 100.0) if cochran_q > df else 0.0
 
+                consensus_source = "FISHER_OBSERVED_STUDIES"
+                observed_r_count = len(observed_approved)
                 meta_stats = {
                     "pooled_z": round(consensus_z, 4),
                     "pooled_se_z": round(se_z, 4),
@@ -307,18 +330,33 @@ class ScientificReferee:
                     "quality_weighted_r": quality_weighted_r,
                     "total_fisher_information": round(total_fisher_info, 1),
                     "observed_n_studies": len(observed_approved),
+                    "observed_r_studies": observed_r_count,
                     "imputed_n_studies_excluded_from_fisher": imputed_excluded,
                     "all_sample_sizes_imputed": False,
+                    "consensus_source": consensus_source,
                     "cochran_q": round(cochran_q, 3),
                     "higgins_i2_pct": round(higgins_i2, 1),
                 }
             else:
-                z_vals = [fisher_z(ap["inferred_r"]) for ap in approved]
-                consensus_z = sum(z_vals) / len(z_vals)
-                consensus_r = round(inv_fisher_z(consensus_z), 3)
-                se_z = 0.25
-                ci_low_r = round(inv_fisher_z(consensus_z - 1.96 * se_z), 3)
-                ci_high_r = round(inv_fisher_z(consensus_z + 1.96 * se_z), 3)
+                r_only = [ap for ap in approved if ap.get("inferred_r") is not None]
+                if r_only:
+                    z_vals = [fisher_z(ap["inferred_r"]) for ap in r_only]
+                    consensus_z = sum(z_vals) / len(z_vals)
+                    consensus_r = round(inv_fisher_z(consensus_z), 3)
+                    se_z = 0.25
+                    ci_low_r = round(inv_fisher_z(consensus_z - 1.96 * se_z), 3)
+                    ci_high_r = round(inv_fisher_z(consensus_z + 1.96 * se_z), 3)
+                    consensus_source = "OBSERVED_R_IMPUTED_N"
+                    observed_r_count = len(r_only)
+                else:
+                    consensus_r = prior_mean_r
+                    consensus_z = fisher_z(prior_mean_r)
+                    se_z = 0.25
+                    ci_low_r = round(max(-0.99, prior_mean_r - 0.15), 3)
+                    ci_high_r = round(min(0.99, prior_mean_r + 0.15), 3)
+                    consensus_source = "REFERENCE_BASELINE_PRIOR"
+                    observed_r_count = 0
+
                 meta_stats = {
                     "pooled_z": round(consensus_z, 4),
                     "pooled_se_z": se_z,
@@ -326,20 +364,26 @@ class ScientificReferee:
                     "quality_weighted_r": consensus_r,
                     "total_fisher_information": 0.0,
                     "observed_n_studies": 0,
+                    "observed_r_studies": observed_r_count,
                     "imputed_n_studies_excluded_from_fisher": imputed_excluded,
                     "all_sample_sizes_imputed": True,
+                    "consensus_source": consensus_source,
                     "cochran_q": 0.0,
                     "higgins_i2_pct": 0.0,
                 }
         else:
             consensus_r = prior_mean_r
+            consensus_source = "REFERENCE_BASELINE_PRIOR"
+            observed_r_count = 0
             meta_stats = {
                 "pooled_z": round(fisher_z(prior_mean_r), 4),
                 "pooled_se_z": 0.15,
                 "ci_95_r": [round(max(-0.99, prior_mean_r - 0.15), 3), round(min(0.99, prior_mean_r + 0.15), 3)],
                 "total_fisher_information": 0.0,
                 "observed_n_studies": 0,
+                "observed_r_studies": 0,
                 "imputed_n_studies_excluded_from_fisher": 0,
+                "consensus_source": consensus_source,
                 "cochran_q": 0.0,
                 "higgins_i2_pct": 0.0,
             }
@@ -350,6 +394,8 @@ class ScientificReferee:
             "approved_count": len(approved),
             "rejected_count": len(rejected),
             "consensus_r": consensus_r,
+            "consensus_source": consensus_source,
+            "observed_r_studies": observed_r_count,
             "fisher_meta_analysis": meta_stats,
             "ranked_papers": evaluated,
             "approved_papers": approved,
@@ -466,7 +512,7 @@ class ScientificReferee:
                     continue
         return None
 
-    def _extract_or_infer_correlation(self, explicit_r: Any, text: str) -> float:
+    def _extract_or_infer_correlation(self, explicit_r: Any, text: str) -> Optional[float]:
         if explicit_r is not None:
             try:
                 val = float(explicit_r)
@@ -475,7 +521,10 @@ class ScientificReferee:
             except (ValueError, TypeError):
                 pass
 
-        match = re.search(r"\br\s*=\s*([+-]?(?:0?\.\d+|[01]))\b", text)
+        match = re.search(
+            r"(?<![A-Za-z0-9_])r\s*=\s*([+-]?(?:0?\.\d+|1(?:\.0+)?|0))(?![A-Za-z0-9_])",
+            text,
+        )
         if match:
             try:
                 val = float(match.group(1))
@@ -483,7 +532,7 @@ class ScientificReferee:
                     return val
             except ValueError:
                 pass
-        return 0.25
+        return None
 
     def _extract_or_infer_p_value(self, explicit_p: Any, text: str) -> Optional[float]:
         if explicit_p is not None:
