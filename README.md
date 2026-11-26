@@ -58,7 +58,7 @@
 | **Negation-Aware Bayesian Psychometrics** | Clause-scoped syntactic negation guards (English & Turkish) + Beta-Binomial **95% Credible Intervals** across lexical markers (*Machiavellianism, Need for Closure, Prospect Loss Framing β, Affective Volatility, Moral Foundations, Epistemic Calibration*) | Prevents false keyword hits (e.g., *"no risk"*, *"not only fair"*, *"-mam gerekiyor"* vs *"kabul etmem"*) and scales credible intervals with corpus size |
 | **CAPS Context Matrix & Stated vs. Revealed Framing** | Context-conditional keyword bucketing (`IF [Context] -> THEN [Signature]`) + separation of stated ideals vs. conditional red-line commitments (`[NECESSARY_CONDITION_RED_LINE]`) | Maps how a subject's framing shifts across Academic, Crisis, Strategic, and Interpersonal contexts |
 | **Knowledge Graph & Structural Balance** | Local JSON/NetworkX + optional Neo4j concept graph extraction (`ADVOCATES`, `CRITIQUES`, `CONTRADICTS`), Signed Graph Laplacian spectrum ($\lambda_{\min}$), and simulated-annealing Ising frustration metrics | Identifies central concepts, recurring tensions, and structural contradictions across a subject's own corpus |
-| **Boltzmann-Gibbs Scenario Simulation & Swarms** | Softmax/Boltzmann-Gibbs probability distribution over scenario stances, Monte Carlo sensitivity sweeps, and multi-twin `SwarmArena` debates | Models plausible scenario reactions with explicit entropy, free-energy diagnostics, and multi-target comparison |
+| **Boltzmann-Gibbs Scenario Simulation & Swarms** | Corpus- and knowledge-graph-conditioned Softmax/Boltzmann-Gibbs scenario models, Monte Carlo sensitivity sweeps, and multi-twin `SwarmArena` debates | Models plausible scenario reactions with explicit provenance, entropy, and free-energy diagnostics (non-predictive scenario modeling) |
 | **Temporal Drift, Chronomics & Verification** | Circadian timestamp bucketing (`CognitiveChronomics`), Ornstein-Uhlenbeck longitudinal drift analysis (`TemporalDriftDetector`), Temporal Holdout Backtesting (`ProfileEvaluator`), and stylometric Jensen-Shannon Divergence (`JSD`) | Tracks day/night rhetorical shifts, longitudinal vocabulary changes, citation validity, and candidate-response style fidelity |
 
 ---
@@ -81,7 +81,7 @@ pip install -e .
 
 **Optional Extras:**
 ```bash
-# Persistent ChromaDB HNSW, Neo4j driver, LiteLLM gateway, scikit-learn, scholarly, yt-dlp:
+# Persistent ChromaDB HNSW, Neo4j driver, scholarly, yt-dlp:
 pip install -e ".[full]"
 
 # Heavy local multimodal ML (Docling, PaddleOCR, BERTopic, Crawl4AI):
@@ -152,7 +152,7 @@ drift = twin.analyze_drift(["New public statement emphasizing transparency and v
 check = twin.verify_response("Empirical bounds and reciprocal governance remain essential.")
 ```
 
-### Option B: Connect Directly to ChatGPT (OpenAI), Claude (Anthropic), or Gemini Tool Calling
+### Option B: Connect Directly to ChatGPT (OpenAI), Claude (Anthropic), Gemini, or Ollama Tool Calling
 
 Export native tool schemas for the 7 Cognitive Digital Twin tools (`get_tool_schemas`) and dispatch calls cleanly through `MCPServer().dispatch_tool_call`:
 
@@ -179,6 +179,9 @@ result = mcp.dispatch_tool_call(tc.function.name, tc.function.arguments)
 # 3. Google Gemini Function Calling
 # tools=get_tool_schemas("gemini")
 # result = mcp.dispatch_tool_call(function_call.name, dict(function_call.args))
+
+# 4. Local Ollama (OpenAI-Compatible Function Calling)
+# tools=get_tool_schemas("ollama")
 ```
 
 ### Option C: Model Context Protocol (MCP) — Claude Desktop, Claude Code, Cursor
@@ -231,8 +234,8 @@ Explore runnable scripts in [`examples/`](examples/):
 To maintain strict scientific transparency, users and researchers should account for the following boundaries:
 
 1. **Non-Clinical Scope (Goldwater Rule Alignment):** `who??` models observable linguistic, rhetorical, and decision-framing patterns from text corpora using transparent lexicon/statistical heuristics. It does **not** perform clinical psychological diagnosis, mental health assessment, or deterministic mind-reading.
-2. **Heuristic Lexicons vs. Validated Instruments:** Core psychometric indices combine curated English/Turkish lexicons, syntactic negation guards, and Beta-Binomial uncertainty intervals. Quantitative parameters and simulation weights represent interpretable priors rather than clinical psychometric measurements.
-3. **Population Priors vs. Ecological Inference:** Effect sizes (`r`) retrieved from peer-reviewed literature serve strictly as **Bayesian population priors** (weighted via Inverse-Variance Fisher Information) and do not establish individual-level causality.
+2. **Heuristic Lexical Indicators & Short-Corpus Thresholds:** Core indices combine curated English/Turkish lexicons, privative/syntactic negation guards, and Beta-Binomial uncertainty intervals. They emit explicit `INSUFFICIENT_DATA` states below 20 words and represent lexical behavioral indicators — not clinical psychometric diagnoses. Scenario simulations are explicitly labeled as corpus-conditioned scenario models rather than trained empirical predictors.
+3. **3-Tier Literature Grounding:** Retrieved literature is strictly separated into `QUANTITATIVE_EXTRACTED` (explicit `r` and `N`), `QUALITATIVE_ABSTRACT_MATCH` (excluded from Fisher-z Bayesian updates), and `REFERENCE_BASELINE_PRIOR`. Quantitative effect sizes serve strictly as **Bayesian population priors** and do not establish individual-level causality.
 4. **Corpus Quality & Consent:** Public texts reflect public personas; simulated outputs remain strictly bounded by input volume, source diversity, and selection bias. This toolkit is intended for computational social science, public-domain analysis, consented self-twinning, and research workflows — never covert surveillance or non-consensual private profiling (see [SECURITY.md](SECURITY.md) and [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)).
 
 ---

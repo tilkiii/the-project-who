@@ -1360,7 +1360,7 @@ class AutonomousAcademicResearcher:
             p.setdefault("source", p.get("repository", "Academic"))
             p.setdefault("url", p.get("doi_or_url") or p.get("doi", ""))
             p.setdefault("summary", p.get("abstract", ""))
-            p.setdefault("authors", ["Empirical Research Cohort"])
+            p.setdefault("authors", [])
 
         review_md = self.generate_literature_review(topic, deduped_papers, findings)
 

@@ -12,6 +12,8 @@ import re
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
+import numpy as np
+
 from who.learn.feature_extractor import (
     CERTAINTY_MARKERS,
     FIRST_PERSON_PLURAL,
@@ -594,26 +596,26 @@ class ProfileEvaluator:
             return _probs_from_utils(utils)
 
         def _fit_mle(data_rows: List[Tuple[List[List[float]], int]]) -> Tuple[List[float], List[List[float]]]:
-            th_est = [1.0, 0.3, 0.3]
-            fim_mat = [[0.0] * 3 for _ in range(3)]
+            X = np.asarray([r[0] for r in data_rows], dtype=float)
+            y_arr = np.asarray([r[1] for r in data_rows], dtype=int)
+            X_y = X[np.arange(len(data_rows)), y_arr]
+            th = np.array([1.0, 0.3, 0.3], dtype=float)
+            fim = np.zeros((3, 3), dtype=float)
             for step in range(55):
-                grad = [0.0, 0.0, 0.0]
-                fim_mat = [[0.0] * 3 for _ in range(3)]
-                for feats, y in data_rows:
-                    pr = _probs(feats, th_est)
-                    mean_f = [sum(pr[b] * feats[b][d] for b in range(4)) for d in range(3)]
-                    for d in range(3):
-                        grad[d] += feats[y][d] - mean_f[d]
-                    for d1 in range(3):
-                        for d2 in range(3):
-                            cov_d12 = sum(pr[b] * (feats[b][d1] - mean_f[d1]) * (feats[b][d2] - mean_f[d2]) for b in range(4))
-                            fim_mat[d1][d2] += cov_d12
-                inv_fim = ProfileEvaluator._invert_3x3_matrix(fim_mat)
+                utils = X @ th
+                utils = utils - np.max(utils, axis=1, keepdims=True)
+                exps = np.exp(np.maximum(-700.0, utils))
+                pr = exps / np.maximum(np.sum(exps, axis=1, keepdims=True), 1e-12)
+                mean_f = np.einsum("nb,nbd->nd", pr, X)
+                grad = np.sum(X_y - mean_f, axis=0)
+                diff = X - mean_f[:, None, :]
+                fim = np.einsum("nb,nbi,nbj->ij", pr, diff, diff)
+                inv_fim = ProfileEvaluator._invert_3x3_matrix(fim.tolist())
                 lr = 0.75 if step < 30 else 0.40
                 for d in range(3):
-                    step_d = sum(inv_fim[d][k] * grad[k] for k in range(3))
-                    th_est[d] += lr * max(-0.5, min(0.5, step_d))
-            return th_est, fim_mat
+                    step_d = sum(inv_fim[d][k] * float(grad[k]) for k in range(3))
+                    th[d] += lr * max(-0.5, min(0.5, step_d))
+            return th.tolist(), fim.tolist()
 
         def _simulate_dataset(seed_val: int, misspecified: bool = False) -> List[Tuple[List[List[float]], int]]:
             local_rng = random.Random(seed_val)

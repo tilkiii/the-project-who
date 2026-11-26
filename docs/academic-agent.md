@@ -1,13 +1,19 @@
 # Autonomous Academic Literature & Grounding
 
-The `who_learn` autonomous researcher grounds behavioral and psychometric hypotheses against peer-reviewed scientific literature.
+The `who.learn.autonomous_researcher` (`AcademicResearcher`) module grounds behavioral and psychometric hypotheses against peer-reviewed scientific literature.
 
 ## Integrated Repositories
 
 - **arXiv API:** Quantitative finance, game theory, mathematical economics, and computer science.
 - **PubMed (E-Utilities):** Cognitive psychology, neurobiology, and chronomics.
-- **Semantic Scholar API:** Citation graphs, influence scores, and paper abstracts.
-- **OpenAlex:** Cross-disciplinary academic metadata and Open Access publications.
+- **Semantic Scholar API:** Citation graphs and paper abstracts.
+- **Crossref:** Cross-disciplinary bibliographic metadata, DOIs, and publisher abstracts.
+
+## 3-Tier Evidence Separation
+
+- **`QUANTITATIVE_EXTRACTED`**: Retrieved papers reporting explicit empirical correlation (`r`) and sample size (`N >= 10`), eligible for Fisher-z Bayesian weight updates.
+- **`QUALITATIVE_ABSTRACT_MATCH`**: Retrieved relevant abstracts lacking explicit `r` or `N`; preserved qualitatively (`r=None`, `N=None`) and excluded from Bayesian Fisher updates.
+- **`REFERENCE_BASELINE_PRIOR`**: Curated canonical baseline studies, explicitly tagged as reference priors and never attributed to unrelated retrieved papers.
 
 ## AI Scientific Referee (0-100 Rigor Index)
 

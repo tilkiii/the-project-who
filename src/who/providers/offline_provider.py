@@ -96,6 +96,38 @@ class OfflineProvider(BaseLLMProvider):
             lines.append("\n(Offline mode: Configure an API key in .env for full model generation.)")
             return "\n".join(lines)
 
+        # Monte Carlo Game-Theoretic synthesis fallback
+        if "monte carlo & boltzmann-gibbs results" in p_lower:
+            mc_scenario = re.search(r'SCENARIO:\s*"?(.+?)"?\s*(?:\n|$)', prompt)
+            dom_match = re.search(r"Dominant Nash Equilibrium Branch:\s*(.+?)(?:\n|$)", prompt)
+            payoff_match = re.search(r"Expected Payoff \(E\[U\]\):\s*(.+?)(?:\n|$)", prompt)
+            anchors_match = re.search(r"MATCHED KNOWLEDGE GRAPH ANCHORS:\s*(.+?)(?:\n|$)", prompt)
+            caps_match = re.search(r"ACTIVE CAPS CONTEXT:\s*(.+?)(?:\n|$)", prompt)
+            sens_match = re.search(r"Sensitivity Finding:\s*(.+?)(?:\n|$)", prompt)
+            div_match = re.search(r"Stated vs\. Revealed Divergence:\s*(.+?)(?:\n|$)", prompt)
+
+            scenario_val = mc_scenario.group(1).strip() if mc_scenario else "Submitted strategic proposition"
+            dom_val = dom_match.group(1).strip() if dom_match else "UNDETERMINED"
+            payoff_val = payoff_match.group(1).strip() if payoff_match else "N/A"
+            anchors_val = anchors_match.group(1).strip() if anchors_match else "None matched in local graph"
+            caps_val = caps_match.group(1).strip() if caps_match else "DEFAULT"
+            sens_val = sens_match.group(1).strip() if sens_match else ""
+            div_val = div_match.group(1).strip() if div_match else ""
+
+            mc_lines = [
+                "**Monte Carlo Scenario Synthesis (Corpus-Conditioned Model)**",
+                f"- **Scenario:** {scenario_val}",
+                f"- **Dominant Branch:** {dom_val}",
+                f"- **Expected Payoff:** {payoff_val}",
+                f"- **CAPS Context & KG Anchors:** {caps_val} | Anchors: {anchors_val}",
+            ]
+            if sens_val:
+                mc_lines.append(f"- **Primary Sensitivity Driver:** {sens_val}")
+            if div_val:
+                mc_lines.append(f"- **Stated vs. Revealed Alignment:** {div_val}")
+            mc_lines.append("\n(Offline mode: Configure an API key in .env for full model generation.)")
+            return "\n".join(mc_lines)
+
         # Oracle Q&A or Scenario simulation fallback
         question_match = re.search(r"(?:QUESTION|SORU):\s*(.+?)(?:\n|$)", prompt, re.IGNORECASE)
         scenario_match = re.search(r'SCENARIO PROPOSITION:\s*["\']?(.+?)["\']?\n', prompt, re.IGNORECASE)

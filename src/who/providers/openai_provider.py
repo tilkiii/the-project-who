@@ -49,12 +49,15 @@ class OpenAICompatibleProvider(BaseLLMProvider):
     def _get_base_url(self) -> str:
         # Check custom base url env var (e.g. OPENAI_API_BASE, OLLAMA_API_BASE)
         env_base = os.getenv(f"{self.provider_id.upper()}_API_BASE")
-        if env_base:
-            return env_base.rstrip("/")
+        if env_base and env_base.strip():
+            cleaned = env_base.strip().rstrip("/")
+            if self.provider_id in ("ollama", "vllm") and not cleaned.endswith("/v1"):
+                return f"{cleaned}/v1"
+            return cleaned
         if self.provider_id == "openai":
             alt = os.getenv("OPENAI_BASE_URL") or os.getenv("OPENAI_API_BASE")
-            if alt:
-                return alt.rstrip("/")
+            if alt and alt.strip():
+                return alt.strip().rstrip("/")
         return self._default_base_url.rstrip("/")
 
     def is_available(self) -> bool:
@@ -68,7 +71,7 @@ class OpenAICompatibleProvider(BaseLLMProvider):
             try:
                 base = self._get_base_url()
                 with httpx.Client(timeout=0.8) as client:
-                    r = client.get(f"{base}/models" if "localhost" in base else base)
+                    r = client.get(f"{base}/models")
                     return r.status_code < 500
             except Exception:
                 return False

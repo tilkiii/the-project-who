@@ -11,6 +11,7 @@ import json
 import sys
 from typing import Any, Dict, List, Optional, Union
 
+from who import __version__
 from who.agent.sdk import AcademicResearcher, CognitiveTwin, list_targets
 from who.utils.logger import get_logger
 
@@ -18,7 +19,7 @@ logger = get_logger("who.mcp")
 
 PROTOCOL_VERSION = "2024-11-05"
 SERVER_NAME = "who-twin-mcp"
-SERVER_VERSION = "1.1.0"
+SERVER_VERSION = __version__
 
 TOOLS_SCHEMA: List[Dict[str, Any]] = [
     {
@@ -107,7 +108,7 @@ TOOLS_SCHEMA: List[Dict[str, Any]] = [
     },
     {
         "name": "who_explain",
-        "description": "Trace any claim or behavioral assertion back to primary corpus quotes, Neo4j graph relationships, and epistemic confidence scores.",
+        "description": "Trace any claim or behavioral assertion back to primary corpus quotes, knowledge graph relationships, and epistemic confidence scores.",
         "annotations": {
             "readOnlyHint": True,
             "destructiveHint": False,
@@ -131,7 +132,7 @@ TOOLS_SCHEMA: List[Dict[str, Any]] = [
     },
     {
         "name": "who_academic_research",
-        "description": "Search peer-reviewed literature across arXiv, PubMed, Semantic Scholar, and OpenAlex. Evaluates findings using the 0-100 AI Scientific Referee Rigor Index.",
+        "description": "Search peer-reviewed literature across arXiv, PubMed, Semantic Scholar, and Crossref. Evaluates findings using the 0-100 AI Scientific Referee Rigor Index.",
         "annotations": {
             "readOnlyHint": False,
             "destructiveHint": False,
@@ -209,11 +210,11 @@ TOOLS_SCHEMA: List[Dict[str, Any]] = [
 
 
 def get_tool_schemas(provider: str = "mcp") -> List[Dict[str, Any]]:
-    """Export core Cognitive Digital Twin tool schemas for MCP, OpenAI/ChatGPT, Anthropic/Claude, or Gemini."""
+    """Export core Cognitive Digital Twin tool schemas for MCP, OpenAI/ChatGPT, Anthropic/Claude, Gemini, or Ollama/OpenAI-compatible providers."""
     key = str(provider or "mcp").strip().lower()
     if key == "mcp":
         return copy.deepcopy(TOOLS_SCHEMA)
-    if key in ("openai", "chatgpt"):
+    if key in ("openai", "chatgpt", "ollama", "vllm", "groq", "deepseek", "openrouter", "mistral"):
         return [
             {
                 "type": "function",
@@ -244,7 +245,7 @@ def get_tool_schemas(provider: str = "mcp") -> List[Dict[str, Any]]:
             for tool in TOOLS_SCHEMA
         ]
     raise ValueError(
-        f"Unsupported provider {provider!r}; expected one of 'mcp', 'openai', 'chatgpt', 'anthropic', 'claude', 'gemini', 'google'."
+        f"Unsupported provider {provider!r}; expected one of 'mcp', 'openai', 'chatgpt', 'anthropic', 'claude', 'gemini', 'google', 'ollama', 'vllm', 'groq', 'deepseek', 'openrouter', 'mistral'."
     )
 
 

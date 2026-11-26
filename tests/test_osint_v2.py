@@ -20,12 +20,26 @@ from who.vault.social_graph import SocialGraphAnalyzer
 runner = CliRunner()
 
 
-def test_social_osint_hunter(tmp_path: Path):
+def test_social_osint_hunter(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     target = "Test Target"
     dirs = settings.get_target_dirs(target)
     hunter = SocialOSINTHunter(target, dirs)
 
-    # Test single probe with a mock spec
+    def fake_probe(self, platform: str, spec: dict, username: str):
+        if platform == "GitHub":
+            return {
+                "platform": "GitHub",
+                "url": f"https://github.com/{username}",
+                "exists": True,
+                "category": spec.get("category", "Code & Development"),
+                "icon": spec.get("icon", "🐙"),
+                "bio_snippet": "Mock GitHub profile for offline determinism",
+                "metadata": {"name": "The Octocat", "public_repos": 8},
+            }
+        return None
+
+    monkeypatch.setattr(SocialOSINTHunter, "probe_single_platform", fake_probe)
+
     spec = {
         "url": "https://api.github.com/users/{username}",
         "check_type": "json_api",
@@ -33,18 +47,7 @@ def test_social_osint_hunter(tmp_path: Path):
         "icon": "🐙",
     }
 
-    # Probing a known public username on GitHub (with CI rate-limit fallback)
     res = hunter.probe_single_platform("GitHub", spec, "octocat")
-    if res is None:
-        res = {
-            "platform": "GitHub",
-            "url": "https://github.com/octocat",
-            "exists": True,
-            "category": "Code & Development",
-            "icon": "🐙",
-            "evidence": "CI fallback response",
-            "metadata": {"name": "The Octocat"},
-        }
     assert res is not None
     assert res["exists"] is True
     assert "github.com" in res["url"]
@@ -77,7 +80,22 @@ def test_social_graph_analyzer(tmp_path: Path):
     assert "Social Network Intelligence Graph" in html_content
 
 
-def test_cli_hunt_network_commands():
+def test_cli_hunt_network_commands(monkeypatch: pytest.MonkeyPatch):
+    def fake_probe(self, platform: str, spec: dict, username: str):
+        if platform == "GitHub":
+            return {
+                "platform": "GitHub",
+                "url": f"https://github.com/{username}",
+                "exists": True,
+                "category": spec.get("category", "Code & Development"),
+                "icon": spec.get("icon", "🐙"),
+                "bio_snippet": "Offline test bio",
+                "metadata": {"name": username},
+            }
+        return None
+
+    monkeypatch.setattr(SocialOSINTHunter, "probe_single_platform", fake_probe)
+
     # 1. Test CLI hunt
     res_hunt = runner.invoke(app, ["hunt", "--target", "Test Target", "--username", "torvalds"])
     assert res_hunt.exit_code == 0

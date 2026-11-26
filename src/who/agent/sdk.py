@@ -37,7 +37,7 @@ def list_targets() -> List[Dict[str, Any]]:
 
             raw_count = len(list(raw_dir.glob("*.md"))) if raw_dir.exists() else 0
             has_mindset = (vault_dir / "mindset_summary.md").exists()
-            has_graph = (vault_dir / "knowledge_graph.json").exists()
+            has_graph = (vault_dir / "knowledge_graph.json").exists() or (vault_dir / "concept_network.json").exists()
             has_skills = (skills_dir / "generated_mapping_skill.json").exists()
 
             targets.append({
@@ -256,13 +256,14 @@ class CognitiveTwin:
 
     def get_knowledge_graph(self) -> Dict[str, Any]:
         """Retrieve the target's cognitive knowledge graph nodes and relationships."""
-        graph_file = self.dirs.vault_dir / "knowledge_graph.json"
-        if graph_file.exists():
-            try:
-                with open(graph_file, "r", encoding="utf-8") as f:
-                    return json.load(f)
-            except Exception:
-                pass
+        for filename in ("knowledge_graph.json", "concept_network.json"):
+            graph_file = self.dirs.vault_dir / filename
+            if graph_file.exists():
+                try:
+                    with open(graph_file, "r", encoding="utf-8") as f:
+                        return json.load(f)
+                except Exception:
+                    pass
         return {"nodes": [], "edges": []}
 
 
@@ -287,7 +288,7 @@ class AcademicResearcher:
         ingest: bool = False,
     ) -> Dict[str, Any]:
         """
-        Search arXiv, PubMed, Semantic Scholar, and OpenAlex for peer-reviewed papers.
+        Search arXiv, PubMed, Semantic Scholar, and Crossref for peer-reviewed papers.
         Evaluates each paper with the 0-100 Scientific Rigor Index.
         """
         srcs = sources or ["arxiv", "pubmed", "semantic_scholar", "crossref"]

@@ -102,10 +102,11 @@ from who.mcp_server import MCPServer, get_tool_schemas
 
 mcp = MCPServer()
 
-# Supported values: "mcp", "openai", "chatgpt", "anthropic", "claude", "gemini", "google"
+# Supported values: "mcp", "openai", "chatgpt", "anthropic", "claude", "gemini", "google", "ollama", "vllm", "groq", "deepseek", "openrouter", "mistral"
 openai_tools = get_tool_schemas("openai")
 claude_tools = get_tool_schemas("anthropic")
 gemini_tools = get_tool_schemas("gemini")
+ollama_tools = get_tool_schemas("ollama")
 
 # Dispatch from OpenAI JSON-string arguments or Claude/Gemini dict arguments:
 result = mcp.dispatch_tool_call("who_get_profile", {"target": "Target X"})

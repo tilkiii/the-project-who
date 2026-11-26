@@ -1,6 +1,6 @@
 # Model Context Protocol (MCP) & Native Function Calling
 
-`who??` implements the official [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) specification over JSON-RPC 2.0 stdio, and exposes native JSON tool schemas (`who.mcp_server.get_tool_schemas`) for **Claude (Anthropic)**, **ChatGPT (OpenAI)**, **Google Gemini**, and **Cursor**.
+`who??` implements the official [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) specification over JSON-RPC 2.0 stdio, and exposes native JSON tool schemas (`who.mcp_server.get_tool_schemas`) for **Claude (Anthropic)**, **ChatGPT (OpenAI)**, **Google Gemini**, **Ollama** (OpenAI-compatible function calling), and **Cursor**.
 
 ## Supported MCP Tools
 

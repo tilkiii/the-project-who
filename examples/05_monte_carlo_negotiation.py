@@ -12,7 +12,6 @@ Maps the resulting decision space into 4 canonical game-theoretic branches:
 4. DEADLOCK_WALKAWAY (Unilateral walkaway / BATNA exercise)
 """
 
-import json
 from who import CognitiveTwin
 
 
@@ -52,7 +51,10 @@ def main():
 
     print(f"\n--- 💡 Strategic Negotiation Synthesis ---")
     print(result.get("strategic_synthesis"))
-    print(f"\nEpistemic Notice: {result.get('epistemic_qualification')}")
+    tr = result.get("model_transparency", {})
+    anchors = tr.get("matched_knowledge_graph_anchors", [])
+    print(f"\nModel Type: {tr.get('model_type')} | Matched KG Anchors: {', '.join(anchors) if anchors else 'None'}")
+    print(f"Epistemic Notice: {result.get('epistemic_qualification')}")
 
 
 if __name__ == "__main__":

@@ -13,7 +13,7 @@ pip install -e .
 Optional extras:
 
 ```bash
-# Persistent ChromaDB HNSW, Neo4j driver, LiteLLM, scikit-learn, scholarly, yt-dlp:
+# Persistent ChromaDB HNSW, Neo4j driver, scholarly, yt-dlp:
 pip install -e ".[full]"
 
 # Development & testing tools (pytest, ruff, mypy):
@@ -35,6 +35,7 @@ GEMINI_API_KEY=...      # Google Gemini
 Verify detected providers and system health at any time:
 
 ```bash
+who --version
 who doctor
 who providers
 ```

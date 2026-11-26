@@ -237,14 +237,22 @@ def doctor() -> None:
     if active_prov.is_available() and active_prov.provider_id != "offline":
         table.add_row("LLM Inference Provider", "[bold green]✔ ACTIVE[/bold green]", f"{active_prov.display_name} (API key verified)")
     elif active_prov.provider_id == "offline":
-        table.add_row("LLM Inference Provider", "[bold yellow]▲ OFFLINE MODE[/bold yellow]", "Corpus-grounded fallback. Set GEMINI_API_KEY for cloud reasoning.")
+        table.add_row(
+            "LLM Inference Provider",
+            "[bold yellow]▲ OFFLINE MODE[/bold yellow]",
+            "Corpus-grounded fallback. Set ANTHROPIC_API_KEY, OPENAI_API_KEY, GEMINI_API_KEY, or OLLAMA_API_BASE.",
+        )
     else:
         table.add_row("LLM Inference Provider", "[bold yellow]▲ UNCONFIGURED[/bold yellow]", f"{active_prov.display_name} (Missing API keys in .env)")
 
     # 3. Storage & Profiles Directory
     profiles_dir = Path(settings.profiles_dir)
     if profiles_dir.exists():
-        target_count = len([p for p in profiles_dir.iterdir() if p.is_dir() and not p.name.startswith((".", "__"))])
+        ignored_dirs = {"social_graphs", "arena_debates", "__pycache__"}
+        target_count = len([
+            p for p in profiles_dir.iterdir()
+            if p.is_dir() and p.name not in ignored_dirs and not p.name.startswith((".", "__"))
+        ])
         table.add_row("Local Vault Storage", "[bold green]✔ OPERATIONAL[/bold green]", f"{profiles_dir} ({target_count} target profile directories)")
     else:
         table.add_row("Local Vault Storage", "[bold red]✘ MISSING[/bold red]", f"Directory '{profiles_dir}' does not exist.")
@@ -254,7 +262,10 @@ def doctor() -> None:
     target_x_dir = profiles_dir / "target_x"
     if target_x_dir.exists():
         has_mindset = (target_x_dir / "vault" / "mindset_summary.md").exists()
-        has_graph = (target_x_dir / "vault" / "knowledge_graph.json").exists()
+        has_graph = (
+            (target_x_dir / "vault" / "knowledge_graph.json").exists()
+            or (target_x_dir / "vault" / "concept_network.json").exists()
+        )
         if has_mindset and has_graph:
             table.add_row("Benchmark Demo Profile", "[bold green]✔ READY[/bold green]", "Target X is fully calibrated with mindset and knowledge graph.")
         else:

@@ -4,7 +4,9 @@ CLI entry point for who digital twin and agent toolkit.
 
 from __future__ import annotations
 
+from typing import Optional
 import typer
+from who import __version__
 from who.utils.logger import console, print_banner
 
 # Subcommand implementations
@@ -37,8 +39,24 @@ app = typer.Typer(
 )
 
 
+def _version_callback(value: Optional[bool]) -> None:
+    if value:
+        typer.echo(f"who?? v{__version__}")
+        raise typer.Exit()
+
+
 @app.callback(invoke_without_command=True)
-def main_callback(ctx: typer.Context) -> None:
+def main_callback(
+    ctx: typer.Context,
+    version: Optional[bool] = typer.Option(
+        None,
+        "--version",
+        "-V",
+        callback=_version_callback,
+        is_eager=True,
+        help="Show the package version and exit.",
+    ),
+) -> None:
     """Print banner if no subcommand given."""
     if ctx.invoked_subcommand is None:
         print_banner()

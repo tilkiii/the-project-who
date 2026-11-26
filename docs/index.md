@@ -11,8 +11,8 @@ Designed for AI agent orchestration, executive simulations, and academic literat
 - **Strict Zero-Substitution & Epistemic Honesty:** Grounded in primary quotes and graph nodes. Rejects deterministic psychological speculation.
 - **Python Agent SDK:** Idiomatic `from who import CognitiveTwin, AcademicResearcher, list_targets` library for agentic workflows.
 - **Model Context Protocol (MCP) Server:** Native JSON-RPC 2.0 stdio server providing 7 tools for Claude Desktop, Cursor, LangChain, and AutoGen.
-- **5-Dimension Behavioral Psychometrics:** Quantifies Machiavellianism, Need for Closure, Prospect Risk Calibration, Affective Volatility, and Moral Foundations.
-- **Autonomous Academic Referee:** Searches arXiv, PubMed, Semantic Scholar, and OpenAlex to evaluate behavioral hypotheses against peer-reviewed empirical evidence.
+- **5-Dimension Lexical & Behavioral Indicators:** Quantifies non-clinical lexical indicators for Strategic Pragmatism, Need for Closure, Prospect Risk Calibration, Affective Volatility, and Moral Foundations with short-corpus `INSUFFICIENT_DATA` guards.
+- **Autonomous Academic Referee:** Searches arXiv, PubMed, Semantic Scholar, and Crossref with 3-tier evidence separation (`QUANTITATIVE_EXTRACTED`, `QUALITATIVE_ABSTRACT_MATCH`, `REFERENCE_BASELINE_PRIOR`).
 
 ---
 

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "the-project-who"
-version = "1.1.0"
+version = "1.0.0"
 description = "Evidence-grounded cognitive digital twin and behavioral modeling toolkit for AI agents"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -24,7 +24,7 @@ keywords = [
     "behavioral-simulation",
 ]
 classifiers = [
-    "Development Status :: 4 - Beta",
+    "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
     "Intended Audience :: Science/Research",
     "Programming Language :: Python :: 3",
@@ -50,8 +50,6 @@ dependencies = [
 full = [
     "chromadb>=0.4.24",
     "neo4j>=5.18.0",
-    "litellm>=1.35.0",
-    "scikit-learn>=1.4.0",
     "scholarly>=1.7.0",
     "yt-dlp>=2024.3.10",
 ]
@@ -59,7 +57,6 @@ ml = [
     "docling>=2.0.0",
     "paddleocr>=2.7.0",
     "bertopic>=0.16.0",
-    "sentence-transformers>=2.5.0",
     "crawl4ai>=0.3.0",
 ]
 dev = [
